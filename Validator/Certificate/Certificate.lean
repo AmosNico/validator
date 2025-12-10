@@ -1,5 +1,9 @@
 import Validator.StateSetFormalism.StateSetFormalism
 
+/-! # Certificate
+Implementation of the certificates used when validating certificates
+-/
+
 namespace Validator
 open Formalism (UnprimedVariable)
 
