@@ -1,0 +1,46 @@
+# empty action set
+a 0 b 0
+# all actions
+a 1 a
+# False: all actions in empty set
+k 0 s 1 0 b5
+# empty state set  
+e 0 c e
+# inital state set
+e 1 c i
+# complement inital state set
+e 2 n 1
+# goal state set
+e 3 c g
+# initial set union empty set
+e 4 u 1 0
+# {I}[{}]
+e 5 p 1 0
+# {I}[A]
+e 6 p 1 1
+# test
+e 7 n 4
+# {I}[{}] subseteq initial state set union empty set
+k 1 s 5 7 b2
+# goal state set subseteq complement inital state set
+k 2 s 3 2 b1
+# {I}[A] subseteq {I}[{}]
+k 3 s 6 5 at 1 0
+# {I}[A] subseteq initial state set union empty set
+k 4 s 6 4 st 3 1
+# empty set is dead
+k 5 d 0 ed
+# initial state set subseteq inital state set
+k 6 s 1 1 b4
+k 7 d 2 pi 4
+k _ d 1 pi _ 1 
+k _ u ci _
+
+A \subseteq {}
+{I}[emptyset] \subseteq {I}
+{I} [A] \subseteq {I}[\emptyset]
+{I}[{}] \subseteq {I}
+{I}[{}] \subseteq {I} \cup {}
+{I} \subseteq {I}
+
+

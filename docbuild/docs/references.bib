@@ -1,0 +1,76 @@
+# bibliography
+#
+# See also the notes in mathlib at
+# https://github.com/leanprover-community/mathlib4/blob/master/docs/references.bib
+#
+# To normalize:
+# bibtool --preserve.key.case=on --preserve.keys=on --pass.comments=on --print.use.tab=off -s -i docs/references.bib -o docs/references.bib
+
+@Article{         ERH2017,
+  title         = {Unsolvability Certificates for Classical Planning},
+  volume        = {27},
+  ignoreurl     = {https://ojs.aaai.org/index.php/ICAPS/article/view/13818},
+  doi           = {10.1609/icaps.v27i1.13818},
+  abstractnote  = {The plans that planning systems generate for solvable
+                  planning tasks are routinely verified by independent
+                  validation tools. For unsolvable planning tasks, no such
+                  validation capabilities currently exist. We describe a
+                  family of certificates of unsolvability for classical
+                  planning tasks that can be efficiently verified and are
+                  sufficiently general for a wide range of planning
+                  approaches including heuristic search with delete
+                  relaxation, critical-path, pattern database and linear
+                  merge-and-shrink heuristics, symbolic search with binary
+                  decision diagrams, and the Trapper algorithm for detecting
+                  dead ends. We also augmented a classical planning system
+                  with the ability to emit certificates of unsolvability and
+                  implemented a planner-independent certificate validation
+                  tool. Experiments show that the overhead for producing such
+                  certificates is tolerable and that their validation is
+                  practically feasible.},
+  number        = {1},
+  journal       = {Proceedings of the International Conference on Automated
+                  Planning and Scheduling},
+  author        = {Eriksson, Salomé and Röger, Gabriele and Helmert,
+                  Malte},
+  year          = {2017},
+  month         = {6},
+  pages         = {88-97}
+}
+
+@Article{         ERH2018,
+  title         = {A Proof System for Unsolvable Planning Tasks},
+  volume        = {28},
+  ignoreurl     = {https://ojs.aaai.org/index.php/ICAPS/article/view/13899},
+  doi           = {10.1609/icaps.v28i1.13899},
+  abstractnote  = {While traditionally classical planning concentrated on
+                  finding plans for solvable tasks, detecting unsolvable
+                  instances has recently attracted increasing interest. To
+                  preclude wrong results, it is desirable that the planning
+                  system provides a certificate of unsolvability that can be
+                  independently verified. We propose a rule-based proof
+                  system for unsolvability where a proof establishes a
+                  knowledge base of verifiable basic statements and applies a
+                  set of derivation rules to infer the unsolvability of the
+                  task from these statements. We argue that this approach is
+                  more flexible than a recent proposal of inductive
+                  certificates of unsolvability and show how our proof system
+                  can be used for a wide range of planning techniques.},
+  number        = {1},
+  journal       = {Proceedings of the International Conference on Automated
+                  Planning and Scheduling},
+  author        = {Eriksson, Salomé and Röger, Gabriele and Helmert,
+                  Malte},
+  year          = {2018},
+  month         = {6},
+  pages         = {65-73}
+}
+
+@PhDThesis{       ES2019,
+  title         = {Certifying planning systems : witnesses for
+                  unsolvability},
+  author        = {Eriksson, Salomé},
+  year          = {2019},
+  school        = {University of Basel},
+  url           = {https://api.semanticscholar.org/CorpusID:215835259}
+}

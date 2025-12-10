@@ -1,0 +1,32 @@
+name = "validator"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["Validator"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.25.2"
+
+[[require]]
+name = "Parser"
+git = "https://github.com/fgdorais/lean4-parser"
+rev = "c721f95697678dc252c90d16c48056d4fee38e7a"
+
+[[lean_lib]]
+name = "Validator"
+
+[[lean_exe]]
+name = "validator"
+root = "Validator"
+
+[[lean_exe]]
+name = "test"
+root = "Test"

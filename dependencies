@@ -1,0 +1,75 @@
+// Lean Files Dependencies
+digraph {
+	ranksep=0.6
+	nodesep=0.6
+	Validator [label="Validator✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator.html"]
+	"Validator/Certificate/Parser" -> Validator
+	"Validator/Certificate/ToDerivation" -> Validator
+	subgraph "cluster./test" {
+		label=test
+		style=rounded
+	}
+	"Validator/Basic" -> "Validator/ProofSystem"
+	"Validator/InductiveCertificate" -> "Validator/ProofSystem"
+	"Validator/StateSetFormalism/Formalism" -> "Validator/ProofSystem"
+	"Validator/PlanningTask/Basic" -> "Validator/InductiveCertificate"
+	"Validator/Certificate/Constraint" -> "Validator/Certificate/BasicRules"
+	"Validator/StateSetFormalism/StateSetFormalism" -> "Validator/Certificate/Certificate"
+	"Validator/Certificate/SetExpr" -> "Validator/Certificate/Constraint"
+	"Validator/PlanningTask/Parser" -> "Validator/Certificate/Parser"
+	"Validator/Certificate/Certificate" -> "Validator/Certificate/Parser"
+	"Validator/Error" -> "Validator/Certificate/SetExpr"
+	"Validator/Certificate/Certificate" -> "Validator/Certificate/SetExpr"
+	"Validator/ProofSystem" -> "Validator/Certificate/ToDerivation"
+	"Validator/Certificate/ValidCertificate" -> "Validator/Certificate/ToDerivation"
+	"Validator/Certificate/BasicRules" -> "Validator/Certificate/ValidCertificate"
+	"Validator/PlanningTask/Core" -> "Validator/PlanningTask/Basic"
+	"Validator/Error" -> "Validator/PlanningTask/Parser"
+	"Validator/PlanningTask/Core" -> "Validator/PlanningTask/Parser"
+	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Bdd"
+	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Formalism"
+	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Horn"
+	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Mods"
+	"Validator/StateSetFormalism/Formalism" -> "Validator/StateSetFormalism/StateSetFormalism"
+	"Validator/StateSetFormalism/Bdd" -> "Validator/StateSetFormalism/StateSetFormalism"
+	"Validator/StateSetFormalism/Horn" -> "Validator/StateSetFormalism/StateSetFormalism"
+	"Validator/StateSetFormalism/Mods" -> "Validator/StateSetFormalism/StateSetFormalism"
+	"Validator/PlanningTask/Basic" -> "Validator/StateSetFormalism/Formula"
+	"Validator/Basic" -> "Validator/StateSetFormalism/Formula"
+	subgraph "cluster./Validator" {
+		label=Validator
+		style=rounded
+		"Validator/Basic" [label="Basic✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Basic.html"]
+		"Validator/ProofSystem" [label="ProofSystem✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/ProofSystem.html"]
+		"Validator/Error" [label="Error✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Error.html"]
+		"Validator/InductiveCertificate" [label="InductiveCertificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/InductiveCertificate.html"]
+		subgraph "cluster./Validator/Certificate" {
+			label=Certificate
+			style=rounded
+			"Validator/Certificate/BasicRules" [label="BasicRules?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/BasicRules.html"]
+			"Validator/Certificate/Certificate" [label="Certificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Certificate.html"]
+			"Validator/Certificate/Constraint" [label="Constraint✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Constraint.html"]
+			"Validator/Certificate/Parser" [label="Parser?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Parser.html"]
+			"Validator/Certificate/SetExpr" [label="SetExpr✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/SetExpr.html"]
+			"Validator/Certificate/ToDerivation" [label="ToDerivation✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ToDerivation.html"]
+			"Validator/Certificate/ValidCertificate" [label="ValidCertificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ValidCertificate.html"]
+		}
+		subgraph "cluster./Validator/PlanningTask" {
+			label=PlanningTask
+			style=rounded
+			"Validator/PlanningTask/Basic" [label="Basic✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/PlanningTask/Basic.html"]
+			"Validator/PlanningTask/Core" [label="Core✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/PlanningTask/Core.html"]
+			"Validator/PlanningTask/Parser" [label="Parser✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/PlanningTask/Parser.html"]
+		}
+		subgraph "cluster./Validator/StateSetFormalism" {
+			label=StateSetFormalism
+			style=rounded
+			"Validator/StateSetFormalism/Bdd" [label="Bdd?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Bdd.html"]
+			"Validator/StateSetFormalism/Formalism" [label="Formalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formalism.html"]
+			"Validator/StateSetFormalism/Horn" [label="Horn?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Horn.html"]
+			"Validator/StateSetFormalism/Mods" [label="Mods?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Mods.html"]
+			"Validator/StateSetFormalism/StateSetFormalism" [label="StateSetFormalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/StateSetFormalism.html"]
+			"Validator/StateSetFormalism/Formula" [label="Formula?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formula.html"]
+		}
+	}
+}
