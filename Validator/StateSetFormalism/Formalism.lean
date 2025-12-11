@@ -570,10 +570,11 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
 
 end UnprimedVariables
 
+-- TODO : check if needed, or if everything can be done in terms of `UnprimedLiterals`
 abbrev Literals (pt : STRIPS n) R [Formalism pt R] :=
   Variables pt R × Variables pt R
 
--- TODO : write in terms of Variables?
+-- TODO : write in terms of `Variables`?
 namespace Literals
 
 def pos [Formalism pt R] (X : Variables pt R) : Literals pt R :=
@@ -672,7 +673,7 @@ lemma val_append [Formalism pt R] {L1 L2 : UnprimedLiterals pt R} :
 open UnprimedVariable (mem_models_iff_of_eq_unprimedState)
 
 @[simp low]
-lemma union [Formalism pt R] {L : UnprimedLiterals pt R} :
+lemma union_val [Formalism pt R] {L : UnprimedLiterals pt R} :
   L.val.union = L.1.val.union ∪ L.2.val.interᶜ :=
   by
     ext s
@@ -692,7 +693,7 @@ lemma union [Formalism pt R] {L : UnprimedLiterals pt R} :
         grind
 
 @[simp low]
-lemma inter [Formalism pt R] {L : UnprimedLiterals pt R} :
+lemma inter_val [Formalism pt R] {L : UnprimedLiterals pt R} :
   L.val.inter = L.1.val.inter ∩ L.2.val.unionᶜ :=
   by
     ext s

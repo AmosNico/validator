@@ -20,3 +20,7 @@ clean:
 
 dependencies.svg:
 	python dependencies.py
+
+# count lines:
+# shopt -s globstar
+# wc -l validator/**/*.lean
