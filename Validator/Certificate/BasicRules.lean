@@ -7,6 +7,322 @@ open ActionSubsetKnowledge StateSubsetKnowledge
 open Formalism StateSetFormalism
 open Formula (Model)
 
+namespace Certificate.validSets
+open StateSetFormalism
+
+/-- Returns none if the formula is constant -/
+def get_formalism' (hC : C.validSets) (Sᵢ : Fin C.states.size) : Option StateSetFormalism :=
+  match  heq : C.states[Sᵢ] with
+  | .empty => none
+  | .init => none
+  | .goal => none
+  | .bdd _ => bdd
+  | .horn _ => horn
+  | .mods _ => mods
+  | .neg S'ᵢ =>
+    have : S'ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+  | .inter S'ᵢ S''ᵢ =>
+    have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
+    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
+    | R => R
+  | .union S'ᵢ S''ᵢ =>
+    have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
+    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
+    | R => R
+  | .progr S'ᵢ _ =>
+    have : S'ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+  | .regr S'ᵢ _ =>
+    have : S'ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+
+def get_formalism (hC : C.validSets) : List (Fin C.states.size) → StateSetFormalism
+| [] => mods -- Fallback if all sets are constant
+| Sᵢ :: tail =>
+  match hC.get_formalism' Sᵢ with
+  | none => hC.get_formalism tail
+  | some F => F
+
+def throwIncompatibleFormalism {α : outParam Type} {p}
+  (R R' : StateSetFormalism) (Sᵢ : ℕ) : Result α p :=
+  throwUnvalid s!"The state set expression #{Sᵢ} is expected \
+   to be a {R} formula, but it is a {R'} formula"
+
+def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariable' pt R) fun x ↦
+    hC.getStates Sᵢ = x.val.toStates ∧ IsVariable pt (R.type pt) (hC.getStates Sᵢ) :=
+  match heq : C.states[Sᵢ] with
+  | .empty =>
+    have h1 : hC.getStates Sᵢ = ∅ :=
+      hC.getStatesEmpty Sᵢ (by simp_all)
+    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
+      rw [h1]
+      exact IsVariable.empty
+    return ⟨R.mkEmpty pt, by simp [h1], h2⟩
+  | .init =>
+    have h1 : hC.getStates Sᵢ = {pt.init} :=
+      hC.getStatesInit Sᵢ (by simp_all)
+    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
+      rw [h1]
+      exact IsVariable.init
+    return ⟨R.mkInit pt, by simp [h1], h2⟩
+  | .goal =>
+    have h1 : hC.getStates Sᵢ = pt.goal_states :=
+      hC.getStatesGoal Sᵢ (by simp_all)
+    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
+      rw [h1]
+      exact IsVariable.goal
+    return ⟨R.mkGoal pt, by simp [h1], h2⟩
+  | .bdd φ =>
+    if heq' : R = bdd then by
+      subst heq'
+      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
+        hC.getStatesBdd Sᵢ (by simp_all)
+      have h2 : IsVariable pt (type pt bdd) (hC.getStates Sᵢ) := by
+        rw [h1]
+        exact IsVariable.explicit φ.val
+      exact return ⟨φ, h1, h2⟩
+    else
+      throwIncompatibleFormalism bdd R Sᵢ
+  | .horn φ =>
+    if heq' : R = horn then by
+      subst heq'
+      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
+        hC.getStatesHorn Sᵢ (by simp_all)
+      have h2 : IsVariable pt (type pt horn) (hC.getStates Sᵢ) := by
+        rw [h1]
+        exact IsVariable.explicit φ.val
+      exact return ⟨φ, h1, h2⟩
+    else
+      throwIncompatibleFormalism horn R Sᵢ
+  | .mods φ =>
+    if heq' : R = mods then by
+      subst heq'
+      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
+        hC.getStatesMods Sᵢ (by simp_all)
+      have h2 : IsVariable pt (type pt mods) (hC.getStates Sᵢ) := by
+        rw [h1]
+        exact IsVariable.explicit φ.val
+      exact return ⟨φ, h1, h2⟩
+    else
+      throwIncompatibleFormalism mods R Sᵢ
+  | S =>
+    throwUnvalid s!"Expected the state set #{Sᵢ} to be a constant state set or \
+      an atomic {R} formula, but it is {S}."
+
+def get_literal (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedLiteral' pt R) fun l ↦
+    hC.getStates Sᵢ = l.val.toStates ∧ IsLiteral pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is a {R} literal" <|
+  match heq : C.states[Sᵢ] with
+  | .neg S'ᵢ => do
+    have : S'ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨S'ᵢ, by omega⟩
+    let l : UnprimedLiteral' pt R := (x, false)
+    have h3 : hC.getStates Sᵢ = l.val.toStates := by
+      simp [l, UnprimedLiteral.val, Literal.toStates]
+      rw [← h1]
+      exact hC.getStatesNeg Sᵢ ⟨S'ᵢ, by omega⟩ (by simp_all)
+    have h4 : IsLiteral pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all only
+      exact IsLiteral.neg h2
+    return ⟨l, h3, h4⟩
+  | _ => do
+    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨Sᵢ, by omega⟩
+    have h3 : hC.getStates Sᵢ = x.val.toStates := by
+      simp_all
+    have h4 : IsLiteral pt (type pt R) (hC.getStates Sᵢ) := by
+      rw [h3] at ⊢ h2
+      exact IsLiteral.pos h2
+    return ⟨(x, true), h3, h4⟩
+
+def get_union_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedLiterals' pt R)
+    fun L ↦ hC.getStates Sᵢ = L.val.union ∧ IsLiteralUnion pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is a union of {R} literals" <|
+  match heq : C.states[Sᵢ] with
+  | .union S'ᵢ S''ᵢ => do
+    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨L1, h1, h2⟩ ← hC.get_union_literals R ⟨S'ᵢ, by omega⟩
+    let ⟨L2, h3, h4⟩ ← hC.get_union_literals R ⟨S''ᵢ, by omega⟩
+    have h5 : hC.getStates Sᵢ = (L1 ++ L2).val.union := by
+      simp only [UnprimedLiterals.val_append, Literals.union_append]
+      rw [← h1, ← h3]
+      exact hC.getStatesUnion Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
+    have h6 : IsLiteralUnion pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all only [UnprimedLiterals.val_append, Literals.union_append]
+      exact IsLiteralUnion.union h2 h4
+    return ⟨L1 ++ L2, h5, h6⟩
+  | _ => do
+    let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
+    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralUnion.single h2⟩
+
+def get_inter_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedLiterals' pt R)
+    fun L ↦ hC.getStates Sᵢ = L.val.inter ∧ IsLiteralInter pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is an intersection of {R} literals" <|
+  match heq : C.states[Sᵢ] with
+  | .inter S'ᵢ S''ᵢ => do
+    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨L1, h1, h2⟩ ← hC.get_inter_literals R ⟨S'ᵢ, by omega⟩
+    let ⟨L2, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
+    have h5 : hC.getStates Sᵢ = (L1 ++ L2).val.inter := by
+      simp only [UnprimedLiterals.val_append, UnprimedLiterals.inter_append]
+      rw [← h1, ← h3]
+      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
+    have h6 : IsLiteralInter pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all [-Finset.inter_assoc]
+      exact IsLiteralInter.inter h2 h4
+    return ⟨(L1 ++ L2), h5, h6⟩
+  | _ => do
+    let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
+    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralInter.single h2⟩
+
+def get_inter_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariables' pt R)
+    fun X ↦ hC.getStates Sᵢ = X.val.inter ∧ IsVariableInter pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage
+    s!"Verifying that the state set #{Sᵢ} is an intersection of atomic {R} formulas" <|
+  match heq : C.states[Sᵢ] with
+  | .inter S'ᵢ S''ᵢ => do
+    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨X1, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
+    let ⟨X2, h3, h4⟩ ← hC.get_inter_variables R ⟨S''ᵢ, by omega⟩
+    have h5 : hC.getStates Sᵢ = (X1 ++ X2).val.inter := by
+      simp only [UnprimedVariables.inter_append]
+      rw [← h1, ← h3]
+      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
+    have h6 : IsVariableInter pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all only [UnprimedVariables.inter_append]
+      exact IsVariableInter.inter h2 h4
+    return ⟨(X1 ++ X2), h5, h6⟩
+  | _ => do
+    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨Sᵢ, by omega⟩
+    return ⟨UnprimedVariables.single x, by simp_all; exact IsVariableInter.single h2⟩
+
+def get_progression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariables' pt R × ActionIds pt)
+    fun (X, A) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∧
+      IsVariableInter pt (R.type pt) X.val.inter :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the progression \
+    of an intersection of atomic {R} formulas"
+  do
+    let ⟨(S'ᵢ, Aᵢ), h⟩ ← (Constraint.isStateProgr C Sᵢ).verify
+    have ⟨hS'ᵢ, hAᵢ⟩ : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
+    let A := hC.getActions' ⟨Aᵢ, by omega⟩
+    have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions := by
+      rw [← h1]
+      exact hC.getStatesProg Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)
+    return ⟨(X, A), h3, by simp_all⟩
+
+def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
+    fun (X, A, L) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter ∧
+      IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the progression \
+    of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
+  match heq : C.states[Sᵢ] with
+  | .inter S'ᵢ S''ᵢ => do
+    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R ⟨S'ᵢ, by omega⟩
+    let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
+    have h5 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter  := by
+      rw [← h1, ← h3]
+      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
+    have h6 : IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) := by
+      simp_all only [Literals.inter]
+      exact IsProgrInter.inter h2 h4
+    return ⟨(X, A, L), h5, h6⟩
+  | .progr S'ᵢ Aᵢ => do
+    let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R Sᵢ
+    let L := UnprimedLiterals.empty
+    have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter := by
+      simp_all [L, UnprimedVariables.val]
+    have h4 : IsProgrInter pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all [UnprimedVariables.val, L]
+      exact IsProgrInter.empty h2
+    return ⟨(X, A, L), h3, h4⟩
+  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or progression"
+
+def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariables' pt R × ActionIds pt)
+    fun (X, A) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∧
+      IsVariableInter pt (R.type pt) X.val.inter :=
+   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the regression \
+    of an intersection of atomic {R} formulas"
+  do
+    let ⟨(S'ᵢ, Aᵢ), h⟩ ← (Constraint.isStateRegr C Sᵢ).verify
+    have ⟨hS'ᵢ, hAᵢ⟩ : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
+    let A := hC.getActions' ⟨Aᵢ, by omega⟩
+    have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions := by
+      rw [← h1]
+      exact hC.getStatesRegr Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)
+    return ⟨(X, A), h3, by simp_all⟩
+
+-- TODO : catch errors
+def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
+  Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
+    fun (X, A, L) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter ∧
+      IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) :=
+  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the regression \
+    of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
+  match heq : C.states[Sᵢ] with
+  | .inter S'ᵢ S''ᵢ => do
+    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
+      have := hC.validStates Sᵢ
+      simp_all [Certificate.validStateSetExpr]
+    let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R ⟨S'ᵢ, by omega⟩
+    let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
+    have h5 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter  := by
+      simp_all [Literals.inter]
+      rw [← h1, ← h3]
+      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
+    have h6 : IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) := by
+      simp_all [Literals.inter]
+      exact IsRegrInter.inter h2 h4
+    return ⟨(X, A, L), h5, h6⟩
+  | .regr S'ᵢ Aᵢ => do
+    let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R Sᵢ
+    let L := UnprimedLiterals.empty
+    have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter := by
+      simp_all [L, UnprimedVariables.val]
+    have h4 : IsRegrInter pt (type pt R) (hC.getStates Sᵢ) := by
+      simp_all [L, UnprimedVariables.val]
+      exact IsRegrInter.empty h2
+    return ⟨(X, A, L), h3, h4⟩
+  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or regression"
+
+end Certificate.validSets
+
 namespace Formalism
 open Formula Variables
 
@@ -271,327 +587,13 @@ def checkB4_correct {R1 R2} {l1 : UnprimedLiteral' pt R1} {l2 : UnprimedLiteral'
 
 end StateSetFormalism
 
-namespace Certificate.validSets
-open StateSetFormalism
-
-/-- Returns none if the formula is constant -/
-def get_formalism' (hC : C.validSets) (Sᵢ : Fin C.states.size) : Option StateSetFormalism :=
-  match  heq : C.states[Sᵢ] with
-  | .empty => none
-  | .init => none
-  | .goal => none
-  | .bdd _ => bdd
-  | .horn _ => horn
-  | .mods _ => mods
-  | .neg S'ᵢ =>
-    have : S'ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
-  | .inter S'ᵢ S''ᵢ =>
-    have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
-    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
-    | R => R
-  | .union S'ᵢ S''ᵢ =>
-    have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
-    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
-    | R => R
-  | .progr S'ᵢ _ =>
-    have : S'ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
-  | .regr S'ᵢ _ =>
-    have : S'ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
-
-
-def get_formalism (hC : C.validSets) : List (Fin C.states.size) → StateSetFormalism
-| [] => mods -- Fallback if all sets are constant
-| Sᵢ :: tail =>
-  match hC.get_formalism' Sᵢ with
-  | none => hC.get_formalism tail
-  | some F => F
-
-def throwIncompatibleFormalism {α : outParam Type} {p}
-  (R R' : StateSetFormalism) (Sᵢ : ℕ) : Result α p :=
-  throwUnvalid s!"The state set expression #{Sᵢ} is expected \
-   to be a {R} formula, but it is a {R'} formula"
-
-def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariable' pt R) fun x ↦
-    hC.getStates Sᵢ = x.val.toStates ∧ IsVariable pt (R.type pt) (hC.getStates Sᵢ) :=
-  match heq : C.states[Sᵢ] with
-  | .empty =>
-    have h1 : hC.getStates Sᵢ = ∅ :=
-      hC.getStatesEmpty Sᵢ (by simp_all)
-    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
-      rw [h1]
-      exact IsVariable.empty
-    return ⟨R.mkEmpty pt, by simp [h1], h2⟩
-  | .init =>
-    have h1 : hC.getStates Sᵢ = {pt.init} :=
-      hC.getStatesInit Sᵢ (by simp_all)
-    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
-      rw [h1]
-      exact IsVariable.init
-    return ⟨R.mkInit pt, by simp [h1], h2⟩
-  | .goal =>
-    have h1 : hC.getStates Sᵢ = pt.goal_states :=
-      hC.getStatesGoal Sᵢ (by simp_all)
-    have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
-      rw [h1]
-      exact IsVariable.goal
-    return ⟨R.mkGoal pt, by simp [h1], h2⟩
-  | .bdd φ =>
-    if heq' : R = bdd then by
-      subst heq'
-      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
-        hC.getStatesBdd Sᵢ (by simp_all)
-      have h2 : IsVariable pt (type pt bdd) (hC.getStates Sᵢ) := by
-        rw [h1]
-        exact IsVariable.explicit φ.val
-      exact return ⟨φ, h1, h2⟩
-    else
-      throwIncompatibleFormalism bdd R Sᵢ
-  | .horn φ =>
-    if heq' : R = horn then by
-      subst heq'
-      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
-        hC.getStatesHorn Sᵢ (by simp_all)
-      have h2 : IsVariable pt (type pt horn) (hC.getStates Sᵢ) := by
-        rw [h1]
-        exact IsVariable.explicit φ.val
-      exact return ⟨φ, h1, h2⟩
-    else
-      throwIncompatibleFormalism horn R Sᵢ
-  | .mods φ =>
-    if heq' : R = mods then by
-      subst heq'
-      have h1 : hC.getStates Sᵢ = φ.val.toStates :=
-        hC.getStatesMods Sᵢ (by simp_all)
-      have h2 : IsVariable pt (type pt mods) (hC.getStates Sᵢ) := by
-        rw [h1]
-        exact IsVariable.explicit φ.val
-      exact return ⟨φ, h1, h2⟩
-    else
-      throwIncompatibleFormalism mods R Sᵢ
-  | S =>
-    throwUnvalid s!"Expected the state set #{Sᵢ} to be a constant state set or \
-      an atomic {R} formula, but it is {S}."
-
-def get_literal (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedLiteral' pt R) fun l ↦
-    hC.getStates Sᵢ = l.val.toStates ∧ IsLiteral pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is a {R} literal" <|
-  match heq : C.states[Sᵢ] with
-  | .neg S'ᵢ => do
-    have : S'ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨S'ᵢ, by omega⟩
-    let l : UnprimedLiteral' pt R := (x, false)
-    have h3 : hC.getStates Sᵢ = l.val.toStates := by
-      simp [l, UnprimedLiteral.val, Literal.toStates]
-      rw [← h1]
-      exact hC.getStatesNeg Sᵢ ⟨S'ᵢ, by omega⟩ (by simp_all)
-    have h4 : IsLiteral pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all only
-      exact IsLiteral.neg h2
-    return ⟨l, h3, h4⟩
-  | _ => do
-    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨Sᵢ, by omega⟩
-    have h3 : hC.getStates Sᵢ = x.val.toStates := by
-      simp_all
-    have h4 : IsLiteral pt (type pt R) (hC.getStates Sᵢ) := by
-      rw [h3] at ⊢ h2
-      exact IsLiteral.pos h2
-    return ⟨(x, true), h3, h4⟩
-
-def get_union_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedLiterals' pt R)
-    fun L ↦ hC.getStates Sᵢ = L.val.union ∧ IsLiteralUnion pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is a union of {R} literals" <|
-  match heq : C.states[Sᵢ] with
-  | .union S'ᵢ S''ᵢ => do
-    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨L1, h1, h2⟩ ← hC.get_union_literals R ⟨S'ᵢ, by omega⟩
-    let ⟨L2, h3, h4⟩ ← hC.get_union_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = (L1 ++ L2).val.union := by
-      simp only [UnprimedLiterals.val_append, Literals.union_append]
-      rw [← h1, ← h3]
-      exact hC.getStatesUnion Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
-    have h6 : IsLiteralUnion pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all only [UnprimedLiterals.val_append, Literals.union_append]
-      exact IsLiteralUnion.union h2 h4
-    return ⟨L1 ++ L2, h5, h6⟩
-  | _ => do
-    let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralUnion.single h2⟩
-
-def get_inter_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedLiterals' pt R)
-    fun L ↦ hC.getStates Sᵢ = L.val.inter ∧ IsLiteralInter pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is an intersection of {R} literals" <|
-  match heq : C.states[Sᵢ] with
-  | .inter S'ᵢ S''ᵢ => do
-    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨L1, h1, h2⟩ ← hC.get_inter_literals R ⟨S'ᵢ, by omega⟩
-    let ⟨L2, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = (L1 ++ L2).val.inter := by
-      simp only [UnprimedLiterals.val_append, UnprimedLiterals.inter_append]
-      rw [← h1, ← h3]
-      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
-    have h6 : IsLiteralInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [-Finset.inter_assoc]
-      exact IsLiteralInter.inter h2 h4
-    return ⟨(L1 ++ L2), h5, h6⟩
-  | _ => do
-    let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralInter.single h2⟩
-
-def get_inter_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariables' pt R)
-    fun X ↦ hC.getStates Sᵢ = X.val.inter ∧ IsVariableInter pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage
-    s!"Verifying that the state set #{Sᵢ} is an intersection of atomic {R} formulas" <|
-  match heq : C.states[Sᵢ] with
-  | .inter S'ᵢ S''ᵢ => do
-    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨X1, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
-    let ⟨X2, h3, h4⟩ ← hC.get_inter_variables R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = (X1 ++ X2).val.inter := by
-      simp only [UnprimedVariables.inter_append]
-      rw [← h1, ← h3]
-      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
-    have h6 : IsVariableInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all only [UnprimedVariables.inter_append]
-      exact IsVariableInter.inter h2 h4
-    return ⟨(X1 ++ X2), h5, h6⟩
-  | _ => do
-    let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedVariables.single x, by simp_all; exact IsVariableInter.single h2⟩
-
-def get_progression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariables' pt R × ActionIds pt)
-    fun (X, A) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∧
-      IsVariableInter pt (R.type pt) X.val.inter :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the progression \
-    of an intersection of atomic {R} formulas"
-  do
-    let ⟨(S'ᵢ, Aᵢ), h⟩ ← (Constraint.isStateProgr C Sᵢ).verify
-    have ⟨hS'ᵢ, hAᵢ⟩ : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
-    let A := hC.getActions' ⟨Aᵢ, by omega⟩
-    have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions := by
-      rw [← h1]
-      exact hC.getStatesProg Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)
-    return ⟨(X, A), h3, by simp_all⟩
-
-def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
-    fun (X, A, L) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter ∧
-      IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the progression \
-    of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
-  match heq : C.states[Sᵢ] with
-  | .inter S'ᵢ S''ᵢ => do
-    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R ⟨S'ᵢ, by omega⟩
-    let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter  := by
-      rw [← h1, ← h3]
-      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
-    have h6 : IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) := by
-      simp_all only [Literals.inter]
-      exact IsProgrInter.inter h2 h4
-    return ⟨(X, A, L), h5, h6⟩
-  | .progr S'ᵢ Aᵢ => do
-    let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R Sᵢ
-    let L := UnprimedLiterals.empty
-    have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter := by
-      simp_all [L, UnprimedVariables.val]
-    have h4 : IsProgrInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [UnprimedVariables.val, L]
-      exact IsProgrInter.empty h2
-    return ⟨(X, A, L), h3, h4⟩
-  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or progression"
-
--- TODO : make variables primed
-def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariables' pt R × ActionIds pt)
-    fun (X, A) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∧
-      IsVariableInter pt (R.type pt) X.val.inter :=
-   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the regression \
-    of an intersection of atomic {R} formulas"
-  do
-    let ⟨(S'ᵢ, Aᵢ), h⟩ ← (Constraint.isStateRegr C Sᵢ).verify
-    have ⟨hS'ᵢ, hAᵢ⟩ : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
-    let A := hC.getActions' ⟨Aᵢ, by omega⟩
-    have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions := by
-      rw [← h1]
-      exact hC.getStatesRegr Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)
-    return ⟨(X, A), h3, by simp_all⟩
-
--- TODO : catch errors
-def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
-  Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
-    fun (X, A, L) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter ∧
-      IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) :=
-  withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the regression \
-    of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
-  match heq : C.states[Sᵢ] with
-  | .inter S'ᵢ S''ᵢ => do
-    have ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
-      have := hC.validStates Sᵢ
-      simp_all [Certificate.validStateSetExpr]
-    let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R ⟨S'ᵢ, by omega⟩
-    let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter  := by
-      simp_all [Literals.inter]
-      rw [← h1, ← h3]
-      exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
-    have h6 : IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) := by
-      simp_all [Literals.inter]
-      exact IsRegrInter.inter h2 h4
-    return ⟨(X, A, L), h5, h6⟩
-  | .regr S'ᵢ Aᵢ => do
-    let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R Sᵢ
-    let L := UnprimedLiterals.empty
-    have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter := by
-      simp_all [L, UnprimedVariables.val]
-    have h4 : IsRegrInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [L, UnprimedVariables.val]
-      exact IsRegrInter.empty h2
-    return ⟨(X, A, L), h3, h4⟩
-  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or regression"
-
-end Certificate.validSets
-
+def throwNotImplemented {p}
+  (R : StateSetFormalism) (Kᵢ : ℕ) (rule : String) : Result' p :=
+  throwUnvalid s!"Trying to verify that knowledge with identifier #{Kᵢ} is a valid {rule}\
+  -statement in the {R} formalism, but the required operations have not yet been implemented."
 
 -- TODO : Combine B1 - B3?
-def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB1 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun _ ↦ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
@@ -604,6 +606,8 @@ def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
       let ⟨⟨⟩, hS1ᵢ⟩ ← (stateBounds' C S1ᵢ).verify
       let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
       let R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+      throwNotImplemented R Kᵢ "B1"
+      /-
       let ⟨L1, h1, h2⟩ ← hC.get_inter_literals R ⟨S1ᵢ, hS1ᵢ⟩
       let ⟨L2, h3, h4⟩ ← hC.get_union_literals R ⟨S2ᵢ, hS2ᵢ⟩
       if h5 : R.checkB1 L1 L2 then
@@ -612,12 +616,13 @@ def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
       else
         throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      -/
 
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB1 hC S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB1 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsLiteralInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
@@ -627,7 +632,7 @@ lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ 
     simp [constraintB1]
     tauto
 
-def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB2 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
@@ -640,6 +645,8 @@ def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
       let ⟨⟨⟩, hS1ᵢ⟩ ← (stateBounds' C S1ᵢ).verify
       let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
       let R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+      throwNotImplemented R Kᵢ "B2"
+      /-
       let ⟨(X, A, L1), h1, h2⟩ ← hC.get_progression_inter R ⟨S1ᵢ, hS1ᵢ⟩
       let ⟨L2, h3, h4⟩ ← hC.get_union_literals R ⟨S2ᵢ, hS2ᵢ⟩
       if h5 : R.checkB2 X A L1 L2 then
@@ -648,12 +655,13 @@ def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
       else
         throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      -/
 
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB2 hC S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB2 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsProgrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
@@ -663,7 +671,7 @@ lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ 
     simp [constraintB2]
     tauto
 
-def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB3 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
@@ -676,6 +684,8 @@ def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
       let ⟨⟨⟩, hS1ᵢ⟩ ← (stateBounds' C S1ᵢ).verify
       let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
       let R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+      throwNotImplemented R Kᵢ "B3"
+      /-
       let ⟨(X, A, L1), h1, h2⟩ ← hC.get_regression_inter R ⟨S1ᵢ, hS1ᵢ⟩
       let ⟨L2, h3, h4⟩ ← hC.get_union_literals R ⟨S2ᵢ, hS2ᵢ⟩
       if h5 : R.checkB3 X A L1 L2 then
@@ -684,12 +694,13 @@ def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
       else
         throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      -/
 
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB3 hC S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB3 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsRegrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
@@ -699,7 +710,7 @@ lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ 
     simp [constraintB3]
     tauto
 
-def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB4 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
     have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
@@ -714,6 +725,8 @@ def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
       let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
       let R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
       let R2 := hC.get_formalism [⟨S2ᵢ, hS2ᵢ⟩]
+      throwNotImplemented R1 Kᵢ "B4"
+      /-
       let ⟨l1, h1, h2⟩ ← hC.get_literal R1 ⟨S1ᵢ, hS1ᵢ⟩
       let ⟨l2, h3, h4⟩ ← hC.get_literal R2 ⟨S2ᵢ, hS2ᵢ⟩
       if h5 : R1.checkB4 R2 l1 l2 then
@@ -722,12 +735,13 @@ def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
       else
         throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      -/
 
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB4.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB4 hC S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB4.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB4 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
     have R2 := hC.get_formalism [⟨S2ᵢ, hS2ᵢ⟩]

@@ -33,9 +33,9 @@ def parseConstStateSetExpr {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
 
 def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
-    let path← parseWord
+    let path ← parseWord
     let idx ← parseNat
-    return StateSetExpr.bdd sorry
+    return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
 
 def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [

@@ -442,7 +442,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Sᵢ, A1ᵢ⟩, ⟨Aᵢ, A'ᵢ⟩, ⟨S2ᵢ, ⟨⟩⟩, S3ᵢ, ⟨⟩⟩, h', _⟩
         simp [constraintAU] at h'
-        rcases h' with ⟨hS'ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, ⟨hA1ᵢ, hA1⟩, ⟨hK1, hS2ᵢ, hS2⟩, hK2, hS3ᵢ, hS3⟩
+        rcases h' with ⟨hS'ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, ⟨hA1ᵢ, hA1⟩, ⟨hK1, hS2ᵢ, hS2⟩,
+          hK2, hS3ᵢ, hS3⟩
         obtain ⟨hSᵢ, hAᵢ⟩ : Sᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
           hC.stateProgrBounds ⟨S2ᵢ, hS2ᵢ⟩ hS2
         have hA'ᵢ : A'ᵢ < C.actions.size :=

@@ -18,25 +18,24 @@ namespace StateSetFormalism
 instance : ToString StateSetFormalism where
 
   toString
-  | bdd => "bdd"
-  | horn => "horn"
-  | mods => "mods"
+  | bdd => "BDD"
+  | horn => "Horn"
+  | mods => "MODS"
 
 abbrev type {n} (_ : STRIPS n) : StateSetFormalism → Type
 | bdd => BDD (2 * n)
 | horn => Horn (2 * n)
 | mods => MODS (2 * n)
 
+instance BDD.instFormalism {n} {pt : STRIPS n} : Formalism pt (BDD (2 * n)) where
+
 instance Horn.instFormalism {n} {pt : STRIPS n} : Formalism pt (Horn (2 * n)) where
 
 instance MODS.instFormalism {n} {pt : STRIPS n} : Formalism pt (MODS (2 * n)) where
 
-instance BDD.instFormalism {n} {pt : STRIPS n} : Formalism pt (BDD (2 * n)) where
-
 --TODO
-def mkUnprimed {n} (pt : STRIPS n) : UnprimedVariable pt (BDD (2 * n)) :=
+def mkBDD {n} (pt : STRIPS n) : UnprimedVariable pt (BDD (2 * n)) :=
   ⟨BDD.mk (VarSet'.unprimedVars n), VarSet'.isUnprimed_unprimedVars⟩
-
 
 instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formalism pt (R.type pt)
 | bdd => BDD.instFormalism
@@ -61,13 +60,10 @@ instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Renaming (2 *
 open Formalism Formula.Bot Formula.OfPartialModel
 variable {n} (pt : STRIPS n) (R : StateSetFormalism)
 
-abbrev Variable' := Variable pt (R.type pt)
 abbrev UnprimedVariable' := UnprimedVariable pt (R.type pt)
-abbrev Literal' := Literal pt (R.type pt)
 abbrev UnprimedLiteral' := UnprimedLiteral pt (R.type pt)
 abbrev Variables' := Variables pt (R.type pt)
 abbrev UnprimedVariables' := UnprimedVariables pt (R.type pt)
-abbrev Literals' := Literals pt (R.type pt)
 abbrev UnprimedLiterals' := UnprimedLiterals pt (R.type pt)
 
 def mkEmpty : UnprimedVariable' pt R :=

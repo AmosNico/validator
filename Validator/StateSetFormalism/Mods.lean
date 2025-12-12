@@ -132,7 +132,9 @@ instance {n} : Formula n (MODS n) where
 
   models := models
 
-  models_equiv_right := sorry
+  models_equiv_right := by
+    simp [models, PartialModel.models]
+    grind
 
 /-
   ofModel {V} M := MODS.mk V #[M]

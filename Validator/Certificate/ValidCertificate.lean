@@ -215,10 +215,10 @@ def constraintKnowledge {C : Certificate pt} (hC : C.validSets) (Kᵢ : Fin C.kn
     | STA Aᵢ A'ᵢ K1ᵢ K2ᵢ => ⟨_, constraintST C SetType.Actions Kᵢ Aᵢ A'ᵢ K1ᵢ K2ᵢ⟩
   | stateSubset Sᵢ S'ᵢ K =>
     match K with
-    | B1 Sᵢ S'ᵢ => ⟨_, constraintB1 hC Sᵢ S'ᵢ⟩
-    | B2 Sᵢ S'ᵢ => ⟨_, constraintB2 hC Sᵢ S'ᵢ⟩
-    | B3 Sᵢ S'ᵢ => ⟨_, constraintB3 hC Sᵢ S'ᵢ⟩
-    | B4 Sᵢ S'ᵢ => ⟨_, constraintB4 hC Sᵢ S'ᵢ⟩
+    | B1 Sᵢ S'ᵢ => ⟨_, constraintB1 hC Kᵢ Sᵢ S'ᵢ⟩
+    | B2 Sᵢ S'ᵢ => ⟨_, constraintB2 hC Kᵢ Sᵢ S'ᵢ⟩
+    | B3 Sᵢ S'ᵢ => ⟨_, constraintB3 hC Kᵢ Sᵢ S'ᵢ⟩
+    | B4 Sᵢ S'ᵢ => ⟨_, constraintB4 hC Kᵢ Sᵢ S'ᵢ⟩
     | URS Sᵢ S'ᵢ => ⟨_, constraintUR C SetType.States Sᵢ S'ᵢ⟩
     | ULS Sᵢ S'ᵢ => ⟨_, constraintUL C SetType.States Sᵢ S'ᵢ⟩
     | IRS Sᵢ S'ᵢ => ⟨_, constraintIR C Sᵢ S'ᵢ⟩
