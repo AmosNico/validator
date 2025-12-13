@@ -90,18 +90,6 @@ lemma models_append {n} (γ1 γ2 : Clause n) :
     simp [models, -Prod.forall]
     grind
 
-private def isTrivial_aux {n} (acc : Vector (Bool × Bool) n) : Clause n → Vector (Bool × Bool) n
-| [] => acc
-| (x, true) :: ls => isTrivial_aux (acc.set x (true, acc[x].2)) ls
-| (x, false) :: ls => isTrivial_aux (acc.set x (acc[x].1, true)) ls
-
-def isTrivial {n} (γ : Clause n) : Bool :=
-  (isTrivial_aux (Vector.replicate n (false, false)) γ).contains (true, true)
-
-lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ ∃ x, (x, true) ∈ γ ∧ (x, false) ∈ γ :=
-  by
-    sorry
-
 end Clause
 
 /-! ## Cube -/

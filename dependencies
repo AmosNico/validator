@@ -355,6 +355,42 @@ digraph {
 				label=52
 				style=rounded
 			}
+			subgraph "cluster./.git/objects/5b" {
+				label="5b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/69" {
+				label=69
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/03" {
+				label=03
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/68" {
+				label=68
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ab" {
+				label=ab
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/2e" {
+				label="2e"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/e2" {
+				label=e2
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/da" {
+				label=da
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/35" {
+				label=35
+				style=rounded
+			}
 		}
 		subgraph "cluster./.git/logs" {
 			label=logs
@@ -404,6 +440,7 @@ digraph {
 	"Validator/StateSetFormalism/Bdd" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Horn" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Mods" -> "Validator/StateSetFormalism/StateSetFormalism"
+	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/TwoCNF"
 	subgraph "cluster./Validator" {
 		label=Validator
 		style=rounded
@@ -438,6 +475,7 @@ digraph {
 			"Validator/StateSetFormalism/Horn" [label="Horn?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Horn.html"]
 			"Validator/StateSetFormalism/Mods" [label="Mods?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Mods.html"]
 			"Validator/StateSetFormalism/StateSetFormalism" [label="StateSetFormalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/StateSetFormalism.html"]
+			"Validator/StateSetFormalism/TwoCNF" [label="TwoCNF?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/TwoCNF.html"]
 		}
 	}
 	subgraph "cluster./test" {

@@ -4,20 +4,13 @@ namespace Validator
 open Formula
 
 structure Horn n where
-
   vars : VarSet' n
-
-  -- TODO : this is 2CNF, not Horn
-  formula : { φ : CNF n // ∀ c ∈ φ, c.length ≤ 2 }
-
-  subset_vars : ∀ i ∈ formula.val.vars, i ∈ vars.val
-
+  -- TODO
   deriving DecidableEq, Repr
 
 namespace Horn
 
-def models {n} (φ : Horn n) : Models n :=
-  φ.formula.val.models
+def models {n} (φ : Horn n) : Models n := sorry
 
 instance {n} : Formula n (Horn n) where
 
@@ -25,26 +18,19 @@ instance {n} : Formula n (Horn n) where
 
   models := models
 
-  models_equiv_right φ M M' h1 :=
-    by
-      apply CNF.models_equiv_right
-      intro i hi
-      exact h1 i (φ.subset_vars i hi)
+  models_equiv_right := sorry
 
 instance {n} : Top n (Horn n) where
 
-  top := Horn.mk  VarSet'.empty ⟨[], by simp⟩ (by simp)
+  top := sorry
 
-  top_correct := by
-    ext M
-    simp [Formula.models, models]
+  top_correct := sorry
 
 instance {n} : Bot n (Horn n) where
 
-  bot := Horn.mk VarSet'.empty ⟨[[]], by simp⟩ (by simp)
+  bot := sorry
 
-  bot_correct := by
-    simp [Formula.models, models, Formula.vars, Set.ext_iff]
+  bot_correct := sorry
 
 instance {n} : ClausalEntailment n (Horn n) where
 
@@ -54,21 +40,9 @@ instance {n} : ClausalEntailment n (Horn n) where
 
 instance {n} : BoundedConjuction n (Horn n) where
 
-  and φ ψ :=
-    let formula : { φ : CNF n // _ } := ⟨φ.formula.val ++ ψ.formula.val, by grind⟩
-    have h : ∀ i ∈ formula.val.vars , i ∈ (φ.vars.union ψ.vars).val := by
-      intro i
-      have := φ.subset_vars i
-      have := ψ.subset_vars i
-      simp_all only [CNF.mem_vars, Prod.exists, VarSet'.mem_union, formula]
-      grind
-    Horn.mk (VarSet'.union φ.vars ψ.vars) formula h
+  and := sorry
 
-  and_correct := by
-    intro φ ψ
-    ext M
-    simp [Formula.models, Horn.models]
-    grind
+  and_correct := sorry
 
 instance {n} : OfPartialModel n (Horn n) where
 
@@ -84,9 +58,8 @@ instance {n} : Renaming n (Horn n) where
 
 instance {n} : ToCNF n (Horn n) where
 
-  toCNF φ := φ.formula
+  toCNF := sorry
 
-  toCNF_correct := by
-    simp [Formula.models, Horn.models]
+  toCNF_correct := sorry
 
 end Validator.Horn
