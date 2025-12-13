@@ -18,8 +18,8 @@ show-doc: doc
 clean:
 	rm -rf .first-run-done lake-packages .lake build lakefile.olean
 
-dependencies.svg:
-	python dependencies.py
+dependencies:
+	python dependencies_v1.py
 
 # count lines:
 # shopt -s globstar

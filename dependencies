@@ -5,14 +5,382 @@ digraph {
 	Validator [label="Validator✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator.html"]
 	"Validator/Certificate/Parser" -> Validator
 	"Validator/Certificate/ToDerivation" -> Validator
-	subgraph "cluster./test" {
-		label=test
+	subgraph "cluster./.git" {
+		label=".git"
 		style=rounded
+		subgraph "cluster./.git/hooks" {
+			label=hooks
+			style=rounded
+		}
+		subgraph "cluster./.git/info" {
+			label=info
+			style=rounded
+		}
+		subgraph "cluster./.git/refs" {
+			label=refs
+			style=rounded
+			subgraph "cluster./.git/refs/heads" {
+				label=heads
+				style=rounded
+			}
+			subgraph "cluster./.git/refs/tags" {
+				label=tags
+				style=rounded
+			}
+			subgraph "cluster./.git/refs/remotes" {
+				label=remotes
+				style=rounded
+				subgraph "cluster./.git/refs/remotes/main" {
+					label=main
+					style=rounded
+				}
+			}
+		}
+		subgraph "cluster./.git/objects" {
+			label=objects
+			style=rounded
+			subgraph "cluster./.git/objects/pack" {
+				label=pack
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/info" {
+				label=info
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/4b" {
+				label="4b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/b6" {
+				label=b6
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/6d" {
+				label="6d"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/49" {
+				label=49
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/9b" {
+				label="9b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/44" {
+				label=44
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/3b" {
+				label="3b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/cf" {
+				label=cf
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/af" {
+				label=af
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/3a" {
+				label="3a"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/81" {
+				label=81
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/31" {
+				label=31
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ef" {
+				label=ef
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/02" {
+				label=02
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/e1" {
+				label=e1
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/b3" {
+				label=b3
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/6c" {
+				label="6c"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/9e" {
+				label="9e"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/58" {
+				label=58
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/9d" {
+				label="9d"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/fc" {
+				label=fc
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/c9" {
+				label=c9
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/14" {
+				label=14
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/97" {
+				label=97
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/d1" {
+				label=d1
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ff" {
+				label=ff
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/e6" {
+				label=e6
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/b0" {
+				label=b0
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/32" {
+				label=32
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/f4" {
+				label=f4
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/4c" {
+				label="4c"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/86" {
+				label=86
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/a7" {
+				label=a7
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/07" {
+				label=07
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/26" {
+				label=26
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/70" {
+				label=70
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/7f" {
+				label="7f"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/d9" {
+				label=d9
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/37" {
+				label=37
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/c1" {
+				label=c1
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/8a" {
+				label="8a"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/54" {
+				label=54
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/2f" {
+				label="2f"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/79" {
+				label=79
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/22" {
+				label=22
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/a2" {
+				label=a2
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/b9" {
+				label=b9
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/f2" {
+				label=f2
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/c7" {
+				label=c7
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ad" {
+				label=ad
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/7c" {
+				label="7c"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/50" {
+				label=50
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/2d" {
+				label="2d"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/85" {
+				label=85
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/bf" {
+				label=bf
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/7e" {
+				label="7e"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/bd" {
+				label=bd
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/a3" {
+				label=a3
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/41" {
+				label=41
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/8c" {
+				label="8c"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/c0" {
+				label=c0
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/a9" {
+				label=a9
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/5d" {
+				label="5d"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/e5" {
+				label=e5
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/9a" {
+				label="9a"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/e8" {
+				label=e8
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/0b" {
+				label="0b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/f9" {
+				label=f9
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ee" {
+				label=ee
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/25" {
+				label=25
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/d2" {
+				label=d2
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/d3" {
+				label=d3
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ae" {
+				label=ae
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/51" {
+				label=51
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/64" {
+				label=64
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/8f" {
+				label="8f"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/52" {
+				label=52
+				style=rounded
+			}
+		}
+		subgraph "cluster./.git/logs" {
+			label=logs
+			style=rounded
+			subgraph "cluster./.git/logs/refs" {
+				label=refs
+				style=rounded
+				subgraph "cluster./.git/logs/refs/heads" {
+					label=heads
+					style=rounded
+				}
+				subgraph "cluster./.git/logs/refs/remotes" {
+					label=remotes
+					style=rounded
+					subgraph "cluster./.git/logs/refs/remotes/main" {
+						label=main
+						style=rounded
+					}
+				}
+			}
+		}
 	}
+	"Validator/PlanningTask/Basic" -> "Validator/InductiveCertificate"
 	"Validator/Basic" -> "Validator/ProofSystem"
 	"Validator/InductiveCertificate" -> "Validator/ProofSystem"
 	"Validator/StateSetFormalism/Formalism" -> "Validator/ProofSystem"
-	"Validator/PlanningTask/Basic" -> "Validator/InductiveCertificate"
 	"Validator/Certificate/Constraint" -> "Validator/Certificate/BasicRules"
 	"Validator/StateSetFormalism/StateSetFormalism" -> "Validator/Certificate/Certificate"
 	"Validator/Certificate/SetExpr" -> "Validator/Certificate/Constraint"
@@ -28,28 +396,28 @@ digraph {
 	"Validator/PlanningTask/Core" -> "Validator/PlanningTask/Parser"
 	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Bdd"
 	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Formalism"
+	"Validator/PlanningTask/Basic" -> "Validator/StateSetFormalism/Formula"
+	"Validator/Basic" -> "Validator/StateSetFormalism/Formula"
 	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Horn"
 	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/Mods"
 	"Validator/StateSetFormalism/Formalism" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Bdd" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Horn" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Mods" -> "Validator/StateSetFormalism/StateSetFormalism"
-	"Validator/PlanningTask/Basic" -> "Validator/StateSetFormalism/Formula"
-	"Validator/Basic" -> "Validator/StateSetFormalism/Formula"
 	subgraph "cluster./Validator" {
 		label=Validator
 		style=rounded
 		"Validator/Basic" [label="Basic✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Basic.html"]
-		"Validator/ProofSystem" [label="ProofSystem✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/ProofSystem.html"]
 		"Validator/Error" [label="Error✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Error.html"]
 		"Validator/InductiveCertificate" [label="InductiveCertificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/InductiveCertificate.html"]
+		"Validator/ProofSystem" [label="ProofSystem✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/ProofSystem.html"]
 		subgraph "cluster./Validator/Certificate" {
 			label=Certificate
 			style=rounded
 			"Validator/Certificate/BasicRules" [label="BasicRules?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/BasicRules.html"]
 			"Validator/Certificate/Certificate" [label="Certificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Certificate.html"]
 			"Validator/Certificate/Constraint" [label="Constraint✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Constraint.html"]
-			"Validator/Certificate/Parser" [label="Parser?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Parser.html"]
+			"Validator/Certificate/Parser" [label="Parser✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Parser.html"]
 			"Validator/Certificate/SetExpr" [label="SetExpr✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/SetExpr.html"]
 			"Validator/Certificate/ToDerivation" [label="ToDerivation✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ToDerivation.html"]
 			"Validator/Certificate/ValidCertificate" [label="ValidCertificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ValidCertificate.html"]
@@ -66,10 +434,14 @@ digraph {
 			style=rounded
 			"Validator/StateSetFormalism/Bdd" [label="Bdd?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Bdd.html"]
 			"Validator/StateSetFormalism/Formalism" [label="Formalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formalism.html"]
+			"Validator/StateSetFormalism/Formula" [label="Formula?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formula.html"]
 			"Validator/StateSetFormalism/Horn" [label="Horn?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Horn.html"]
 			"Validator/StateSetFormalism/Mods" [label="Mods?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Mods.html"]
 			"Validator/StateSetFormalism/StateSetFormalism" [label="StateSetFormalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/StateSetFormalism.html"]
-			"Validator/StateSetFormalism/Formula" [label="Formula?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formula.html"]
 		}
+	}
+	subgraph "cluster./test" {
+		label=test
+		style=rounded
 	}
 }

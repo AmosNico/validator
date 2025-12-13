@@ -535,7 +535,7 @@ def toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
 
 lemma mem_inter_toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
   {X : UnprimedVariables pt R} {V s} :
-  s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ (UnprimedVariables.val X).inter, ∀ i ∉ V.val, i ∈ s' ↔ i ∈ s :=
+  s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V.val, i ∈ s' ↔ i ∈ s :=
   by
     simp [Variables.inter, toPrimed, UnprimedVariables.val]
     constructor

@@ -7,7 +7,6 @@ def main : IO Unit :=
   do
     try
       let path <- IO.currentDir
-      IO.println path
       let pt_path := path / "test" / "success-task.txt"
       let ⟨n, pt⟩ <- STRIPS.parse pt_path
       IO.println (repr pt)
@@ -23,7 +22,5 @@ def main : IO Unit :=
       | .error e =>
         -- TODO Fix error messages
         throw (IO.userError (e.show ""))
-
-      IO.println (repr C)
     catch e =>
       IO.println e
