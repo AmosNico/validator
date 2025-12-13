@@ -312,7 +312,7 @@ class OfCube n R [F : Formula n R] where
   ofCube : Cube n → R
 
   ofCube_correct {δ} :
-    F.models (ofCube δ) = δ.models ∧ F.vars (ofCube δ) = sorry
+    F.models (ofCube δ) = δ.models ∧ F.vars (ofCube δ) = ...
 -/
 
 class OfPartialModel n R [F : Formula n R] where

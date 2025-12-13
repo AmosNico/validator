@@ -391,6 +391,38 @@ digraph {
 				label=35
 				style=rounded
 			}
+			subgraph "cluster./.git/objects/11" {
+				label=11
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/0c" {
+				label="0c"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/ba" {
+				label=ba
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/2b" {
+				label="2b"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/1a" {
+				label="1a"
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/aa" {
+				label=aa
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/a5" {
+				label=a5
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/53" {
+				label=53
+				style=rounded
+			}
 		}
 		subgraph "cluster./.git/logs" {
 			label=logs
@@ -440,7 +472,6 @@ digraph {
 	"Validator/StateSetFormalism/Bdd" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Horn" -> "Validator/StateSetFormalism/StateSetFormalism"
 	"Validator/StateSetFormalism/Mods" -> "Validator/StateSetFormalism/StateSetFormalism"
-	"Validator/StateSetFormalism/Formula" -> "Validator/StateSetFormalism/TwoCNF"
 	subgraph "cluster./Validator" {
 		label=Validator
 		style=rounded
@@ -471,11 +502,10 @@ digraph {
 			style=rounded
 			"Validator/StateSetFormalism/Bdd" [label="Bdd?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Bdd.html"]
 			"Validator/StateSetFormalism/Formalism" [label="Formalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formalism.html"]
-			"Validator/StateSetFormalism/Formula" [label="Formula?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formula.html"]
+			"Validator/StateSetFormalism/Formula" [label="Formula✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Formula.html"]
 			"Validator/StateSetFormalism/Horn" [label="Horn?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Horn.html"]
 			"Validator/StateSetFormalism/Mods" [label="Mods?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/Mods.html"]
 			"Validator/StateSetFormalism/StateSetFormalism" [label="StateSetFormalism✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/StateSetFormalism.html"]
-			"Validator/StateSetFormalism/TwoCNF" [label="TwoCNF?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/StateSetFormalism/TwoCNF.html"]
 		}
 	}
 	subgraph "cluster./test" {
