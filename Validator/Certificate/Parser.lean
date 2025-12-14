@@ -35,14 +35,14 @@ def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
     let path ← parseWord
     let idx ← parseNat
-    return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
+    return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- sorry -- TODO
 
 def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
     ("b", parseBdd pt),
-    ("h", parserTODO),
-    ("e", parserTODO),
+    ("h", parserTODO), -- sorry
+    ("e", parserTODO), -- sorry
     ("n", return StateSetExpr.neg (← parseNat)),
     ("i", return StateSetExpr.inter (← parseNat) (← parseNat)),
     ("u", return StateSetExpr.union (← parseNat) (← parseNat)),

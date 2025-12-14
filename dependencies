@@ -423,6 +423,18 @@ digraph {
 				label=53
 				style=rounded
 			}
+			subgraph "cluster./.git/objects/13" {
+				label=13
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/27" {
+				label=27
+				style=rounded
+			}
+			subgraph "cluster./.git/objects/12" {
+				label=12
+				style=rounded
+			}
 		}
 		subgraph "cluster./.git/logs" {
 			label=logs
@@ -485,7 +497,7 @@ digraph {
 			"Validator/Certificate/BasicRules" [label="BasicRules?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/BasicRules.html"]
 			"Validator/Certificate/Certificate" [label="Certificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Certificate.html"]
 			"Validator/Certificate/Constraint" [label="Constraint✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Constraint.html"]
-			"Validator/Certificate/Parser" [label="Parser✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Parser.html"]
+			"Validator/Certificate/Parser" [label="Parser?" color=red href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/Parser.html"]
 			"Validator/Certificate/SetExpr" [label="SetExpr✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/SetExpr.html"]
 			"Validator/Certificate/ToDerivation" [label="ToDerivation✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ToDerivation.html"]
 			"Validator/Certificate/ValidCertificate" [label="ValidCertificate✓" color=green href="https://github.com/AmosNico/Master-Thesis/tree/main/validator/Validator/Certificate/ValidCertificate.html"]
