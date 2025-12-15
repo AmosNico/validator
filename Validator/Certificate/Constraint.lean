@@ -2,7 +2,7 @@ import Validator.Certificate.SetExpr
 
 open Validator
 
-structure Constraint (α : Type) where
+structure Constraint (α : Type) : Type where
 
   prop : α → Prop
 

@@ -323,11 +323,11 @@ class OfPartialModel n R [F : Formula n R] where
 
 /-- Renaming consistent with order -/
 class Renaming n R [F : Formula n R] where
-  rename : (φ : R) → (vars' : VarSet' n) → (vars'.val.length = (F.vars φ).val.length) → R
+  rename : (φ : R) → (vars' : VarSet' n) → vars'.val.length = (F.vars φ).val.length → R
 
   rename_correct {φ vars' h} :
     F.vars (rename φ vars' h) = vars' ∧ F.models (rename φ vars' h) =
-      { M | ∃ M' ∈ F.models φ, ∀ i : Fin vars'.val.length, M vars'.val[i] ↔ M' (F.vars φ).val[i]}
+      { M | ∃ M' ∈ F.models φ, ∀ i : Fin vars'.val.length, M vars'.val[i] ↔ M' (F.vars φ).val[i] }
 
 def Renaming.renameModel {n}
   (V V' : VarSet' n) (h : V'.val.length = V.val.length) (M : Model n) : Model n :=

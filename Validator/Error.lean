@@ -57,7 +57,7 @@ def Error.show (context : String) : Error → String
   have ⟨n, k, _⟩ := positionInfo context pos
   s!"  {msg} (line {n}, pos {k})\n" ++ e.show context
 
-abbrev Result.{u} (α : Type u) (p : α → Prop) := Except Error {a // p a}
+abbrev Result.{u} (α : Type u) (p : α → Prop) := Except Error { a // p a }
 
 abbrev Result' (p : Prop) := Result Unit (fun _ ↦ p)
 
