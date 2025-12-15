@@ -41,11 +41,10 @@ theorem soundness' {n} {pt : STRIPS n} {s S} :
   InductiveCertificateState pt s S → UnsolvableState pt s :=
   by
     rintro ⟨hs, h1, h2⟩
-    unfold UnsolvableState
-    apply IsEmpty.mk
+    constructor
     rintro ⟨s', π, h3⟩
     induction π with
-    | empty s' => simp_all
+    | empty s' => exact h1 s' hs h3
     | @cons a s1 s2 s3 ha h π ih =>
       refine ih ?_ h3
       show s2 ∈ S
@@ -71,12 +70,12 @@ theorem completeness' {n} {pt : STRIPS n} {s} :
     simp [InductiveCertificateState]
     split_ands
     · exact reachable_self s
-    · intro s' h2 h3
+    · intro s' π h3
       apply h1
-      exact Plan.mk s' h2 h3
+      exact Plan.mk s' π h3
     · intro s' h
       simp_all [STRIPS.progression, STRIPS.progression']
-      obtain ⟨a, ha, s'', h2, h3⟩ := h
+      rcases h with ⟨a, ha, s'', h2, h3⟩
       obtain π : Path pt s s'' := Classical.choice h2
       constructor
       show Path pt s s'
