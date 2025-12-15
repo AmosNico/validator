@@ -16,9 +16,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: leanprover/lean-action@v1
-      
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ env.GIT_HISTORY_DEPTH }}
+
+      - name: Install elan
+        run: |
+          set -o pipefail
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- --default-toolchain none -y
+          ~/.elan/bin/lean --version
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Cache both .lake/build folders
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/build
+            docbuild/.lake/build
+          key: lakeBuild-${{ hashFiles('lake-manifest.json') }}
+          restore-keys: lakeBuild-
+        
+      - name: Build Validator
+        if: always()
+        run: make validator
+
+      - name: Check environment with lean4checker
+        run: make check
+        
       - name: Build documentation
         if: github.ref_name == 'master'
         run: make doc
