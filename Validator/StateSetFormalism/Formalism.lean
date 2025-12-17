@@ -29,7 +29,7 @@ lemma isUnprimed_empty {n} : empty.IsUnprimed (n := n) :=
 
 def toUnprimed {n} (V : VarSet' n) : VarSet' (2 * n) :=
   ⟨V.val.map Fin.toUnprimed, by
-    rw [StrictMono.sorted_lt_listMap Fin.toUnprimedStrictMono]
+    rw [StrictMono.sortedLT_listMap  Fin.toUnprimedStrictMono]
     exact V.prop⟩
 
 @[simp]
@@ -43,8 +43,8 @@ lemma isUnprimed_toUnprimed {n} {V : VarSet' n} : IsUnprimed (toUnprimed V) :=
 
 def unprimedVars n : VarSet' (2 * n) :=
     let vars := List.ofFn Fin.toUnprimed
-    have h : vars.Sorted (· < ·) := by
-      simp [vars, List.Sorted, Fin.toUnprimed]
+    have h : vars.SortedLT := by
+      simp [vars, List.sortedLT_iff_pairwise, Fin.toUnprimed]
     ⟨vars, h⟩
 
 lemma isUnprimed_unprimedVars {n} : IsUnprimed (unprimedVars n) :=
@@ -176,7 +176,7 @@ def ofVarset' R [Formalism pt R] [h : OfPartialModel (2 * n) R]
   let x : Variable pt R :=
     h.ofPartialModel V.toUnprimed (BitVec.fill _ pos)
   have hx : x.vars.IsUnprimed := by
-    simp [x, h.ofPartialModel_correct]
+    simp only [h.ofPartialModel_correct, x]
     exact VarSet'.isUnprimed_toUnprimed
   ⟨x, hx⟩
 
@@ -191,8 +191,9 @@ lemma mem_models_ofVarSet' [Formalism pt R] [h : OfPartialModel (2 * n) R]
   {V : VarSet' n} {pos M} :
   M ∈ (ofVarset' (h := h) R V pos).val.models ↔ (∀ i ∈ V.val, i ∈ M.unprimedState ↔ pos):=
   by
-    simp [ofVarset', Variable.models, OfPartialModel.ofPartialModel_correct]
-    simp [Formula.PartialModel.models, VarSet'.toUnprimed, Fin.toUnprimed, Model.unprimedState]
+    simp only [Variable.models, ofVarset', OfPartialModel.ofPartialModel_correct]
+    simp only [PartialModel.models, VarSet'.toUnprimed, Fin.getElem_fin, List.getElem_map,
+      Fin.toUnprimed, BitVec.getElem_fill, Set.mem_setOf_eq, Model.unprimedState]
     constructor
     · intro h1 i hi
       obtain ⟨j, h2, rfl⟩ := List.getElem_of_mem hi
@@ -207,13 +208,13 @@ lemma mem_models_of_eq_toState [Formalism pt R]
     intro h2 h3
     have h4 : ∀ i ∈ x, M i = M' i := by
       intro i hi
-      simp [VarSet'.IsUnprimed, even_iff_exists_two_mul] at h1
+      simp only [VarSet'.IsUnprimed, even_iff_exists_two_mul] at h1
       have ⟨j, hj⟩ := h1 i hi
-      simp [Set.ext_iff, Model.unprimedState, Fin.toUnprimed] at h2
+      simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq] at h2
       have h5 := @h2 ⟨j, by omega⟩
       simp [← hj] at h5
       simp [h5]
-    simp [Variable.models]
+    simp only [Variable.models]
     rw [← Formula.models_equiv h4]
     exact h3
 
@@ -243,15 +244,14 @@ def toPrimedAux {n} (oldVars : List (Fin (2 * n))) (h : ∀ i ∈ oldVars, Even 
     | .gt => toPrimedAux (i :: oldVars) (by simp_all) toRename
 
 private lemma toPrimedAux_eq' {n}
-  {oldVars : List (Fin (2 * n))} (h1 : oldVars.Sorted (· < ·)) {h2}
-  {toRename} (h3 : toRename.Sorted (· < ·)) :
+  {oldVars : List (Fin (2 * n))} (h1 : oldVars.SortedLT) {h2}
+  {toRename} (h3 : toRename.SortedLT) :
   toPrimedAux oldVars h2 toRename = oldVars.attach.map (fun ⟨i, hi⟩ ↦
     if i ∈ (VarSet'.toUnprimed ⟨toRename, h3⟩).val then
       i.toPrimed (h2 i hi)
     else i) :=
   by
     unfold toPrimedAux
-    simp
     split
     case h_1 => simp
     case h_2 => simp [VarSet'.toUnprimed]
@@ -260,32 +260,37 @@ private lemma toPrimedAux_eq' {n}
       split
       case h_1 heq =>
         rcases i with ⟨i, hi⟩
-        have h := @toPrimedAux_eq' _ oldVars (by simp_all) (by grind) (j :: toRename) h3
+        have h := @toPrimedAux_eq' _ oldVars (by grind) (by grind) (j :: toRename) h3
         simp [VarSet'.toUnprimed, Fin.toUnprimed, h]
         simp [compare_lt_iff_lt] at heq
-        simp at h3
+        simp [List.sortedLT_iff_pairwise] at h3
         grind
       case h_2 heq =>
-        have h := @toPrimedAux_eq' _ oldVars (by simp_all) (by grind) toRename (by simp_all)
-        simp at heq h1 h3
+        have h := @toPrimedAux_eq' _ oldVars (by grind) (by grind) toRename (by grind)
+        simp only [compare_eq_iff_eq] at heq
         subst heq
-        simp [VarSet'.toUnprimed, Fin.toUnprimed, Fin.toPrimed, h]
+        simp only [h, VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed, Fin.toPrimed, ↓reduceIte,
+          List.cons.injEq, List.map_inj_left, Function.comp_apply, Subtype.forall,
+          true_and, true_or]
+        simp [List.sortedLT_iff_pairwise] at h1
         rintro i' h5
         split
         · grind
         · grind
       case h_3 heq =>
-        have h := @toPrimedAux_eq' _ (i :: oldVars) (by simp_all) (by grind) toRename (by simp_all)
-        simp [compare_gt_iff_gt] at heq h3
-        simp [VarSet'.toUnprimed, Fin.toUnprimed, h]
-        simp [even_iff_exists_two_mul] at h4
+        have h := @toPrimedAux_eq' _ (i :: oldVars) (by simp_all) (by grind) toRename (by grind)
+        simp only [compare_gt_iff_gt] at heq h3
+        simp only [h, VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed, List.attach_cons,
+          List.map_cons, List.map_map, List.cons.injEq, List.map_inj_left, List.mem_attach,
+          Function.comp_apply, forall_const, Subtype.forall]
+        simp only [List.mem_cons, even_iff_exists_two_mul, forall_eq_or_imp] at h4
         constructor
         · split
           · grind
           · grind
         · intro ⟨i', hi'⟩ h5
           obtain ⟨j', rfl⟩ := h4.2 ⟨i', hi'⟩ h5
-          simp at h1
+          simp [List.sortedLT_iff_pairwise] at h1
           split
           · grind
           · grind
@@ -295,7 +300,7 @@ lemma toPrimedAux_eq {n} {oldVars : VarSet' (2 * n)} {h} {toRename : VarSet' n} 
   toPrimedAux oldVars.val h toRename = oldVars.val.attach.map (fun ⟨i, hi⟩ ↦
     if i ∈ toRename.toUnprimed.val then
       have hi : i + 1 < 2 * n := by
-        simp [even_iff_exists_two_mul] at h
+        simp only [even_iff_exists_two_mul] at h
         have := h i hi
         omega
       ⟨i + 1, hi⟩
@@ -309,12 +314,12 @@ def toPrimed [Formalism pt R] [Renaming (2 * n) R]
   (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
   let vars : List (Fin (2 * n)) :=
     toPrimedAux x.val.vars (by grind) V.val
-  have hvars : vars.Sorted (· < ·) := by
+  have hvars : vars.SortedLT := by
     have h1 := x.val.vars.prop
-    simp_all only [List.Sorted, List.pairwise_iff_getElem, toPrimedAux_eq, List.length_map,
-      List.length_attach, List.getElem_map, List.getElem_attach, vars]
+    simp_all only [List.sortedLT_iff_pairwise, List.pairwise_iff_getElem, toPrimedAux_eq,
+      List.length_map, List.length_attach, List.getElem_map, List.getElem_attach, vars]
     have h2 := x.prop
-    simp [VarSet'.IsUnprimed, even_iff_exists_two_mul] at h2
+    simp only [VarSet'.IsUnprimed, even_iff_exists_two_mul] at h2
     intro i j hi hj h3
     specialize h1 i j hi hj h3
     obtain ⟨vi, h4⟩ := h2 x.val.vars.val[i] (by simp)
@@ -327,32 +332,34 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Renaming (2 * n) R]
   {x : UnprimedVariable pt R} {V M} :
   M ∈ (x.toPrimed V).models ↔ M.toPrimed V ∈ x.val.models :=
   by
-    simp [Variable.models, toPrimed, toPrimedAux_eq, Variable.models, Renaming.mem_rename_models]
+    simp only [Variable.models, toPrimed, toPrimedAux_eq, Renaming.mem_rename_models]
     apply Formula.models_equiv
-    simp [Renaming.renameModel, Model.toPrimed_eq, Variable.vars, -Nat.not_even_iff_odd]
+    simp only [Variable.vars, Renaming.renameModel, Fin.getElem_fin, List.getElem_map,
+      List.getElem_attach, Model.toPrimed_eq, dite_not, eq_iff_iff]
     intro i hi
     have h2  := x.prop i hi
-    simp [h2]
+    simp only [h2, ↓reduceDIte]
     split
     case _ => simp_all
     case _ j h3 =>
-      simp at h3
+      simp only [List.finIdxOf?_eq_some_iff] at h3
       rcases h3 with ⟨rfl, _⟩
-      simp_all [VarSet'.toUnprimed, Fin.toUnprimed]
+      simp_all only [VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed]
       split
       case _ h4 =>
         have : ⟨(Formula.vars x.val).val[j] / 2, by omega⟩ ∈ V.val := by
           rcases h4 with ⟨i, h3, h4⟩
-          simp [← h4]
-          exact h3
-        simp_all
+          simp only [Fin.getElem_fin, ← h4, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+            mul_div_cancel_left₀, h3]
+        simp_all only [List.getElem_mem, Fin.getElem_fin, ↓reduceIte]
       case _ h4 =>
         have : ¬⟨(Formula.vars x.val).val[j] / 2, by omega⟩ ∈ V.val := by
           intro h5
-          simp_all [even_iff_exists_two_mul]
+          simp_all only [Fin.getElem_fin, even_iff_exists_two_mul, not_exists, not_and]
           rcases h2 with ⟨i, h3⟩
           specialize h4 _ h5
-          simp_all
+          simp_all only [List.getElem_mem, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
+            mul_div_cancel_left₀]
           simp [← h3] at h4
         simp_all
 
@@ -379,9 +386,9 @@ lemma UnprimedLiteral.toStates_eq [Formalism pt R] : {l : UnprimedLiteral pt R} 
 | (X, true) => by
   simp [Literal.toStates, Variable.toStates_eq, Literal.models, UnprimedLiteral.val]
 | (X, false) => by
-  simp [Literal.toStates, Variable.toStates_eq, Literal.models, UnprimedLiteral.val]
+  simp only [Literal.toStates, val, Variable.toStates_eq, Literal.models]
   ext s
-  simp
+  simp only [Set.mem_compl_iff, Set.mem_image, not_exists, not_and]
   constructor
   · have ⟨M, h⟩ := Model.exists_model_of_state s
     grind
@@ -475,7 +482,9 @@ lemma union_append [Formalism pt R] {X1 X2 : UnprimedVariables pt R} :
 lemma mem_inter [F : Formalism pt R] {X : UnprimedVariables pt R} {s} :
   s ∈ X.val.inter ↔ ∀ x ∈ X, s ∈ x.val.toStates :=
   by
-    simp [Variables.mem_inter, val, Variable.toStates_eq]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Variables.mem_inter, List.mem_unattach, forall_exists_index,
+      Variable.toStates_eq, Subtype.forall]
     constructor
     · rintro ⟨M, rfl, h1⟩ x h2 h3
       use M
@@ -495,7 +504,9 @@ lemma inter_variables_append [Formalism pt R]
   (X1 ++ X2.val).inter = X1.inter ∩ X2.val.inter :=
   by
     ext s
-    simp [Variables.mem_inter, val]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Variables.mem_inter, List.mem_append, List.mem_unattach,
+      Set.mem_inter_iff, forall_exists_index]
     constructor
     · grind
     · rintro ⟨⟨M1, rfl, h1⟩, M2, h2, h3⟩
@@ -516,8 +527,9 @@ lemma inter_subset_union_iff_models [F : Formalism pt R]
   (X1 : Variables pt R) (X2 : UnprimedVariables pt R) :
   X1.inter ⊆ X2.val.union ↔ (∀ M, (∀ x ∈ X1, M ∈ F.models x) → ∃ x ∈ X2, M ∈ x.val.models) :=
   by
-    simp [Set.subset_def, UnprimedVariables.val,
-      Variables.mem_inter, Variables.mem_union]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Set.subset_def, Variables.mem_inter, Variables.mem_union,
+      List.mem_unattach, forall_exists_index, and_imp, Subtype.exists, exists_and_right]
     constructor
     · intro h1 M hM
       specialize @h1 M.unprimedState M rfl hM
@@ -537,14 +549,16 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
   {X : UnprimedVariables pt R} {V s} :
   s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V.val, i ∈ s' ↔ i ∈ s :=
   by
-    simp [Variables.inter, toPrimed, UnprimedVariables.val]
+    simp only [Variables.inter, toPrimed, List.mem_map, Subtype.exists, forall_exists_index,
+      and_imp, Set.mem_setOf_eq, val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', List.mem_unattach, ↓existsAndEq, true_and]
     constructor
     · rintro ⟨M, rfl, h1⟩
       use Model.toPrimed V M
       constructor
       · intro x h2 h3
         specialize h1 (UnprimedVariable.toPrimed ⟨x, h2⟩ V) x h2 h3 rfl
-        simp [UnprimedVariable.mem_models_toPrimed_iff] at h1
+        simp only [UnprimedVariable.mem_models_toPrimed_iff] at h1
         exact h1
       · simp [Model.toPrimed_eq, Model.unprimedState, Fin.toUnprimed]
         grind
@@ -555,15 +569,17 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
           ⟨i / 2, by omega⟩ ∈ s
         else
           ⟨i / 2, by omega⟩ ∈ M.unprimedState
-      simp [Model.unprimedState, Fin.toUnprimed]
+      simp only [Model.unprimedState, Fin.toUnprimed, even_two, Even.mul_right, ↓reduceIte, ne_eq,
+        OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀, Fin.eta, Set.setOf_mem_eq,
+        Set.mem_setOf_eq, true_and]
       intro _ x h3 h4 rfl
-      simp [UnprimedVariable.mem_models_toPrimed_iff]
+      simp only [UnprimedVariable.mem_models_toPrimed_iff]
       specialize h1 x h3 h4
       refine Formula.models_equiv_right _ _ _ ?_ h1
       intro ⟨i, hi⟩ h5
       have h6 := h3 ⟨i, hi⟩ h5
       simp [Model.toPrimed_eq, h6, Nat.even_add_one]
-      simp [even_iff_exists_two_mul] at h6
+      simp only [even_iff_exists_two_mul] at h6
       rcases h6 with ⟨j, rfl⟩
       simp_all [Model.unprimedState, Fin.toUnprimed]
       grind
@@ -642,7 +658,7 @@ def single [Formalism pt R] : UnprimedLiteral pt R → UnprimedLiterals pt R
 lemma union_single [Formalism pt R] {l : UnprimedLiteral pt R} :
   (single l).val.union = l.val.toStates :=
   by
-    simp [single, UnprimedLiteral.toStates_eq]
+    simp only [single, UnprimedLiteral.toStates_eq]
     split
     all_goals
       ext s
@@ -653,7 +669,7 @@ lemma union_single [Formalism pt R] {l : UnprimedLiteral pt R} :
 lemma inter_single [Formalism pt R] {l : UnprimedLiteral pt R} :
   (single l).val.inter = l.val.toStates :=
   by
-    simp [single, UnprimedLiteral.toStates_eq]
+    simp only [single, UnprimedLiteral.toStates_eq]
     split
     all_goals
       ext s
@@ -677,7 +693,10 @@ lemma union_val [Formalism pt R] {L : UnprimedLiterals pt R} :
   L.val.union = L.1.val.union ∪ L.2.val.interᶜ :=
   by
     ext s
-    simp [Variables.mem_inter, Variables.mem_union, Variable.models, val, UnprimedVariables.val]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Literals.mem_union, List.mem_unattach, Variable.models,
+      UnprimedVariables.val, Set.mem_union, Variables.mem_union, Set.mem_compl_iff,
+      Variables.mem_inter, forall_exists_index, not_exists, not_and, not_forall]
     constructor
     · rintro ⟨M, rfl, h1⟩
       rcases h1 with ⟨x, ⟨h1, h2⟩, h3⟩ | ⟨x, ⟨h1, h2⟩, h3⟩
@@ -697,7 +716,10 @@ lemma inter_val [Formalism pt R] {L : UnprimedLiterals pt R} :
   L.val.inter = L.1.val.inter ∩ L.2.val.unionᶜ :=
   by
     ext s
-    simp [Variables.mem_inter, Variables.mem_union, val, UnprimedVariables.val]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Literals.mem_inter, List.mem_unattach, forall_exists_index,
+      UnprimedVariables.val, Set.mem_inter_iff, Variables.mem_inter, Set.mem_compl_iff,
+      Variables.mem_union, not_exists, not_and]
     constructor
     · rintro ⟨M, rfl, h1, h2⟩
       constructor
@@ -713,7 +735,9 @@ lemma inter_append [Formalism pt R] {L1 L2 : UnprimedLiterals pt R} :
   (L1.val ++ L2.val).inter = L1.val.inter ∩ L2.val.inter :=
   by
     ext s
-    simp [UnprimedLiterals.val]
+    simp only [val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+      List.flatMap_singleton', Literals.mem_inter, Literals.append_pos, List.mem_append,
+      List.mem_unattach, Literals.append_neg, Set.mem_inter_iff, forall_exists_index]
     constructor
     · grind
     · rintro ⟨⟨M1, rfl, h1, h2⟩, M2, h3, h4, h5⟩

@@ -31,7 +31,7 @@ At runtime we use an `Array` instead of `Finset`.
 
 abbrev VarSet n := Set (Fin n)
 
-abbrev VarSet' n := { vars : List (Fin n) // vars.Sorted (· < ·) }
+abbrev VarSet' n := { vars : List (Fin n) // vars.SortedLT }
 
 def convertVarSet {n} (V : VarSet' n) : VarSet n :=
   V.val.toFinset

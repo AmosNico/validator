@@ -65,7 +65,7 @@ lemma cons_to_snoc {n} {pt : STRIPS n} {a : Action n} {s1 s2 s3 : State n}
         simp [length]
       obtain ⟨s2'', a'', ha'', π'', succ'', heq, heq'⟩ := cons_to_snoc ha' succ' π'
       use s2'', a'', ha'', cons a s2 ha succ π'', succ''
-      simp [length]
+      simp only [length, Nat.add_right_cancel_iff]
       rw [heq, heq']
       simp [snoc]
 
@@ -131,7 +131,7 @@ lemma mem_snoc {n : ℕ} {pt : STRIPS n} {a s1 s2 s3} {ha : a ∈ pt.actions}
       simp [instMembershipState, snoc]
       tauto
     | @cons a' s1 s2 s2' ha' succ' π ih =>
-      simp [snoc]
+      simp only [snoc, mem_cons]
       rw [ih]
       tauto
 
@@ -145,17 +145,14 @@ lemma last_mem {n} {pt : STRIPS n} {s1 s2} (π : Path pt s1 s2) : s2 ∈ π :=
     induction π with
     | empty s => simp
     | @cons a s1 s2 s3 ha succ π ih =>
-      simp
-      apply Or.inr
-      exact ih
+      simp [mem_cons, ih]
 
 lemma mem_append {n} {pt : STRIPS n} {s1 s2 s3} (π₁ : Path pt s1 s2) (π₂ : Path pt s2 s3) :
   ∀ s, s ∈ (π₁ ++ π₂) ↔ s ∈ π₁ ∨ s ∈ π₂ :=
   by
     induction π₁ with
     | empty =>
-      simp [instHAppend, Path.append]
-      exact Path.first_mem π₂
+      simp [instHAppend, Path.append, Path.first_mem]
     | cons =>
       simp_all [instHAppend, Path.append]
       tauto
@@ -170,11 +167,11 @@ lemma split {n} {pt : STRIPS n} {s1 s2 s} (π : Path pt s1 s2) (h : s ∈ π) :
   by
   cases π with
   | empty s =>
-    simp at h
+    simp only [mem_empty] at h
     subst h
     use Path.empty s, Path.empty s
   | cons a s3 ha succ π =>
-    simp at h
+    simp only [mem_cons] at h
     rcases h with rfl | h
     · use Path.empty s, cons a s3 ha succ π
     · obtain ⟨π₁, π₂⟩ := split π h
@@ -196,7 +193,7 @@ abbrev Reachable {n} (pt : STRIPS n) (s s' : State n) : Prop :=
 lemma reachable_self {n pt} : ∀ s : State n, Reachable pt s s :=
   by
     intro s
-    simp [Reachable]
+    simp only [Reachable]
     constructor
     exact Path.empty s
 
@@ -255,14 +252,14 @@ lemma progression_union_actions {n} {pt : STRIPS n} {S A1 A2} :
 lemma progression_monotone_states {n} {pt : STRIPS n} {A} : Monotone (pt.progression · A) :=
   by
     intro S1 S2 hS s hs
-    simp_all [mem_progression]
+    simp_all only [Set.le_eq_subset, mem_progression]
     obtain ⟨a, ha, s', hs', succ⟩ := hs
     use a, ha, s', hS hs'
 
 lemma progression_monotone_actions {n} {pt : STRIPS n} {S} : Monotone (pt.progression S) :=
   by
     intro A1 A2 hA s hs
-    simp_all [mem_progression]
+    simp_all only [Set.le_eq_subset, mem_progression]
     obtain ⟨a, ha, s', hs', succ⟩ := hs
     use a, hA ha, s'
 
@@ -282,7 +279,7 @@ lemma sub_progression_iff_sub_regression {n} {pt : STRIPS n} {S S' A} :
     constructor
     · intro h1 s hs_regr
       obtain ⟨a, ha, s', hs', succ⟩ := (mem_regression s).1 hs_regr
-      simp at ⊢ hs'
+      simp only [Set.mem_compl_iff] at ⊢ hs'
       by_contra hs1
       apply hs'
       apply h1

@@ -14,21 +14,19 @@ lemma models_nonempty {n} {V : VarSet' n} (M : PartialModel V) : Nonempty M.mode
   by
     constructor
     use fun i ↦ (List.finRange V.val.length).any fun j ↦ V.val[j].val = i && M[j]
-    simp [models]
     rintro ⟨i, hi⟩
     rcases V with ⟨l, h⟩
-    simp [← Fin.ext_iff]
+    simp only [← Fin.ext_iff]
     rw [← Bool.coe_iff_coe]
     have : ∀ i {_ : i < l.length} j {_ : j < l.length}, l[i] = l[j] ↔ i = j := by
-      simp [List.Sorted, List.pairwise_iff_getElem] at h
+      simp only [List.sortedLT_iff_pairwise, List.pairwise_iff_getElem] at h
       grind only
-    simp
     grind
 
 lemma disjoint {n} {V : VarSet' n} {M1 M2 : PartialModel V} {M} :
   M ∈ M1.models → M ∈ M2.models → M1 = M2 :=
   by
-    simp [models]
+    simp only [models]
     intro hM1 hM2
     ext i hi
     specialize hM1 ⟨i, hi⟩
@@ -48,7 +46,8 @@ lemma mem_models_to_mem_literal_models
   {n} {V : VarSet' n} {M : PartialModel V} {l : Literal n} {M'} :
   M.contains_literal l → M' ∈ M.models →  M' ∈ l.models :=
   by
-    simp [models, Literal.mem_models, contains_literal]
+    simp only [contains_literal, List.any_eq_true, List.mem_finRange, Bool.and_eq_true,
+      decide_eq_true_eq, true_and, models, Literal.mem_models, forall_exists_index, and_imp]
     intro i h1 h2 h3
     rw [← h1, ← h2]
     exact h3 i
@@ -111,7 +110,9 @@ instance {n} : ClausalEntailment n (MODS n) where
   entails_correct :=
     by
       intro φ γ
-      simp [Formula.models, Set.subset_def, Clause.isTrivial_iff, -Bool.exists_bool]
+      simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, Prod.exists,
+        Clause.isTrivial_iff, Formula.models, Set.subset_def, mem_models, Clause.mem_models,
+        forall_exists_index, and_imp]
       constructor
       · intro h M M' hM' hM
         rcases h with h | ⟨x, h⟩
@@ -135,9 +136,9 @@ instance {n} : ClausalEntailment n (MODS n) where
           obtain ⟨M, hM⟩ := M'.models_nonempty
           rcases h M M' hM' hM with ⟨var, b, h1, h2⟩
           use var, b, h1
-          simp_all [Literal.mem_models, PartialModel.contains_literal_iff]
+          simp_all only [Literal.mem_models, Bool.exists_bool, Bool.false_eq_true, iff_false,
+            iff_true, PartialModel.contains_literal_iff, Fin.getElem_fin]
           by_contra h3
-          simp at h3
           obtain ⟨j, hj, h3⟩ := List.getElem_of_mem h1
           sorry
 

@@ -13,12 +13,12 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.25.2"
+rev = "v4.27.0-rc1"
 
 [[require]]
 name = "Parser"
 git = "https://github.com/fgdorais/lean4-parser"
-rev = "c721f95697678dc252c90d16c48056d4fee38e7a"
+rev = "e09a85fef8b2ee9875723410ee60448ff7b71642"
 
 [[lean_lib]]
 name = "Validator"
@@ -26,7 +26,3 @@ name = "Validator"
 [[lean_exe]]
 name = "validator"
 root = "Validator"
-
-[[lean_exe]]
-name = "test"
-root = "Test"

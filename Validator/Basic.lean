@@ -115,7 +115,7 @@ lemma List.mem_biInter {α β} [Fintype β] [DecidableEq β] {l : List α} {f : 
   by simp [List.biInter]
 -/
 @[simp]
-lemma Fintype.elems_eq_univ {α} [h : Fintype α] [DecidableEq α] : h.elems = Finset.univ :=
+lemma Fintype.elems_eq_univ {α} [h : Fintype α] : h.elems = Finset.univ :=
   by
     ext a
     simp [Fintype.complete]
@@ -133,7 +133,8 @@ instance {α} [Fintype α] [DecidableEq α] {n} : Fintype (Vector α n) where
       induction n with
       | zero => simp [Vector.elems]
       | succ n ih =>
-        simp [Vector.forall_cons_iff, Vector.elems]
+        simp only [Vector.elems, Fintype.elems_eq_univ, Finset.mem_biUnion, Finset.mem_image,
+          Finset.mem_univ, true_and, Vector.forall_cons_iff]
         intro a v
         use v, ih v, a
 
@@ -243,12 +244,14 @@ lemma List.mem_mergeDedup {α} [LinearOrder α] {xs ys : List α} {a} :
   all_goals grind
 
 lemma List.mergeDedup_sorted {α} [LinearOrder α] {xs ys : List α} :
-  xs.Sorted (· < ·) → ys.Sorted (· < ·) → (mergeDedup xs ys).Sorted (· < ·) := by
+  xs.SortedLT → ys.SortedLT → (mergeDedup xs ys).SortedLT := by
   fun_induction mergeDedup
-  all_goals simp
+  · tauto
+  · tauto
   case _ x xs y ys h ih =>
-    simp [compare_lt_iff_lt] at h
-    simp_all [mem_mergeDedup]
+    simp only [compare_lt_iff_lt] at h
+    simp_all only [sortedLT_iff_pairwise, pairwise_cons, and_imp, mem_mergeDedup, mem_cons,
+      implies_true, and_true]
     intro h1 h2 h3 h4 x' hx'
     rcases hx' with hx' | rfl | hx'
     · grind
@@ -256,11 +259,12 @@ lemma List.mergeDedup_sorted {α} [LinearOrder α] {xs ys : List α} :
     · specialize h3 x' hx'
       exact Trans.trans h h3
   case _ x xs y ys h ih =>
-    simp [mem_mergeDedup]
+    simp [List.sortedLT_iff_pairwise, mem_mergeDedup]
     grind
   case _ x xs y ys h ih =>
-    simp [compare_gt_iff_gt] at h
-    simp_all [mem_mergeDedup]
+    simp only [compare_gt_iff_gt] at h
+    simp_all only [sortedLT_iff_pairwise, pairwise_cons, and_imp, mem_mergeDedup, mem_cons,
+      implies_true, and_true]
     intro h1 h2 h3 h4 x' hx'
     rcases hx' with (rfl | hx') | hx'
     · exact h
@@ -284,19 +288,20 @@ def List.diff' {α} [Ord α] : (xs ys : List α) → List α
   | .gt => diff' (x :: xs) ys
 
 lemma List.mem_diff' {α} [LinearOrder α] {xs ys : List α}
-  (h1 : xs.Sorted (· < ·)) (h2 : ys.Sorted (· < ·)) :
+  (h1 : xs.SortedLT) (h2 : ys.SortedLT) :
   ∀ a, a ∈ diff' xs ys ↔ a ∈ xs ∧ a ∉ ys := by
   fun_induction diff'
-  all_goals simp
+  · tauto
+  · tauto
   all_goals
-    simp at h1 h2
+    simp [List.sortedLT_iff_pairwise] at *
     simp_all [compare_lt_iff_lt, compare_gt_iff_gt]
     grind
 
 lemma List.diff'_sorted {α} [LinearOrder α] {xs ys : List α} :
-  xs.Sorted (· < ·) → ys.Sorted (· < ·) → (diff' xs ys).Sorted (· < ·) := by
+  xs.SortedLT→ ys.SortedLT → (diff' xs ys).SortedLT := by
   fun_induction diff'
-  all_goals simp_all [mem_diff']
+  all_goals simp_all [List.sortedLT_iff_pairwise, mem_diff']
 
 lemma List.map_toFinset {α β} [DecidableEq α] [DecidableEq β] {f : α → β} {xs : List α} :
   (xs.map f).toFinset = xs.toFinset.image f := by

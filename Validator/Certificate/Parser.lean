@@ -200,9 +200,7 @@ def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) :=
     match (parseCertificate pt).run content with
     | .ok _ res => return res
     | .error _ e =>
-      let msg :=
-        s!"The certificate at \"{path}\" is not valid:\n" ++
-        e.show content
+      let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString
       throw (IO.userError msg)
 
 end Certificate

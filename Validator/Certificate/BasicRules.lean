@@ -135,7 +135,7 @@ def get_literal (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.
     let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨S'ᵢ, by omega⟩
     let l : UnprimedLiteral' pt R := (x, false)
     have h3 : hC.getStates Sᵢ = l.val.toStates := by
-      simp [l, UnprimedLiteral.val, Literal.toStates]
+      simp only [Literal.toStates, UnprimedLiteral.val, l]
       rw [← h1]
       exact hC.getStatesNeg Sᵢ ⟨S'ᵢ, by omega⟩ (by simp_all)
     have h4 : IsLiteral pt (type pt R) (hC.getStates Sᵢ) := by
@@ -172,7 +172,9 @@ def get_union_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.
     return ⟨L1 ++ L2, h5, h6⟩
   | _ => do
     let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralUnion.single h2⟩
+    return ⟨UnprimedLiterals.single l, by
+      simp_all only [Fin.getElem_fin, Fin.eta, UnprimedLiterals.union_single, true_and]
+      exact IsLiteralUnion.single h2⟩
 
 def get_inter_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
   Result (UnprimedLiterals' pt R)
@@ -190,12 +192,15 @@ def get_inter_literals (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.
       rw [← h1, ← h3]
       exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
     have h6 : IsLiteralInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [-Finset.inter_assoc]
+      simp_all only [Fin.getElem_fin, UnprimedLiterals.inter_val, UnprimedLiterals.val_append,
+        UnprimedLiterals.inter_append]
       exact IsLiteralInter.inter h2 h4
     return ⟨(L1 ++ L2), h5, h6⟩
   | _ => do
     let ⟨l, h1, h2⟩ ← hC.get_literal R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedLiterals.single l, by simp_all; exact IsLiteralInter.single h2⟩
+    return ⟨UnprimedLiterals.single l, by
+      simp_all only [Fin.getElem_fin, Fin.eta, UnprimedLiterals.inter_single, true_and]
+      exact IsLiteralInter.single h2⟩
 
 def get_inter_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
   Result (UnprimedVariables' pt R)
@@ -219,7 +224,10 @@ def get_inter_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C
     return ⟨(X1 ++ X2), h5, h6⟩
   | _ => do
     let ⟨x, h1, h2⟩ ← hC.get_variable R ⟨Sᵢ, by omega⟩
-    return ⟨UnprimedVariables.single x, by simp_all; exact IsVariableInter.single h2⟩
+    return ⟨UnprimedVariables.single x, by
+      simp_all only [Fin.getElem_fin, Fin.eta, UnprimedVariables.val_single, Variables.inter_single,
+        true_and]
+      exact IsVariableInter.single h2⟩
 
 def get_progression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
   Result (UnprimedVariables' pt R × ActionIds pt)
@@ -265,7 +273,8 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
     have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter := by
       simp_all [L, UnprimedVariables.val]
     have h4 : IsProgrInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [UnprimedVariables.val, L]
+      simp_all only [Fin.getElem_fin, UnprimedVariables.val,
+        UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsProgrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
   | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or progression"
@@ -303,11 +312,11 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
     let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R ⟨S'ᵢ, by omega⟩
     let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
     have h5 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter  := by
-      simp_all [Literals.inter]
+      simp_all only [Fin.getElem_fin, List.coe_toFinset, List.mem_map, Literals.inter]
       rw [← h1, ← h3]
       exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
     have h6 : IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) := by
-      simp_all [Literals.inter]
+      simp_all only [Fin.getElem_fin, List.coe_toFinset, List.mem_map, Literals.inter]
       exact IsRegrInter.inter h2 h4
     return ⟨(X, A, L), h5, h6⟩
   | .regr S'ᵢ Aᵢ => do
@@ -316,7 +325,8 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
     have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter := by
       simp_all [L, UnprimedVariables.val]
     have h4 : IsRegrInter pt (type pt R) (hC.getStates Sᵢ) := by
-      simp_all [L, UnprimedVariables.val]
+      simp_all only [Fin.getElem_fin, UnprimedVariables.val,
+        UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsRegrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
   | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or regression"
@@ -450,7 +460,7 @@ lemma mem_toStates_addVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
 -- Only return deleting effects that are not adding effects
 def delVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
   let vars := List.diff' pt.actions'[aᵢ].del'.val pt.actions'[aᵢ].add'.val
-  have h : vars.Sorted (· < ·) := by
+  have h : vars.SortedLT := by
     apply List.diff'_sorted
     · exact pt.actions'[aᵢ].del'.prop
     · exact pt.actions'[aᵢ].add'.prop
@@ -517,12 +527,17 @@ lemma checkB2'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
       simp [X, X0'] at h
       simp [checkB2', check_variables_subset_correct, ← Set.inter_assoc, h]
     ext s
-    simp [STRIPS.progression', Successor, Applicable]
-    simp [X, X0', UnprimedVariables.mem_inter_toPrimed]
+    simp only [STRIPS.progression', UnprimedVariables.mem_inter, Successor,
+      Applicable, Set.mem_setOf_eq]
+    simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
+      UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
+      UnprimedVariables.mem_inter, mem_preVariables, forall_eq, mem_toStates_preVariable,
+      mem_effectVarSet', not_or, and_imp, mem_effectVariables, forall_eq_or_imp,
+      mem_toStates_addVariable, mem_toStates_delVariable, X, X0']
     constructor
     · rintro ⟨⟨s', ⟨h1, h2⟩, h3⟩, h4, h5⟩
       have : s = s' \ pt.actions'[aᵢ].del ∪ pt.actions'[aᵢ].add := by
-        simp [Set.subset_compl_iff_disjoint_left] at h5
+        simp only [Set.subset_compl_iff_disjoint_left] at h5
         have h6 := Disjoint.notMem_of_mem_left h5
         grind
       grind
@@ -553,13 +568,18 @@ lemma checkB3'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
       simp [X, X0'] at h
       simp [checkB3', check_variables_subset_correct, ← Set.inter_assoc, h]
     ext s
-    simp [STRIPS.regression', Successor, Applicable]
-    simp [X, X0', UnprimedVariables.mem_inter_toPrimed]
+    simp only [STRIPS.regression', UnprimedVariables.mem_inter, Successor,
+      Applicable, exists_eq_right_right, Set.mem_setOf_eq]
+    simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
+      UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
+      UnprimedVariables.mem_inter, mem_effectVariables, forall_eq_or_imp, mem_toStates_addVariable,
+      forall_eq, mem_toStates_delVariable, Subtype.forall, mem_effectVarSet',
+      not_or, and_imp, mem_preVariables, mem_toStates_preVariable, and_congr_left_iff, X, X0']
     intro h1
     constructor
     · rintro ⟨s', ⟨h2, h3⟩, h4⟩ x h5 h6
       have : s' = s \ pt.actions'[aᵢ].del ∪ pt.actions'[aᵢ].add := by
-        simp [Set.subset_compl_iff_disjoint_left] at h2
+        simp only [Set.subset_compl_iff_disjoint_left] at h2
         have h7 := Disjoint.notMem_of_mem_left h2.2
         grind
       grind
@@ -764,7 +784,8 @@ def constraintB5 {C : Certificate pt} (hC : C.validSets) (A1ᵢ A2ᵢ : ℕ) : C
       let ⟨⟨⟩, hA2ᵢ⟩ ← (actionBounds' C A2ᵢ).verify
       if h : hC.getActions' ⟨A1ᵢ, hA1ᵢ⟩ ⊆ hC.getActions' ⟨A2ᵢ, hA2ᵢ⟩ then
         return ⟨(), by
-          simp [getActions]
+          simp only [getActions, List.coe_toFinset, List.mem_map, Set.setOf_subset_setOf,
+            forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
           use hA1ᵢ, hA2ᵢ
           grind⟩
       else

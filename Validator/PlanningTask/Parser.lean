@@ -10,7 +10,7 @@ This file contains some general parsing functions and a parser for STRIPS planni
 -/
 
 /-! ## General Parsing Functionality -/
-abbrev Parser := ParserT Error Substring Char Id
+abbrev Parser := ParserT Error String.Slice Char Id
 
 def parseSpaces : Parser Unit :=
   Parser.dropMany (Parser.Char.char ' ')
@@ -23,10 +23,10 @@ def parseEol : Parser Unit :=
   parseSpaces <* Parser.optional (Parser.Char.char ';') <* Parser.Char.eol
 
 def checkString (s : String) : Parser Unit :=
-  Parser.Char.string s *> parseSpaces
+  Parser.Char.chars s *> parseSpaces
 
 def checkLine (s : String) : Parser Unit :=
-  Parser.Char.string s *> parseEol
+  Parser.Char.chars s *> parseEol
 
 -- TODO : rename
 def readLine {α} (s : String) (p : Parser α) : Parser α :=
@@ -38,13 +38,13 @@ def dropLine : Parser Unit :=
 def parseLine : Parser String :=
   do
     let ⟨⟨l⟩, _⟩ ← Parser.takeUntil Parser.Char.eol Parser.anyToken
-    return String.mk l
+    return String.ofList l
 
 def parseWord : Parser String :=
   do
     let stop : Parser Unit := parseSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
     let ⟨⟨l⟩, _⟩ ← Parser.takeUntil stop Parser.anyToken
-    return String.mk l
+    return String.ofList l
 
 def parseNat : Parser ℕ :=
   Parser.Char.ASCII.parseNat <* parseSpaces
@@ -114,7 +114,7 @@ private def parseVar {n} : Parser (Fin n) :=
 private def parseVarLn {n} : Parser (Fin n) := parseVar <* parseEol
 
 private def toVarset {n} (l : List (Fin n)) : VarSet' n :=
-  ⟨l.toFinset.sort (· ≤ ·), Finset.sort_sorted_lt l.toFinset⟩
+  ⟨l.toFinset.sort (· ≤ ·), Finset.sortedLT_sort l.toFinset⟩
 
 private def parseVarSet {n} : Parser (VarSet' n) :=
   do
@@ -212,8 +212,7 @@ def parse (path : System.FilePath) : IO (Σ n, STRIPS n) :=
     | .ok _ res => return res
     | .error _ e =>
       let msg :=
-        s!"An error occured when parsing the planning problem at \"{path}\":\n" ++
-        e.show content
+        s!"An error occured when parsing the planning problem at \"{path}\":\n" ++ e.toString
       throw (IO.userError msg)
 
 end Validator.STRIPS

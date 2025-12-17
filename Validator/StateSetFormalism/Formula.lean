@@ -16,7 +16,9 @@ operations should do. More specifically the file contains
 /-! ## VarSet' -/
 namespace Validator.VarSet'
 
-def empty {n} : VarSet' n := ⟨[], by simp⟩
+-- TODO : check if List.sortedLT_iff_pairwise is needed
+def empty {n} : VarSet' n :=
+  ⟨[], by simp [List.sortedLT_iff_pairwise]⟩
 
 def union {n} (V V' : VarSet' n) : VarSet' n :=
   ⟨List.mergeDedup V V', List.mergeDedup_sorted V.prop V'.prop⟩
@@ -340,13 +342,13 @@ def Renaming.renameModel {n}
 lemma Renaming.mem_rename_models {n R} [F : Formula n R] [Renaming n R] {φ vars' h M} :
   M ∈ F.models (rename φ vars' h) ↔ renameModel (F.vars φ) vars' (by simp [h]) M ∈ F.models φ :=
   by
-    simp [rename_correct]
+    simp only [rename_correct, Fin.getElem_fin, Set.mem_setOf_eq]
     constructor
     · rintro ⟨M', h1, h2⟩
       unfold renameModel
       rw [Formula.models_equiv]
       · exact h1
-      · simp
+      · simp only [Fin.getElem_fin, eq_iff_iff]
         intro i hi
         split
         · grind
@@ -355,14 +357,14 @@ lemma Renaming.mem_rename_models {n R} [F : Formula n R] [Renaming n R] {φ vars
           grind
     · intro h1
       use renameModel (vars φ) vars' h M, h1
-      simp [renameModel]
+      simp only [renameModel, Fin.getElem_fin]
       intro i
       split
       · grind
       · rename_i j h
-        simp_all
+        simp_all only [List.finIdxOf?_eq_some_iff, Fin.getElem_fin]
         rcases h with ⟨h1, h2⟩
-        have h3 := List.Sorted.nodup (F.vars φ).prop
+        have h3 := List.SortedLT.nodup (F.vars φ).prop
         apply (List.Nodup.getElem_inj_iff h3).1 at h1
         simp_all only
 
@@ -380,7 +382,7 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
   (disjunctionToCNF φs).models = { M | ∃ φ ∈ φs, M ∈ F.models φ } :=
   by
     ext M
-    simp [disjunctionToCNF, -Prod.exists, ← toCNF_correct]
+    simp only [disjunctionToCNF, CNF.mem_models, ← toCNF_correct, Set.mem_setOf_eq]
     constructor
     · induction φs with
       | nil => simp
@@ -390,7 +392,8 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
     · induction φs with
       | nil => simp
       | cons φ φs ih =>
-        simp [-Prod.exists] at ⊢ ih
+        simp only [forall_exists_index, and_imp, List.mem_cons, exists_eq_or_imp, List.map_cons,
+          List.multiply_cons, List.mem_flatMap, List.mem_map] at ⊢ ih
         intro h1 _ γ1 hγ1 γ2 hγ2 rfl
         rcases h1 with h1 | ⟨φ', h1, h2⟩
         · grind
@@ -413,7 +416,7 @@ lemma conjunctionToDnF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
   (conjunctionToDNF φs).models = { M | ∀ φ ∈ φs, M ∈ F.models φ } :=
   by
     ext M
-    simp [conjunctionToDNF, ← toDNF_correct, -Prod.forall]
+    simp only [conjunctionToDNF, DNF.mem_models, ← toDNF_correct, Set.mem_setOf_eq]
     induction φs with
       | nil => simp
       | cons φ φs ih =>

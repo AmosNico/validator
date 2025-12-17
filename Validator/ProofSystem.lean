@@ -23,16 +23,16 @@ abbrev DeadState {n} (pt : STRIPS n) (s : State n) : Prop :=
 /-- Alternative definiton of dead states. -/
 lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
   DeadState pt s ↔ ¬ Reachable pt pt.init s ∨ UnsolvableState pt s := by
-  simp [DeadState, UnsolvableState]
+  simp only [DeadState, not_nonempty_iff, UnsolvableState]
   constructor
   · contrapose
-    simp
+    simp only [not_or, not_isEmpty_iff, not_forall, not_not, and_imp, Nonempty.forall]
     intro π plan
     use Plan.mk plan.last (π ++ plan.path) plan.goal
-    simp [Path.mem_append]
+    simp only [Path.mem_append]
     exact Or.inl (Path.last_mem π)
   · rintro h ⟨s', π, hgoal⟩ hs
-    simp at hs
+    simp only at hs
     obtain ⟨π₁, π₂⟩ := Path.split π hs
     rcases h with h | h
     · exact h.false π₁
@@ -175,11 +175,11 @@ private lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
   by
     induction π₂ with
     | empty s =>
-      simp
+      simp only [Path.mem_empty, forall_eq]
       exact hs1
     | @cons a s1 s2 s3 ha succ π₂ ih =>
       intro s' hs'
-      simp at hs'
+      simp only [Path.mem_cons] at hs'
       cases hs' with
       | inl heq =>
         subst heq
@@ -192,7 +192,7 @@ private lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
           have h' : DeadState pt s2 := h2 s2 h
           let π : Path pt pt.init s3 := π₁ ++ Path.cons a s2 ha succ π₂
           apply h' (Plan.mk s3 π hgoal)
-          simp [π, Path.mem_append]
+          simp only [Path.mem_append, Path.mem_cons, π]
           suffices s2 ∈ π₂ by simp_all
           exact Path.first_mem π₂
         have hs2 : s2 ∈ S := by
@@ -222,10 +222,10 @@ lemma progression_initial {n} {pt : STRIPS n} {S S'}
   Dead pt (Sᶜ) :=
   by
     rintro s hs ⟨s', π, hgoal⟩ s_in_π
-    simp at h3
+    simp only [Set.singleton_subset_iff] at h3
     have s_in_S : s ∈ S :=
       progression_aux h3 (Path.empty pt.init) π hgoal h1 h2 s s_in_π
-    simp at hs
+    simp only [Set.mem_compl_iff] at hs
     exact hs s_in_S
 
 -- Unable to use regular induction on π₁ (I assume because pt.init is not a variable)
@@ -235,11 +235,11 @@ private lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
   by
     cases heq : π₁ using Path.snocCases with
     | empty s =>
-      simp
+      simp only [Path.mem_empty, forall_eq]
       exact hs1
     | snoc a s0 ha π₁' succ =>
       intro s' hs'
-      simp at hs'
+      simp only [Path.mem_snoc] at hs'
       cases hs' with
       | inl heq =>
         subst heq
@@ -274,7 +274,7 @@ lemma regression_goal {n} {pt : STRIPS n} {S S'}
       exact h3 s' (by simp_all [STRIPS.goal_states]) (Plan.mk s' π hgoal) (Path.last_mem π)
     have s_in_S : s ∈ S :=
       regression_aux hs' π (Path.empty s') hgoal h1 h2 s s_in_π
-    simp at hs
+    simp only [Set.mem_compl_iff] at hs
     exact hs s_in_S
 
 lemma regression_initial {n} {pt : STRIPS n} {S S'}
@@ -284,7 +284,7 @@ lemma regression_initial {n} {pt : STRIPS n} {S S'}
   Dead pt S :=
   by
     rintro s hs ⟨s', π, hgoal⟩ s_in_π
-    simp at h3
+    simp only [Set.singleton_subset_iff, Set.mem_compl_iff] at h3
     apply h3
     obtain ⟨π₁, π₂⟩ := Path.split π s_in_π
     apply regression_aux hs π₁ π₂ hgoal h1 h2
@@ -305,7 +305,6 @@ theorem soundness {n} {pt : STRIPS n} {conclusion} : (d : Derivation pt conclusi
 | ED => by simp [Dead]
 | UD S S' d1 d2 =>
   by
-    simp [Dead]
     intro s hs
     cases hs with
     | inl hs =>
@@ -316,7 +315,6 @@ theorem soundness {n} {pt : STRIPS n} {conclusion} : (d : Derivation pt conclusi
       exact hs
 | SD S S' d1 d2 =>
   by
-    simp [Dead]
     intro s hs
     show DeadState pt s
     apply d1.soundness
@@ -351,7 +349,7 @@ theorem soundness {n} {pt : STRIPS n} {conclusion} : (d : Derivation pt conclusi
     constructor
     have h : DeadState pt pt.init :=
       d.soundness pt.init (by simp)
-    simp [DeadState, Path.first_mem] at h
+    simp only [DeadState, Path.first_mem, not_true_eq_false] at h
     exact h
 | CG d =>
   by
@@ -433,7 +431,8 @@ def fromInductiveCertificate {n} {pt : STRIPS n} {S} :
                 (IsLiteralInter.single <| pos <| explicit S)
                 (IsLiteralInter.single <| pos <| goal)
             · exact IsLiteralUnion.single <| pos <| empty
-            · simp [Set.eq_empty_iff_forall_notMem, STRIPS.goal_states]
+            · simp only [STRIPS.goal_states, Set.subset_empty_iff, Set.eq_empty_iff_forall_notMem,
+                Set.mem_inter_iff, Set.mem_setOf_eq, not_and]
               exact h2
       · apply B1 (States n)
         · exact IsLiteralInter.single <| pos <| init

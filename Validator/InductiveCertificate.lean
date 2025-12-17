@@ -67,14 +67,13 @@ theorem completeness' {n} {pt : STRIPS n} {s} :
     unfold UnsolvableState
     rintro ⟨h1⟩
     use { s' | Reachable pt s s' }
-    simp [InductiveCertificateState]
+    simp only [InductiveCertificateState, Set.mem_setOf_eq, Nonempty.forall]
     split_ands
     · exact reachable_self s
     · intro s' π h3
       apply h1
       exact Plan.mk s' π h3
     · intro s' h
-      simp_all [STRIPS.progression, STRIPS.progression']
       rcases h with ⟨a, ha, s'', h2, h3⟩
       obtain π : Path pt s s'' := Classical.choice h2
       constructor
@@ -133,11 +132,10 @@ lemma expand_monotone_states {n} (pt : STRIPS n) (k : ℕ) : Monotone (expand pt
   by
     intro S1 S2 hS
     induction k with
-    | zero =>
-      simp [expand]
-      exact hS
+    | zero => exact hS
     | succ k ih =>
-      simp_all [expand, Set.subset_union_of_subset_left]
+      simp_all only [Set.le_eq_subset, expand, Set.union_subset_iff,
+        Set.subset_union_of_subset_left, true_and]
       apply Set.subset_union_of_subset_right
       apply progression_monotone_states
       exact ih
@@ -156,7 +154,7 @@ noncomputable instance {α} [Fintype α] [DecidableEq α] : CompleteLattice (Fin
 
   le_sSup := by
     intro S as has a ha
-    simp
+    simp only [Finset.mem_sup, Set.mem_toFinset, id_eq]
     use as
 
   sSup_le := by
@@ -169,7 +167,7 @@ noncomputable instance {α} [Fintype α] [DecidableEq α] : CompleteLattice (Fin
   sInf_le := by
     intro S as has
     apply Finset.inf_le
-    simp
+    simp only [Set.mem_toFinset]
     exact has
 
   le_sInf := by
@@ -202,7 +200,7 @@ lemma exists_eq_iSup_monotone {β : Type} [CompleteLattice β] [WellFoundedGT β
       use I.sup id
       exact Finset.comp_sup_eq_sup_comp_of_nonempty hf h
     | inr h =>
-      simp at h
+      simp only [Finset.not_nonempty_iff_eq_empty] at h
       subst h
       use 0
       apply iSup_eq_bot.1 (symm hI)
@@ -213,18 +211,16 @@ lemma mem_reachable_helper {n} {pt : STRIPS n} {s s'} {k}
   by
     induction k generalizing s' with
     | zero =>
-      simp [expand] at hs'
+      simp only [expand, Set.mem_singleton_iff] at hs'
       rw [hs']
       exact reachable_self s
     | succ k ih =>
       rw [expand] at hs'
-      simp at hs'
       cases hs' with
       | inl hs' =>
         rw [hs']
         exact reachable_self s
       | inr hs' =>
-        simp [mem_progression] at hs'
         obtain ⟨a, ha, s'', hs'', succ⟩ := hs'
         obtain ⟨π⟩ := ih hs''
         constructor
@@ -248,11 +244,12 @@ theorem mem_reachable {n} (pt : STRIPS n) {s s'} : s' ∈ reachable_states pt s 
       induction π with
       | empty s'' => simp [Path.length, expand]
       | @cons a s1 s2 s3 ha succ π ih =>
-        simp [Path.length, expand, ← expand_progression]
+        simp only [Path.length, expand, ← expand_progression, Set.le_eq_subset,
+          Set.singleton_subset_iff]
         apply Or.inr
-        simp at ih
+        simp only [Set.le_eq_subset, Set.singleton_subset_iff] at ih
         have h : {s2} ⊆ pt.progression {s1} pt.actions := by
-          simp
+          simp only [Set.singleton_subset_iff]
           exact mem_progression_of_successor (by simp) ha succ
         apply expand_monotone_states pt π.length h
         apply ih
