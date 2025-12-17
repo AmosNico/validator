@@ -1,3 +1,5 @@
+# Based on https://github.com/m4lvin/lean4-pdl/blob/main/.github/workflows/build.yml
+
 name: Lean Action CI
 
 on:
@@ -13,6 +15,7 @@ permissions:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:

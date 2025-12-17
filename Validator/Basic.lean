@@ -222,7 +222,7 @@ lemma List.mem_multiply {α} {asss as} :
         apply h
 -/
 
-/-
+/--
 Similar to `List.merge`, but also remove duplicates.
 I tried to combine `List.merge` with `List.dedup`, but there are no lemmas for
 `List.dedup` with sorted. There is also `Array.mergeDedup`, but that also has no lemmas.

@@ -217,11 +217,11 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       | B5 =>
         simp only at h
         apply Constraint.elim_exists at h
-        rcases h with ⟨_, h, _⟩
-        simp at h
-        rcases h with ⟨hA1ᵢ, hA2ᵢ, h'⟩
-        simp [hA1ᵢ, hA2ᵢ] at h'
-        exact Derivation.B5 _ _ h'
+        rcases h with ⟨_, h', _⟩
+        simp at h'
+        rcases h' with ⟨hA1ᵢ, hA2ᵢ, h''⟩
+        simp [hA1ᵢ, hA2ᵢ] at h''
+        exact Derivation.B5 _ _ h''
       | URA =>
         rename' A1ᵢ => Aᵢ, A2ᵢ => A1ᵢ
         simp only at h
@@ -281,38 +281,38 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       | B1 => -- TODO: this is the same as B2 and B3
         simp only at h
         apply Constraint.elim_exists at h
-        rcases h with ⟨⟨⟩, h, _⟩
-        simp at h
-        rcases h with ⟨hS1ᵢ, hS2ᵢ, h'⟩
-        simp [hS1ᵢ, hS2ᵢ] at h'
-        rcases h' with ⟨h1, h2, h3⟩
+        rcases h with ⟨⟨⟩, h', _⟩
+        simp at h'
+        rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
+        simp [hS1ᵢ, hS2ᵢ] at h''
+        rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B1 _ h1 h2 h3
       | B2 =>
         simp only at h
         apply Constraint.elim_exists at h
-        rcases h with ⟨⟨⟩, h, _⟩
-        simp at h
-        rcases h with ⟨hS1ᵢ, hS2ᵢ, h'⟩
-        simp [hS1ᵢ, hS2ᵢ] at h'
-        rcases h' with ⟨h1, h2, h3⟩
+        rcases h with ⟨⟨⟩, h', _⟩
+        simp at h'
+        rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
+        simp [hS1ᵢ, hS2ᵢ] at h''
+        rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B2 _ h1 h2 h3
       | B3 =>
         simp only at h
         apply Constraint.elim_exists at h
-        rcases h with ⟨⟨⟩, h, _⟩
-        simp at h
-        rcases h with ⟨hS1ᵢ, hS2ᵢ, h'⟩
-        simp [hS1ᵢ, hS2ᵢ] at h'
-        rcases h' with ⟨h1, h2, h3⟩
+        rcases h with ⟨⟨⟩, h', _⟩
+        simp at h'
+        rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
+        simp [hS1ᵢ, hS2ᵢ] at h''
+        rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B3 _ h1 h2 h3
       | B4 =>
         simp only at h
         apply Constraint.elim_exists at h
-        rcases h with ⟨⟨⟩, h, _⟩
-        simp at h
-        rcases h with ⟨hS1ᵢ, hS2ᵢ, h'⟩
-        simp [hS1ᵢ, hS2ᵢ] at h'
-        rcases h' with ⟨h1, h2, h3⟩
+        rcases h with ⟨⟨⟩, h', _⟩
+        simp at h'
+        rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
+        simp [hS1ᵢ, hS2ᵢ] at h''
+        rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B4 _ _ h1 h2 h3
       | URS =>
         rename' S1ᵢ => Sᵢ, S2ᵢ => S1ᵢ
