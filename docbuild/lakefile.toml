@@ -6,7 +6,7 @@ packagesDir = "../.lake/packages"
 
 [[require]]
 name = "validator"
-path = "../"
+path = ".."
 
 [[require]]
 scope = "leanprover"

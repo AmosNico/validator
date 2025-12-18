@@ -45,19 +45,19 @@ jobs:
         run: make validator
 
       - name: Build documentation
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         run: make doc
 
       - name: Setup Graphviz
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         uses: ts-graphviz/setup-graphviz@v2
 
       - name: Build dependencies graph
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         run: make dependencies
 
       - name: Copy documentation to `home_page/docs`
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         run: |
           rm -rf home_page
           mkdir -p home_page
@@ -65,22 +65,22 @@ jobs:
           cp dependencies.svg home_page/docs/
 
       - name: Remove unnecessary lake files from documentation in `home_page/docs`
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         run: |
           find home_page/docs -name "*.trace" -delete
           find home_page/docs -name "*.hash" -delete
 
       - name: List website content
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         run: find home_page
 
       - name: Upload website
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'home_page/'
 
       - name: Deploy to GitHub Pages
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'main'
         id: deployment
         uses: actions/deploy-pages@v4

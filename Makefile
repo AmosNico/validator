@@ -11,7 +11,11 @@ validator: .first-run-done
 doc:
 	cd docbuild && lake -Kenv=dev build Validator:docs
 
-show-doc: doc
+# use show-doc when locally building documentation. 
+# The default option DOCGEN_SRC="github" gives an error message when used locally.
+# The file breaks links to source code, but at least it runs
+show-doc:
+	cd docbuild && DOCGEN_SRC="file" lake -Kenv=dev build Validator:docs
 	(sleep 2 && flatpak run io.gitlab.librewolf-community http://127.0.0.1:8000/Validator.html) &
 	cd docbuild/.lake/build/doc && python -m http.server --bind 127.0.0.1
 
