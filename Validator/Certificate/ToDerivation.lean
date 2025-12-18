@@ -4,7 +4,7 @@ import Validator.Certificate.ValidCertificate
 namespace Validator.Certificate.valid
 
 variable {n : ℕ} {pt : STRIPS n}
-open Knowledge Certificate ProofSystem
+open Knowledge Certificate ProofSystem Constraint
 
 def conclusion {C : Certificate pt} {hC : C.valid} (Kᵢ : Fin C.knowledge.size) : Prop :=
   match heq : C.knowledge[Kᵢ] with
@@ -69,7 +69,7 @@ lemma conclusionUnsolvable
 
 -- TODO : check whether Kᵢ : ℕ with Kᵢ < C.knowledge.size works better
 
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 300000 in
 -- Because the following definition is very large with many cases, we need to increase the number of Heartbeats.
 def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size) :
   Derivation pt (hC.conclusion Kᵢ) :=
@@ -82,13 +82,13 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
     -- case dead Sᵢ K
     case h_1 Sᵢ K heq =>
       rw [heq] at h
-      simp_all
+      simp_all only
       cases K with
       | ED =>
         simp only at h
-        apply Constraint.elim_exists at h
+        apply elim_exists at h
         rcases h with ⟨⟨⟩, h', _⟩
-        simp at h'
+        simp only [isStateEmpty.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS⟩
         rw [hC.getStatesEmpty ⟨Sᵢ, hSᵢ⟩ hS]
         exact Derivation.ED
@@ -97,7 +97,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨Sᵢ, S'ᵢ⟩, ⟨⟩, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintUD] at h'
+        simp only [constraintUD, and.prop_eq, bounds.prop_eq, seq.prop_eq, isStateUnion.prop_eq,
+          eq.prop_eq, isDeadKnowledge.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, hK1, hK2⟩
         have ⟨hSᵢ, hS'ᵢ⟩: Sᵢ < C.states.size ∧ S'ᵢ < C.states.size :=
           hC.stateUnionBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1
@@ -111,7 +112,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, S'ᵢ, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintSD] at h'
+        simp only [constraintSD, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isDeadKnowledge.prop_eq, bothEq.prop_eq, isStateSubsetKnowledge.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hK1ᵢ, hK2ᵢ, hK1, hK2⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           hC.deadKnowledgeBound ⟨K1ᵢ, by omega⟩ hK1
@@ -124,7 +126,10 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩,⟨⟩, ⟨S1ᵢ, S2ᵢ⟩, ⟨⟨Aᵢ, ⟨⟩⟩, ⟨S'ᵢ, ⟨⟩⟩⟩, S3ᵢ, SGᵢ, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintPG] at h'
+        simp only [constraintPG, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateSubsetKnowledge.prop_eq, leftEq.prop_eq, isStateProgr.prop_eq, isActionAll.prop_eq,
+          isStateUnion.prop_eq, eq.prop_eq, isDeadKnowledge.prop_eq, isStateInter.prop_eq,
+          isStateGoal.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hK1ᵢ, hK2ᵢ, hK3ᵢ, hK1, ⟨⟨⟨hS1ᵢ, hS1⟩, hAᵢ, hA⟩, ⟨⟨hS2ᵢ, hS2⟩, hK2⟩⟩,
           hK3, ⟨hS3ᵢ, hS3⟩, hSGᵢ, hSG⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
@@ -146,7 +151,10 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩,⟨⟩, Sᵢ, ⟨⟨S2ᵢ, S3ᵢ⟩, ⟨Aᵢ,⟨⟩⟩, S'ᵢ, ⟨⟩⟩, SIᵢ, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintPI] at h'
+        simp only [constraintPI, and.prop_eq, bounds.prop_eq, seq.prop_eq, isStateNeg.prop_eq,
+          isStateSubsetKnowledge.prop_eq, leftEq.prop_eq, isStateProgr.prop_eq, isActionAll.prop_eq,
+          isStateUnion.prop_eq, eq.prop_eq, isDeadKnowledge.prop_eq, rightEq.prop_eq,
+          isStateInit.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, hK2ᵢ, hK3ᵢ, ⟨hS1ᵢ, hS1⟩,
           ⟨hK1, ⟨⟨hS2ᵢ, hS2⟩, hAᵢ, hA⟩, ⟨hS3ᵢ, hS3⟩, hK2⟩, hK3, hSIᵢ, hSI⟩
         have ⟨hSᵢ, hS'ᵢ⟩ : Sᵢ < C.states.size ∧ S'ᵢ < C.states.size :=
@@ -168,7 +176,10 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Sᵢ, ⟨S2ᵢ, S3ᵢ⟩, ⟨Aᵢ,⟨⟩⟩, S'ᵢ, ⟨⟩⟩, S4ᵢ, SGᵢ, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintRG] at h'
+        simp only [constraintRG, and.prop_eq, bounds.prop_eq, seq.prop_eq, isStateNeg.prop_eq,
+          isStateSubsetKnowledge.prop_eq, leftEq.prop_eq, isStateRegr.prop_eq, isActionAll.prop_eq,
+          isStateUnion.prop_eq, eq.prop_eq, isDeadKnowledge.prop_eq, isStateInter.prop_eq,
+          isStateGoal.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, hK2ᵢ, hK3ᵢ, ⟨⟨hS1ᵢ, hS1⟩, hK1, ⟨⟨hS2ᵢ, hS2⟩, hAᵢ, hA⟩,
           ⟨hS3ᵢ, hS3⟩, hK2⟩, hK3, ⟨hS4ᵢ, hS4⟩, hSGᵢ, hSG⟩
         have ⟨hSᵢ, hS'ᵢ⟩ : Sᵢ < C.states.size ∧ S'ᵢ < C.states.size :=
@@ -192,7 +203,10 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         apply Constraint.elim_exists at h
         rcases h with
           ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨⟩, ⟨S1ᵢ, S2ᵢ⟩, ⟨Aᵢ,⟨⟩⟩, ⟨S'ᵢ, ⟨⟩⟩, ⟨SIᵢ, S3ᵢ⟩, ⟨⟩, ⟨⟩⟩, ⟨h', _⟩⟩
-        simp [constraintRI] at h'
+        simp only [constraintRI, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateSubsetKnowledge.prop_eq, leftEq.prop_eq, isStateRegr.prop_eq, isActionAll.prop_eq,
+          isStateUnion.prop_eq, eq.prop_eq, isDeadKnowledge.prop_eq, isStateInit.prop_eq,
+          isStateNeg.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hK1ᵢ, hK2ᵢ, hK3ᵢ, hK1, ⟨⟨hS1ᵢ, hS1⟩, hAᵢ, hA⟩,
           ⟨⟨hS2ᵢ, hS2⟩, hK2⟩, hK3, ⟨hSIᵢ, hSI⟩, hS3ᵢ, hS3⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
@@ -212,22 +226,23 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
     -- case subsetAction Aᵢ A'ᵢ K
     case h_2 A1ᵢ A2ᵢ K heq =>
       rw [heq] at h
-      simp_all
+      simp_all only
       cases K with
       | B5 =>
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨_, h', _⟩
-        simp at h'
+        simp only [constraintB5.prop_eq] at h'
         rcases h' with ⟨hA1ᵢ, hA2ᵢ, h''⟩
-        simp [hA1ᵢ, hA2ᵢ] at h''
+        simp only [hA2ᵢ, exists_true_left, hA1ᵢ] at h''
         exact Derivation.B5 _ _ h''
       | URA =>
         rename' A1ᵢ => Aᵢ, A2ᵢ => A1ᵢ
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, A'ᵢ⟩, h', _⟩
-        simp [constraintUR] at h'
+        simp only [constraintUR, and.prop_eq, actionBounds'.prop_eq, leftEq.prop_eq,
+          isActionUnion.prop_eq] at h'
         rcases h' with ⟨hAᵢ, hA1ᵢ, hA1⟩
         have hA'ᵢ : A'ᵢ < C.actions.size :=
           (hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1).2
@@ -238,7 +253,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, A'ᵢ⟩, h', _⟩
-        simp [constraintUL] at h'
+        simp only [constraintUL, and.prop_eq, actionBounds'.prop_eq, rightEq.prop_eq,
+          isActionUnion.prop_eq] at h'
         rcases h' with ⟨hAᵢ, hA1ᵢ, hA1⟩
         have hA'ᵢ : A'ᵢ < C.actions.size :=
           (hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1).1
@@ -249,7 +265,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Aᵢ, A'ᵢ⟩, ⟨⟩, ⟨⟩⟩, h', _⟩
-        simp [constraintSU] at h'
+        simp only [constraintSU, and.prop_eq, actionBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isActionUnion.prop_eq, bothEq.prop_eq, isActionSubsetKnowledge.prop_eq] at h'
         rcases h' with ⟨hA''ᵢ, hK1ᵢ, hK2ᵢ, ⟨hA1ᵢ, hA1⟩, hK1, hK2⟩
         obtain ⟨hAᵢ, hA'ᵢ⟩ : Aᵢ < C.actions.size ∧ A'ᵢ < C.actions.size :=
           hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1
@@ -264,7 +281,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨⟩, A'ᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintST] at h'
+        simp only [constraintST, and.prop_eq, actionBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          leftEq.prop_eq, isActionSubsetKnowledge.prop_eq, bothEq.prop_eq] at h'
         rcases h' with ⟨hAᵢ, hA''ᵢ, hK1ᵢ, hK2ᵢ, hK1, hK2⟩
         have hA'ᵢ : A'ᵢ < C.actions.size :=
           (hC.actionSubsetKnowledgeBounds ⟨K1ᵢ, by omega⟩ hK1).2
@@ -276,42 +294,42 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
     -- case subsetState Sᵢ S'ᵢ K
     case h_3 S1ᵢ S2ᵢ K heq =>
       rw [heq] at h
-      simp_all
+      simp_all only
       cases K with
       | B1 => -- TODO: this is the same as B2 and B3
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟩, h', _⟩
-        simp at h'
+        simp only [constraintB1.prop_eq] at h'
         rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
-        simp [hS1ᵢ, hS2ᵢ] at h''
+        simp only [hS2ᵢ, exists_true_left, hS1ᵢ] at h''
         rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B1 _ h1 h2 h3
       | B2 =>
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟩, h', _⟩
-        simp at h'
+        simp only [constraintB2.prop_eq] at h'
         rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
-        simp [hS1ᵢ, hS2ᵢ] at h''
+        simp only [hS2ᵢ, exists_true_left, hS1ᵢ] at h''
         rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B2 _ h1 h2 h3
       | B3 =>
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟩, h', _⟩
-        simp at h'
+        simp only [constraintB3.prop_eq] at h'
         rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
-        simp [hS1ᵢ, hS2ᵢ] at h''
+        simp only [hS2ᵢ, exists_true_left, hS1ᵢ] at h''
         rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B3 _ h1 h2 h3
       | B4 =>
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟩, h', _⟩
-        simp at h'
+        simp only [constraintB4.prop_eq, exists_and_left] at h'
         rcases h' with ⟨hS1ᵢ, hS2ᵢ, h''⟩
-        simp [hS1ᵢ, hS2ᵢ] at h''
+        simp only [hS2ᵢ, exists_true_left, hS1ᵢ] at h''
         rcases h'' with ⟨h1, h2, h3⟩
         exact Derivation.B4 _ _ h1 h2 h3
       | URS =>
@@ -319,7 +337,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, S'ᵢ⟩, h', _⟩
-        simp [constraintUR] at h'
+        simp only [constraintUR, and.prop_eq, stateBounds'.prop_eq, leftEq.prop_eq,
+          isStateUnion.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS1ᵢ, hS1⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           (hC.stateUnionBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1).2
@@ -330,7 +349,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, S'ᵢ⟩, h', _⟩
-        simp [constraintUL] at h'
+        simp only [constraintUL, and.prop_eq, stateBounds'.prop_eq, rightEq.prop_eq,
+          isStateUnion.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS1ᵢ, hS1⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           (hC.stateUnionBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1).1
@@ -341,7 +361,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, S'ᵢ⟩, h', _⟩
-        simp [constraintIR] at h'
+        simp only [constraintIR, and.prop_eq, stateBounds'.prop_eq, leftEq.prop_eq,
+          isStateInter.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS1ᵢ, hS1⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           (hC.stateInterBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1).2
@@ -352,7 +373,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, S'ᵢ⟩, h', _⟩
-        simp [constraintIL] at h'
+        simp only [constraintIL, and.prop_eq, stateBounds'.prop_eq, rightEq.prop_eq,
+          isStateInter.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS1ᵢ, hS1⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           (hC.stateInterBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1).1
@@ -362,7 +384,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨S3ᵢ, S''ᵢ⟩, ⟨Sᵢ, S'ᵢ⟩, ⟨S4ᵢ, S5ᵢ⟩, ⟨⟩,⟨⟩⟩, h', _⟩
-        simp [constraintDI] at h'
+        simp only [constraintDI, seq.prop_eq, isStateInter.prop_eq, isStateUnion.prop_eq,
+          and.prop_eq, bothEq.prop_eq] at h'
         rcases h' with ⟨⟨hS1ᵢ, hS1⟩, ⟨hS3ᵢ, hS3⟩, ⟨hS2ᵢ, hS2⟩, ⟨hS4ᵢ, hS4⟩, hS5ᵢ, hS5⟩
         obtain ⟨hSᵢ, hS'ᵢ⟩ : Sᵢ < C.states.size ∧ S'ᵢ < C.states.size :=
           hC.stateUnionBounds ⟨S3ᵢ, hS3ᵢ⟩ hS3
@@ -379,7 +402,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Sᵢ, S'ᵢ⟩, ⟨⟩, ⟨⟩⟩, h', _⟩
-        simp [constraintSU] at h'
+        simp only [constraintSU, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateUnion.prop_eq, bothEq.prop_eq, isStateSubsetKnowledge.prop_eq] at h'
         rcases h' with ⟨hS''ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, hK1, hK2⟩
         obtain ⟨hSᵢ, hS'ᵢ⟩ : Sᵢ < C.states.size ∧ S'ᵢ < C.states.size :=
           hC.stateUnionBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1
@@ -394,7 +418,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨S'ᵢ, S''ᵢ⟩, ⟨⟩, ⟨⟩⟩, h', _⟩
-        simp [constraintSI] at h'
+        simp only [constraintSI, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateInter.prop_eq, bothEq.prop_eq, isStateSubsetKnowledge.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, hK1, hK2⟩
         obtain ⟨hS'ᵢ, hS''ᵢ⟩ : S'ᵢ < C.states.size ∧ S''ᵢ < C.states.size :=
           hC.stateInterBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1
@@ -409,7 +434,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨⟩, S'ᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintST] at h'
+        simp only [constraintST, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          leftEq.prop_eq, isStateSubsetKnowledge.prop_eq, bothEq.prop_eq] at h'
         rcases h' with ⟨hSᵢ, hS''ᵢ, hK1ᵢ, hK2ᵢ, hK1, hK2⟩
         have hS'ᵢ : S'ᵢ < C.states.size :=
           (hC.stateSubsetKnowledgeBounds ⟨K1ᵢ, by omega⟩ hK1).2
@@ -423,7 +449,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Sᵢ, A'ᵢ⟩, S2ᵢ, Aᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintAT] at h'
+        simp only [constraintAT, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateProgr.prop_eq, rightEq.prop_eq, isStateSubsetKnowledge.prop_eq, leftEq.prop_eq,
+          bothEq.prop_eq, isActionSubsetKnowledge.prop_eq] at h'
         rcases h' with ⟨hS'ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, hK1, ⟨hS2ᵢ, hS2⟩,hK2⟩
         obtain ⟨hSᵢ, hA'ᵢ⟩ : Sᵢ < C.states.size ∧ A'ᵢ < C.actions.size :=
           hC.stateProgrBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1
@@ -441,7 +469,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨Sᵢ, A1ᵢ⟩, ⟨Aᵢ, A'ᵢ⟩, ⟨S2ᵢ, ⟨⟩⟩, S3ᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintAU] at h'
+        simp only [constraintAU, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateProgr.prop_eq, isActionUnion.prop_eq, rightEq.prop_eq,
+          isStateSubsetKnowledge.prop_eq, bothEq.prop_eq] at h'
         rcases h' with ⟨hS'ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, ⟨hA1ᵢ, hA1⟩, ⟨hK1, hS2ᵢ, hS2⟩,
           hK2, hS3ᵢ, hS3⟩
         obtain ⟨hSᵢ, hAᵢ⟩ : Sᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
@@ -462,7 +492,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨S'ᵢ, Aᵢ⟩, S2ᵢ, Sᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintPT] at h'
+        simp only [constraintPT, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateProgr.prop_eq, rightEq.prop_eq, isStateSubsetKnowledge.prop_eq,
+          bothEq.prop_eq] at h'
         rcases h' with ⟨hS''ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, hK1, ⟨hS2ᵢ, hS2⟩,hK2⟩
         obtain ⟨hS'ᵢ, hAᵢ⟩ : S'ᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
           hC.stateProgrBounds ⟨S1ᵢ, hS1ᵢ⟩ hS1
@@ -480,7 +512,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨S2ᵢ, Aᵢ⟩, ⟨Sᵢ, S'ᵢ⟩, ⟨S3ᵢ, ⟨⟩⟩, S4ᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintPU] at h'
+        simp only [constraintPU, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateProgr.prop_eq, isStateUnion.prop_eq, rightEq.prop_eq,
+          isStateSubsetKnowledge.prop_eq, bothEq.prop_eq] at h'
         rcases h' with ⟨hS''ᵢ, hK1ᵢ, hK2ᵢ, ⟨hS1ᵢ, hS1⟩, ⟨hS2ᵢ, hS2⟩,
           ⟨hK1, hS3ᵢ, hS3⟩, hK2, hS4ᵢ, hS4⟩
         obtain hAᵢ : Aᵢ < C.actions.size :=
@@ -500,7 +534,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨S3ᵢ, Aᵢ⟩, S'ᵢ, Sᵢ, S4ᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintPR] at h'
+        simp only [constraintPR, and.prop_eq, bounds.prop_eq, seq.prop_eq, isStateRegr.prop_eq,
+          isStateNeg.prop_eq, rightEq.prop_eq, isStateSubsetKnowledge.prop_eq, bothEq.prop_eq,
+          isStateProgr.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, ⟨hS1ᵢ, hS1⟩, ⟨hS3ᵢ, hS3⟩, ⟨hS2ᵢ, hS2⟩,
            hK1, hS4ᵢ, hS4⟩
         obtain ⟨hSᵢ, hAᵢ⟩ : Sᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
@@ -519,7 +555,9 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, ⟨⟩, ⟨Sᵢ, Aᵢ⟩, ⟨S2ᵢ, S3ᵢ⟩, ⟨S4ᵢ, ⟨⟩⟩, ⟨⟩⟩, h', _⟩
-        simp [constraintRP] at h'
+        simp only [constraintRP, and.prop_eq, stateBounds'.prop_eq, bounds.prop_eq, seq.prop_eq,
+          isStateProgr.prop_eq, isStateSubsetKnowledge.prop_eq, rightEq.prop_eq,
+          isStateRegr.prop_eq, eq.prop_eq, isStateNeg.prop_eq] at h'
         rcases h' with ⟨hS'ᵢ, hK1ᵢ, ⟨hS1ᵢ, hS1⟩,
           hK1, ⟨⟨hS2ᵢ, hS2⟩, hS4ᵢ, hS4⟩, hS3ᵢ, hS3⟩
         obtain ⟨hSᵢ, hAᵢ⟩ : Sᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
@@ -534,13 +572,14 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
     -- case unsolvable K
     case h_4 K heq =>
       rw [heq] at h
-      simp_all
+      simp_all only
       cases K with
       | CI K1ᵢ =>
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, SIᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintCI] at h'
+        simp only [constraintCI, and.prop_eq, bounds.prop_eq, seq.prop_eq, isDeadKnowledge.prop_eq,
+          isStateInit.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, hK1, hSIᵢ, hSI⟩
         apply Derivation.CI
         rw [← hC.getStatesInit ⟨SIᵢ, hSIᵢ⟩ hSI]
@@ -550,7 +589,8 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
         simp only at h
         apply Constraint.elim_exists at h
         rcases h with ⟨⟨⟨⟩, SGᵢ, ⟨⟩⟩, h', _⟩
-        simp [constraintCG] at h'
+        simp only [constraintCG, and.prop_eq, bounds.prop_eq, seq.prop_eq, isDeadKnowledge.prop_eq,
+          isStateGoal.prop_eq] at h'
         rcases h' with ⟨hK1ᵢ, hK1, hSGᵢ, hSG⟩
         apply Derivation.CG
         rw [← hC.getStatesGoal ⟨SGᵢ, hSGᵢ⟩ hSG]

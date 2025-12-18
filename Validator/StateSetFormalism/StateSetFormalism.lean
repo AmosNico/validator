@@ -67,7 +67,7 @@ abbrev UnprimedVariables' := UnprimedVariables pt (R.type pt)
 abbrev UnprimedLiterals' := UnprimedLiterals pt (R.type pt)
 
 def mkEmpty : UnprimedVariable' pt R :=
-  ⟨bot (2 * n), by simp [bot_correct]; exact VarSet'.isUnprimed_empty⟩
+  ⟨bot (2 * n), by simp only [bot_correct]; exact VarSet'.isUnprimed_empty⟩
 
 @[simp]
 lemma toStates_mkEmpty : (mkEmpty pt R).val.toStates = ∅ :=
@@ -77,16 +77,18 @@ lemma toStates_mkEmpty : (mkEmpty pt R).val.toStates = ∅ :=
 def mkInit : UnprimedVariable' pt R :=
   ⟨
     ofPartialModel (VarSet'.unprimedVars n) (pt.init'.cast (by simp [VarSet'.unprimedVars])),
-    by simp [ofPartialModel_correct]; exact VarSet'.isUnprimed_unprimedVars
+    by simp only [ofPartialModel_correct]; exact VarSet'.isUnprimed_unprimedVars
   ⟩
 
 @[simp]
 lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} :=
   by
     ext s
-    simp only [mkInit, Variable.toStates_eq, Variable.models, ofPartialModel_correct]
-    simp [PartialModel.models, Model.unprimedState, VarSet'.unprimedVars, Fin.toUnprimed]
-    simp [STRIPS.init, convertState]
+    simp only [mkInit, Variable.toStates_eq, Variable.models, ofPartialModel_correct, Set.mem_image,
+      Set.mem_singleton_iff]
+    simp only [Model.unprimedState, Fin.toUnprimed, PartialModel.models, VarSet'.unprimedVars,
+      Fin.getElem_fin, List.getElem_ofFn, BitVec.getElem_cast, Set.mem_setOf_eq]
+    simp only [STRIPS.init, convertState]
     constructor
     · grind
     · intro rfl
@@ -98,7 +100,7 @@ lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} :=
 def mkGoal : UnprimedVariable' pt R :=
   ⟨
     ofPartialModel pt.goal'.toUnprimed (BitVec.allOnes _),
-    by simp [ofPartialModel_correct]; exact VarSet'.isUnprimed_toUnprimed
+    by simp only [ofPartialModel_correct]; exact VarSet'.isUnprimed_toUnprimed
   ⟩
 
 @[simp]
@@ -106,11 +108,13 @@ lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goal_states :=
   by
     ext s
     simp only [mkGoal, Variable.toStates_eq, Variable.models, ofPartialModel_correct]
-    simp [PartialModel.models, Model.unprimedState, VarSet'.toUnprimed, Fin.toUnprimed]
-    simp [STRIPS.goal_states, STRIPS.GoalState, convertVarSet]
+    simp only [Model.unprimedState, Fin.toUnprimed, PartialModel.models, VarSet'.toUnprimed,
+      Fin.getElem_fin, List.getElem_map, BitVec.getElem_allOnes, iff_true, Set.mem_image]
+    simp only [STRIPS.goal_states, STRIPS.GoalState, convertVarSet, List.coe_toFinset,
+      Set.mem_setOf_eq]
     constructor
     · rintro ⟨M, h, rfl⟩
-      simp []
+      simp only [Set.setOf_subset_setOf]
       intro i hi
       obtain ⟨j, h2, rfl⟩ := List.getElem_of_mem hi
       exact h ⟨j, by simp [h2]⟩

@@ -72,7 +72,7 @@ def seq {α1 α2} (h1 : Constraint α1) (h2 : α1 → Constraint α2) : Constrai
     return ⟨(a1, a2), by simp_all⟩
 
   elim_exists h0 := by
-    simp_all
+    simp_all only [Prod.exists, exists_and_left, and_imp, Prod.forall]
     have h3 : ∃ v1, h1.prop v1 := by
       rcases h0 with ⟨v1, hv1, _⟩
       use v1, hv1
@@ -99,7 +99,7 @@ def and {α1 α2} (h1 : Constraint α1) (h2 : Constraint α2) : Constraint (α1 
     return ⟨(a1, a2), by simp_all⟩
 
   elim_exists h0 := by
-    simp_all
+    simp_all only [Prod.exists, exists_and_left, exists_and_right, and_imp, Prod.forall]
     obtain ⟨v1, hv1, h1⟩ := h1.elim_exists h0.1
     obtain ⟨v2, hv2, h2⟩ := h2.elim_exists h0.2
     exact ⟨(v1, v2), by simp_all⟩
@@ -324,7 +324,7 @@ def isActionAll (C : Certificate pt) (Aᵢ : ℕ) : Constraint Unit where
 lemma isActionAll.prop_eq {C : Certificate pt} {Aᵢ a} :
   (isActionAll C Aᵢ).prop a ↔ Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.all :=
   by
-    simp [isActionAll]
+    simp only [isActionAll, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isActionUnion (C : Certificate pt) (Aᵢ : ℕ) : Constraint (ℕ × ℕ) where
@@ -346,7 +346,7 @@ lemma isActionUnion.prop_eq {C : Certificate pt} {Aᵢ A'ᵢ A''ᵢ} :
   (isActionUnion C Aᵢ).prop (A'ᵢ, A''ᵢ) ↔
     Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ :=
   by
-    simp [isActionUnion]
+    simp only [isActionUnion, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateConst (C : Certificate pt) (S : StateSetExpr pt) (Sᵢ : ℕ) : Constraint Unit where
@@ -374,7 +374,7 @@ def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
 lemma isStateEmpty.prop_eq {C : Certificate pt} {Sᵢ a} :
   (isStateEmpty C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.empty :=
   by
-    simp [isStateEmpty, isStateConst]
+    simp only [isStateEmpty, isStateConst, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
@@ -384,7 +384,7 @@ def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
 lemma isStateInit.prop_eq {C : Certificate pt} {Sᵢ a} :
   (isStateInit C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.init :=
   by
-    simp [isStateInit, isStateConst]
+    simp only [isStateInit, isStateConst, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
@@ -394,7 +394,7 @@ def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
 lemma isStateGoal.prop_eq {C : Certificate pt} {Sᵢ a} :
   (isStateGoal C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.goal :=
   by
-    simp [isStateGoal, isStateConst]
+    simp only [isStateGoal, isStateConst, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
@@ -415,7 +415,7 @@ def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
 lemma isStateNeg.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ} :
   (isStateNeg C Sᵢ).prop S'ᵢ ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.neg S'ᵢ) :=
   by
-    simp [isStateNeg]
+    simp only [isStateNeg, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
@@ -437,7 +437,7 @@ lemma isStateInter.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
   (isStateInter C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
   Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ) :=
   by
-    simp [isStateInter]
+    simp only [isStateInter, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
@@ -459,7 +459,7 @@ lemma isStateUnion.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
   (isStateUnion C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
     Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ) :=
   by
-    simp [isStateUnion]
+    simp only [isStateUnion, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
@@ -481,7 +481,7 @@ lemma isStateProgr.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ Aᵢ} :
   (isStateProgr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
   Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ) :=
   by
-    simp [isStateProgr]
+    simp only [isStateProgr, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
@@ -503,7 +503,7 @@ lemma isStateRegr.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ Aᵢ} :
   (isStateRegr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
   Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.regr S'ᵢ Aᵢ) :=
   by
-    simp [isStateRegr]
+    simp only [isStateRegr, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 abbrev isUnion (C : Certificate pt) : SetType → ℕ → Constraint (ℕ × ℕ)
@@ -549,7 +549,7 @@ def isActionSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint (ℕ 
     | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
 
   elim_exists := by
-    simp_all
+    simp_all only [Prod.exists, forall_exists_index, Prod.forall]
     cases heq : C.knowledge[Kᵢ]? with
     | some K =>
       cases K
@@ -579,7 +579,7 @@ def isStateSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint (ℕ �
     | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
 
   elim_exists := by
-    simp_all
+    simp_all only [Prod.exists, forall_exists_index, Prod.forall]
     cases heq : C.knowledge[Kᵢ]? with
     | some K =>
       cases K

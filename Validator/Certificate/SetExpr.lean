@@ -129,7 +129,7 @@ def getActions' {C : Certificate pt} (hC : C.validSets)
   match heq : C.actions[Aᵢ] with
   | ActionSetExpr.enum as => by
     have h' := hC.validActions Aᵢ
-    simp [Certificate.validActionSetExpr, heq] at h'
+    simp only [validActionSetExpr, heq] at h'
     exact (as.attach.map (fun ⟨a, ha⟩ ↦⟨a, h' a ha⟩))
   | ActionSetExpr.union A'ᵢ A''ᵢ =>
     have h' := hC.validActions Aᵢ
@@ -170,7 +170,8 @@ lemma getActionsUnion {C : Certificate pt} {hC : C.validSets} (Aᵢ A'ᵢ A''ᵢ
   (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
   hC.getActions Aᵢ = hC.getActions A'ᵢ ∪ hC.getActions A''ᵢ :=
   by
-    simp [getActions, ActionIds.toActions, List.map_toFinset]
+    simp only [getActions, ActionIds.toActions, List.map_toFinset, Finset.coe_image,
+      List.coe_toFinset]
     rw [getActions']
     split
     all_goals simp_all [← Set.image_union]

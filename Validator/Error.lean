@@ -11,7 +11,7 @@ def countLines {s} (pos : String.Pos s) : ℕ :=
   (s.sliceTo pos).foldl (fun n d => if d = '\n' then n + 1 else n) 0
 
 def positionInfo (s : String.Slice) : ℕ × ℕ × String :=
-  let posStart := (s.startInclusive.revFind? '\n').getD (s.str.startPos)
+  let posStart := (s.startInclusive.revFind? '\n' >>= String.Pos.next?).getD s.str.startPos
   let posEnd := s.startInclusive.find (· = '\n')
   let offset := (String.extract posStart s.startInclusive).length
   ⟨countLines s.startInclusive + 1, offset, String.extract posStart posEnd⟩
@@ -31,7 +31,7 @@ instance : Parser.Error Error String.Slice Char where
 def toString : Error → String
 | parseUnexpected pos =>
     have ⟨n, k, line⟩ := positionInfo pos
-    let offset := k + 11 + (ToString.toString n).length
+    let offset := k + 10 + (ToString.toString n).length
     s!"    line {n}: {line}\n" ++ String.replicate offset ' ' ++ "^\n"
 | unvalid msg => s!"  {msg}\n"
 | addMessage e none msg => s!"  {msg}\n" ++ e.toString

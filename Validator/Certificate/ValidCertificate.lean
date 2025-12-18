@@ -288,17 +288,18 @@ lemma deadKnowledgeBound {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowl
   by
     have h' := hC.validKnowledge Kᵢ
     rcases h with ⟨K, heq⟩
-    simp_all [Certificate.validKnowledge, constraintKnowledge]
+    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+      getElem?_pos, Option.some.injEq]
     rw [heq] at h'
-    simp at h'
+    simp only at h'
     cases K with
     | ED => simp_all [Constraint.valid]
     | UD => simp [constraintUD] at h'; tauto
-    | SD => simp [constraintSD] at h'; exact h'.1
-    | PG => simp [constraintPG] at h'; exact h'.1
+    | SD => simp [constraintSD] at h'; tauto
+    | PG => simp [constraintPG] at h'; tauto
     | PI => simp [constraintPI] at h'; tauto
     | RG => simp [constraintRG] at h'; tauto
-    | RI => simp [constraintRI] at h'; exact h'.1
+    | RI => simp [constraintRI] at h'; tauto
 
 lemma actionSubsetKnowledgeBounds {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size)
   {Aᵢ A'ᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = actionSubset Aᵢ A'ᵢ K) :
@@ -306,9 +307,10 @@ lemma actionSubsetKnowledgeBounds {C : Certificate pt} (hC : C.valid) (Kᵢ : Fi
   by
     have h' := hC.validKnowledge Kᵢ
     rcases h with ⟨K, heq⟩
-    simp_all [Certificate.validKnowledge, constraintKnowledge]
+    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+      getElem?_pos, Option.some.injEq]
     rw [heq] at h'
-    simp at h'
+    simp only at h'
     cases K with
     | B5 => simp [constraintB5] at h'; tauto
     | URA => simp [constraintUR] at h'; tauto
@@ -323,9 +325,10 @@ lemma stateSubsetKnowledgeBounds
   by
     have h' := hC.validKnowledge Kᵢ
     rcases h with ⟨K, heq⟩
-    simp_all [Certificate.validKnowledge, constraintKnowledge]
+    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+      getElem?_pos, Option.some.injEq]
     rw [heq] at h'
-    simp at h'
+    simp only at h'
     cases K with
     | B1 => simp [constraintB1] at h'; tauto
     | B2 => simp [constraintB2] at h'; tauto
@@ -357,7 +360,7 @@ private def verifyAll_aux {k} (h : (j : Fin k) → Σ α, Constraint α) : (i : 
   let ⟨a, h3⟩ ← (h ⟨n, by omega⟩).snd.verify
   have h : ∀ j : Fin k, j < n + 1 → (h j).snd.valid := by
     intro j hj
-    simp_all [Nat.lt_add_one_iff_lt_or_eq]
+    simp_all only [Nat.lt_add_one_iff_lt_or_eq]
     rcases hj with h | ⟨rfl⟩
     · exact h2 j h
     · use a
@@ -376,7 +379,7 @@ private def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → Re
   let ⟨⟨⟩, h3⟩ ← verify ⟨n, by omega⟩
   have h : ∀ j : Fin k, j < n + 1 → p j := by
     intro j hj
-    simp_all [Nat.lt_add_one_iff_lt_or_eq]
+    simp_all only [Nat.lt_add_one_iff_lt_or_eq]
     rcases hj with h | ⟨rfl⟩
     · exact h2 j h
     · exact h3
