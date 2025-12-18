@@ -4,7 +4,7 @@ This repository contains a validator for unsolvability certificates for automate
 
 The project can be build by running `make validator` or `lake build validator`, and the validator can be executed by running `lake exe validator`.
 
-The documentation can be found at <https://amosnico.github.io/validator/>.
+The documentation can be found at <https://amosnico.github.io/validator/docs>.
 
 ## Dependency graph of the project
 ![Dependency graph of the files in the project](dependencies.svg)
