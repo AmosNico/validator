@@ -1,9 +1,11 @@
 # Formally Verified Validator for Unsolvability Certificates for Automated Planning
-This repository contains a validator for unsolvability certificates for automated planning, which is implemented and formally verified in Lean 4. 
+This repository contains a validator for unsolvability certificates for automated planning, which is implemented and formally verified in Lean 4. This branch contains version of the project submitted for my master thesis.
 
 The project can be build by running `make validator` or `lake build validator`, and the validator can be executed by running `lake exe validator`.
 
 The latest documentation of the branch `main` can be found at <https://amosnico.github.io/validator/docs/>.
+
+The [thesis report](Formalizing%20Unsolvability%20Certificates%20for%20Automated%20Planning%20in%20Lean%204.pdf) correponding to this can also be found at <https://eprints.illc.uva.nl/id/eprint/2408/>.
 
 ## Dependency graph of the project
 ![Dependency graph of the files in the project](dependencies.svg)
