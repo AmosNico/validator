@@ -237,6 +237,12 @@ class ModelTesting n R [F : Formula n R] where
   isModel_correct {φ M} : isModel φ M ↔ M.models ⊆ models φ
 -/
 
+class Consistency n R [F : Formula n R] where
+
+  consistent : (φ : R) → Bool
+
+  consistent_correct {φ} : consistent φ ↔ Nonempty (F.models φ)
+
 class ClausalEntailment n R [F : Formula n R] where
 
   entails : (φ : R) → (γ : Clause n) → Bool

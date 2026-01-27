@@ -363,6 +363,19 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Renaming (2 * n) R]
           simp [← h3] at h4
         simp_all
 
+lemma subset_states_iff_subset_models {R1 R2} [F1 : Formalism pt R1] [F2 : Formalism pt R2]
+  (x1 : Variable pt R1) (x2 : UnprimedVariable pt R2) :
+  x1.toStates ⊆ x2.val.toStates ↔ F1.models x1 ⊆ F2.models x2.val :=
+  by
+    suffices h : Model.unprimedState ⁻¹' (Model.unprimedState '' x2.val.models) = x2.val.models by
+      simp [Variable.models] at h
+      simp [Variable.toStates, toStates_eq, h]
+    ext M
+    constructor
+    · rintro ⟨M', h1, h2⟩
+      exact mem_models_of_eq_toState h2 h1
+    · grind
+
 end UnprimedVariable
 
 abbrev Literal (pt : STRIPS n) R [Formalism pt R] := Variable pt R × Bool

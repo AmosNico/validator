@@ -32,6 +32,18 @@ instance {n} : Bot n (BDD n) where
 
   bot_correct := sorry
 
+instance {n} : ClausalEntailment n (BDD n) where
+
+  entails := sorry
+
+  entails_correct := sorry
+
+instance {n} : Implicant n (BDD n) where
+
+  entails δ φ := sorry
+
+  entails_correct := sorry
+
 instance {n} : SententialEntailment n (BDD n) where
 
   entails := sorry

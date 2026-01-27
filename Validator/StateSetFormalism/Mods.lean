@@ -142,6 +142,12 @@ instance {n} : ClausalEntailment n (MODS n) where
           obtain ⟨j, hj, h3⟩ := List.getElem_of_mem h1
           sorry
 
+instance {n} : Implicant n (MODS n) where
+
+  entails δ φ := sorry
+
+  entails_correct := sorry
+
 instance {n} : BoundedConjuction n (MODS n) where
 
   and φ ψ := sorry
@@ -172,5 +178,11 @@ instance {n} : ToCNF n (MODS n) where
   toCNF := sorry
 
   toCNF_correct := sorry
+
+instance {n} : ToDNF n (MODS n) where
+
+  toDNF := sorry
+
+  toDNF_correct := sorry
 
 end Validator.MODS

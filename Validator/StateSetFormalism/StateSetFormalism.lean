@@ -47,6 +47,24 @@ instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Bot (2 * n) (
 | horn => Horn.instBot
 | mods => MODS.instBot
 
+instance {n} {pt : STRIPS n} :
+  {R : StateSetFormalism} → Formula.ClausalEntailment (2 * n) (R.type pt)
+| bdd => BDD.instClausalEntailment
+| horn => Horn.instClausalEntailment
+| mods => MODS.instClausalEntailment
+
+instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Implicant (2 * n) (R.type pt)
+| bdd => BDD.instImplicant
+| horn => Horn.instImplicant
+| mods => MODS.instImplicant
+
+-- TODO : remove?
+instance {n} {pt : STRIPS n} :
+  {R : StateSetFormalism} → Formula.SententialEntailment (2 * n) (R.type pt)
+| bdd => BDD.instSententialEntailment
+| horn => Horn.instSententialEntailment
+| mods => MODS.instSententialEntailment
+
 instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.OfPartialModel (2 * n) (R.type pt)
 | bdd => BDD.instOfPartialModel
 | horn => Horn.instOfPartialModel
