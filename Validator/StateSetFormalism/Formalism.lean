@@ -363,19 +363,6 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Renaming (2 * n) R]
           simp [← h3] at h4
         simp_all
 
-lemma subset_states_iff_subset_models {R1 R2} [F1 : Formalism pt R1] [F2 : Formalism pt R2]
-  (x1 : Variable pt R1) (x2 : UnprimedVariable pt R2) :
-  x1.toStates ⊆ x2.val.toStates ↔ F1.models x1 ⊆ F2.models x2.val :=
-  by
-    suffices h : Model.unprimedState ⁻¹' (Model.unprimedState '' x2.val.models) = x2.val.models by
-      simp [Variable.models] at h
-      simp [Variable.toStates, toStates_eq, h]
-    ext M
-    constructor
-    · rintro ⟨M', h1, h2⟩
-      exact mem_models_of_eq_toState h2 h1
-    · grind
-
 end UnprimedVariable
 
 abbrev Literal (pt : STRIPS n) R [Formalism pt R] := Variable pt R × Bool
@@ -390,11 +377,28 @@ def Literal.toStates [Formalism pt R] : Literal pt R → States n
 
 abbrev UnprimedLiteral (pt : STRIPS n) R [Formalism pt R] := UnprimedVariable pt R × Bool
 
-def UnprimedLiteral.val [Formalism pt R] :
+namespace UnprimedLiteral
+
+def val [Formalism pt R] :
   UnprimedLiteral pt R → Literal pt R :=
   fun (x, b) ↦ (x, b)
 
-lemma UnprimedLiteral.toStates_eq [Formalism pt R] : {l : UnprimedLiteral pt R} →
+def pos [Formalism pt R] (x : UnprimedVariable pt R) : UnprimedLiteral pt R :=
+  (x, true)
+
+@[simp]
+lemma models_pos [Formalism pt R] {x : UnprimedVariable pt R} : (pos x).val.models = x.val.models :=
+  by simp [pos, val, Literal.models]
+
+def neg [Formalism pt R] (x : UnprimedVariable pt R) : UnprimedLiteral pt R :=
+  (x, false)
+
+@[simp]
+lemma models_neg [Formalism pt R] {x : UnprimedVariable pt R} :
+  (neg x).val.models = x.val.modelsᶜ :=
+  by simp [neg, val, Literal.models]
+
+lemma toStates_eq [Formalism pt R] : {l : UnprimedLiteral pt R} →
   l.val.toStates = l.val.models.image Model.unprimedState
 | (X, true) => by
   simp [Literal.toStates, Variable.toStates_eq, Literal.models, UnprimedLiteral.val]
@@ -408,6 +412,28 @@ lemma UnprimedLiteral.toStates_eq [Formalism pt R] : {l : UnprimedLiteral pt R} 
   · rintro ⟨M, h1, rfl⟩ M' h2 h3
     rw [UnprimedVariable.mem_models_iff_of_eq_unprimedState X.prop h3] at h2
     contradiction
+
+lemma subset_states_iff_subset_models {R1 R2} [Formalism pt R1] [Formalism pt R2]
+  (l1 : UnprimedLiteral pt R1) (l2 : UnprimedLiteral pt R2) :
+  l1.val.toStates ⊆ l2.val.toStates ↔ l1.val.models ⊆ l2.val.models :=
+  by
+    simp only [toStates_eq, Set.image_subset_iff]
+    suffices h : Model.unprimedState ⁻¹' (Model.unprimedState '' l2.val.models) = l2.val.models by
+      rw [h]
+    ext M
+    constructor
+    · rintro ⟨M', h1, h2⟩
+      match l2 with
+      | (x2, true) =>
+        simp only [Literal.models, val] at h1 ⊢
+        exact UnprimedVariable.mem_models_of_eq_toState h2 h1
+      | (x2, false) =>
+        simp only [Literal.models, val, Set.mem_compl_iff] at h1 ⊢
+        intro h3
+        apply h1
+        exact UnprimedVariable.mem_models_of_eq_toState h2.symm h3
+    · grind
+end UnprimedLiteral
 
 abbrev Variables (pt : STRIPS n) R [Formalism pt R] := List (Variable pt R)
 

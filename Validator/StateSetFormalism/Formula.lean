@@ -59,15 +59,30 @@ its negation (represented by `(i, false)`).
 -/
 abbrev Literal n := Fin n × Bool
 
-def Literal.models {n} : Literal n → Models n
+namespace Literal
+
+def models {n} : Literal n → Models n
 | (i, true) => { M | M i }
 | (i, false) => { M | ¬M i }
 
-lemma Literal.mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.1 ↔ l.2) :=
+lemma mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.1 ↔ l.2) :=
   by
     simp [models]
     split
     all_goals simp
+
+def negate {n} : Literal n → Literal n
+| (i, true) => (i, false)
+| (i, false) => (i, true)
+
+@[simp]
+lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ :=
+  by
+    simp [negate]
+    split
+    all_goals simp [models, Set.compl_setOf]
+
+end Literal
 
 /-! ## Clause -/
 
@@ -406,6 +421,29 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
         · specialize ih φ' h1 h2 γ2 hγ2
           grind
 
+/-- Transform ¬x to a DNF formula by translating x to a CNF-formula and applying De Morgans laws. -/
+def negToDNF {n} {R} [Formula n R] [h : ToCNF n R] (φ : R) : DNF n :=
+  (h.toCNF φ).map (List.map Literal.negate)
+
+lemma negToDNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φ} :
+  (negToDNF φ).models = (F.models φ)ᶜ :=
+  by
+    ext M
+    simp only [negToDNF, DNF.mem_models, ← toCNF_correct, CNF.mem_models,
+      List.mem_map, exists_exists_and_eq_and, forall_exists_index,
+      and_imp, Set.mem_compl_iff, not_forall, not_exists, not_and]
+    constructor
+    · rintro ⟨γ, h1, h2⟩
+      use γ, h1
+      intro l h3
+      specialize h2 l.negate l h3 rfl
+      simp only [Literal.models_negate] at h2
+      exact h2
+    · rintro ⟨γ, h1, h2⟩
+      use γ, h1
+      intro l' l hl rfl
+      simp [h2 l hl]
+
 end ToCNF
 
 class ToDNF n R [F : Formula n R] where
@@ -428,5 +466,31 @@ lemma conjunctionToDnF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
       | cons φ φs ih =>
         simp [-Prod.forall]
         grind
+
+/-- Transform ¬x to a CNF formula by translating x to a DNF-formula and applying De Morgans laws. -/
+def negToCNF {n} {R} [Formula n R] [h : ToDNF n R] (φ : R) : CNF n :=
+  (h.toDNF φ).map (List.map Literal.negate)
+
+lemma negToCNF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φ} :
+  (negToCNF φ).models = (F.models φ)ᶜ :=
+  by
+    ext M
+    simp only [negToCNF, CNF.mem_models, ← toDNF_correct, DNF.mem_models,
+      List.mem_map, forall_exists_index, and_imp, Set.mem_compl_iff,
+      not_forall, not_exists, not_and]
+    constructor
+    · intro h1 δ hδ
+      specialize h1 (δ.map Literal.negate) δ hδ rfl
+      simp only [List.mem_map] at h1
+      rcases h1 with ⟨l', ⟨l, hl, rfl⟩, h1⟩
+      simp only [Literal.models_negate, Set.mem_compl_iff] at h1
+      use l
+    · intro h γ δ hδ rfl
+      specialize h δ hδ
+      rcases h with ⟨l, hl, h2⟩
+      simp only [List.mem_map]
+      use l.negate
+      simp only [Literal.models_negate, Set.mem_compl_iff, h2, not_false_eq_true, and_true]
+      use l
 
 end Validator.Formula.ToDNF

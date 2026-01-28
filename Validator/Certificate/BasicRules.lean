@@ -336,6 +336,8 @@ end Certificate.validSets
 namespace Formalism
 open Formula Variables
 
+-- TODO : combine verification and correctness as done for check_variable_subset/checkB4?
+
 def check_variables_subset1 {R} [F : Formalism pt R]
   [h1 : SententialEntailment (2 * n) R]
   [h2 : BoundedConjuction (2 * n) R] [Top (2 * n) R]
@@ -394,47 +396,15 @@ lemma check_variables_subset3_correct {R} [F : Formalism pt R]
     simp [check_variables_subset3, Variable.models,
       h1.entails_correct, h2.orList_correct, h3.conjunctionToDnF_correct]
 
-/-
 def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   [h1 : ToDNF (2 * n) R1]
   [h2 : Implicant (2 * n) R2]
-  (X1 : UnprimedVariable pt R1) (X2 : UnprimedVariable pt R2) : Bool :=
-  (h1.toDNF X1).all fun δ ↦ h2.entails δ X2
-
-lemma check_variable_subset_pos_pos_1_correct {R1 R2} [Formalism pt R1] [Formalism pt R2]
-  [h1 : ToDNF (2 * n) R1]
-  [h2 : Implicant (2 * n) R2]
-  (X1 : UnprimedVariable pt R1) (X2 : UnprimedVariable pt R2) :
-  check_variable_subset_pos_pos_1 X1 X2 ↔ X1.val.models ⊆ X2.val.models :=
-  by
-    simp [check_variable_subset_pos_pos_1, Variable.models,
-      h1.toDNF_correct, h2.entails_correct]
-
-def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
-  [h1 : ClausalEntailment (2 * n) R1]
-  [h2 : ToCNF (2 * n) R2]
-  (X1 : UnprimedVariable pt R1) (X2 : UnprimedVariable pt R2) : Bool :=
-  (h2.toCNF X2).all fun γ ↦ h1.entails X1 γ
-
-lemma check_variable_subset_pos_pos_2_correct {R1 R2} [Formalism pt R1] [Formalism pt R2]
-  [h1 : ClausalEntailment (2 * n) R1]
-  [h2 : ToCNF (2 * n) R2]
-  (X1 : UnprimedVariable pt R1) (X2 : UnprimedVariable pt R2) :
-  check_variable_subset_pos_pos_2 X1 X2 ↔ X1.val.models ⊆ X2.val.models :=
-  by
-    simp [check_variable_subset_pos_pos_2, Variable.models,
-      h1.entails_correct, h2.toCNF_correct]
--/
-
-def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
-  [h1 : ToDNF (2 * n) R1]
-  [h2 : Implicant (2 * n) R2]
-  (x1 : Variable pt R1) (x2 : UnprimedVariable pt R2) :
-  Result' (x1.toStates ⊆ x2.val.toStates) :=
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStates ⊆ x2.val.toStates) :=
   if h : (h1.toDNF x1).all fun δ ↦ h2.entails δ x2 then
-    have h' : x1.toStates ⊆ x2.val.toStates := by
-      rw [UnprimedVariable.subset_states_iff_subset_models]
-      simp_all [h1.toDNF_correct, h2.entails_correct]
+    have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
+      rw [UnprimedLiteral.subset_states_iff_subset_models]
+      simp_all [h1.toDNF_correct, h2.entails_correct, Variable.models]
     return ⟨(), h'⟩
   else
     throwUnvalid "" -- TODO
@@ -442,15 +412,62 @@ def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
 def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
    [h1 : ClausalEntailment (2 * n) R1]
   [h2 : ToCNF (2 * n) R2]
-  (x1 : Variable pt R1) (x2 : UnprimedVariable pt R2) :
-  Result' (x1.toStates ⊆ x2.val.toStates) :=
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStates ⊆ x2.val.toStates) :=
   if h : (h2.toCNF x2).all fun γ ↦ h1.entails x1 γ then
-    have h' : x1.toStates ⊆ x2.val.toStates := by
-      rw [UnprimedVariable.subset_states_iff_subset_models]
-      simp_all [h1.entails_correct, h2.toCNF_correct]
+    have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
+      rw [UnprimedLiteral.subset_states_iff_subset_models]
+      simp_all [h1.entails_correct, h2.toCNF_correct, Variable.models]
     return ⟨(), h'⟩
   else
     throwUnvalid "" -- TODO
+
+def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
+  [h1 : ToDNF (2 * n) R1]
+  [h2 : ClausalEntailment (2 * n) R2]
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStates ⊆ x2.val.toStatesᶜ) :=
+  if h : (h1.negToCNF x1).all fun γ ↦ h2.entails x2 γ then
+    have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.neg x2).val.toStates := by
+      simp [h2.entails_correct, h1.negToCNF_correct] at h
+      rw [UnprimedLiteral.subset_states_iff_subset_models]
+      simp_all [Variable.models]
+      grind
+    return ⟨(), h'⟩
+  else
+    throwUnvalid "" -- TODO
+
+def check_variable_subset_pos_neg_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
+  [h1 : ClausalEntailment (2 * n) R1]
+  [h2 : ToDNF (2 * n) R2]
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStates ⊆ x2.val.toStatesᶜ) :=
+  do
+    let ⟨(), h⟩ ← check_variable_subset_pos_neg_1 x2 x1
+    return ⟨(), by grind⟩
+
+def check_variable_subset_neg_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
+  [h1 : ToCNF (2 * n) R1]
+  [h2 : Implicant (2 * n) R2]
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStatesᶜ ⊆ x2.val.toStates) :=
+  if h : (h1.negToDNF x1).all fun δ ↦ h2.entails δ x2 then
+    have h' : (UnprimedLiteral.neg x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
+      simp [h2.entails_correct, h1.negToDNF_correct] at h
+      rw [UnprimedLiteral.subset_states_iff_subset_models]
+      simp_all [Variable.models]
+    return ⟨(), h'⟩
+  else
+    throwUnvalid "" -- TODO
+
+def check_variable_subset_neg_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
+  [h1 : Implicant (2 * n) R1]
+  [h2 : ToCNF (2 * n) R2]
+  (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
+  Result' (x1.val.toStatesᶜ ⊆ x2.val.toStates) :=
+  do
+    let ⟨(), h⟩ ← check_variable_subset_neg_pos_1 x2 x1
+    return ⟨(), by grind⟩
 
 end Formalism
 
@@ -673,7 +690,7 @@ def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
       | _, mods => check_variable_subset_pos_pos_2 v1 v2
       | bdd, horn => check_variable_subset_pos_pos_2 v1 v2
       | bdd, _ => sorry
-      | _, _ => sorry -- throwUnvalid s!"The rule B4 is not supported when the left-hand-side is a {R1}-formula and the right-hand-side is a {R2}-formula"
+      | _, _ => sorry -- throwUnsuportedB4 R1 R2
     | (v1, true), (v2, false) => sorry
     | (v1, false), (v2, true) => sorry
     | (v1, false), (v2, false) => checkB4 R2 R1 (v2, true) (v1, true)
@@ -699,29 +716,37 @@ def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
     rw [beq_iff_eq] at h
     subst h
     if h : checkB1 R1 (UnprimedLiterals.single l1) (UnprimedLiterals.single l2) then
-      sorry
-    else sorry
+      exact return ⟨(), by simp_all [checkB1_correct]⟩
+    else exact throwUnvalid s!"The left hand side is not a subset of the right hand side"
   else
     match l1, l2 with
     | (v1, true), (v2, true) =>
-
-      match heq1 : R1, heq2 : R2 with
-      | mods, _ => check_variable_subset_pos_pos_1 v1.val v2
-      | _, mods => check_variable_subset_pos_pos_2 v1.val v2
-      | bdd, horn => check_variable_subset_pos_pos_2 v1.val v2
+      match R1, R2 with
+      | mods, _ => check_variable_subset_pos_pos_1 v1 v2
+      | _, mods => check_variable_subset_pos_pos_2 v1 v2
+      | bdd, horn => check_variable_subset_pos_pos_2 v1 v2
       | _, _ => throwUnsuportedB4 R1 R2
-    | (v1, true), (v2, false) => sorry
-    | (v1, false), (v2, true) => sorry
+    | (v1, true), (v2, false) =>
+      match R1, R2 with
+      | mods, _ => check_variable_subset_pos_neg_1 v1 v2
+      | _, mods => check_variable_subset_pos_neg_2 v1 v2
+      | _, _ => throwUnsuportedB4 R1 R2
+    | (v1, false), (v2, true) =>
+      match R1, R2 with
+      | mods, _ => check_variable_subset_neg_pos_1 v1 v2
+      | _, mods => check_variable_subset_neg_pos_2 v1 v2
+      | bdd, horn => check_variable_subset_neg_pos_2 v1 v2
+      | horn, bdd => check_variable_subset_neg_pos_1 v1 v2
+      | _, _ => throwUnsuportedB4 R1 R2
     | (v1, false), (v2, false) => do
       let ⟨(), h2⟩ ← checkB4 R2 R1 (v2, true) (v1, true)
-      return ⟨(), sorry⟩
+      return ⟨(), by simp_all [UnprimedLiteral.val, Literal.toStates]⟩
     termination_by Bool.toNat (not l1.snd && not l2.snd)
-
 
 end StateSetFormalism
 
 -- TODO : Combine B1 - B3?
-def constraintB1 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun _ ↦ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
@@ -746,8 +771,8 @@ def constraintB1 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit w
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB1 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB1 hC S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsLiteralInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
@@ -757,7 +782,7 @@ lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S
     simp [constraintB1]
     tauto
 
-def constraintB2 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
@@ -782,8 +807,8 @@ def constraintB2 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit w
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB2 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB2 hC S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsProgrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
@@ -829,7 +854,7 @@ lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ 
     simp [constraintB3]
     tauto
 
-def constraintB4 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
+def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
     have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
@@ -853,8 +878,8 @@ def constraintB4 (hC : C.validSets) (Kᵢ S1ᵢ S2ᵢ : ℕ) : Constraint Unit w
   elim_exists := elim_exists_0
 
 @[simp]
-lemma constraintB4.prop_eq {C : Certificate pt} {hC : C.validSets} {Kᵢ S1ᵢ S2ᵢ : ℕ} {a} :
-  (constraintB4 hC Kᵢ S1ᵢ S2ᵢ).prop a ↔
+lemma constraintB4.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
+  (constraintB4 hC S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
     have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
     have R2 := hC.get_formalism [⟨S2ᵢ, hS2ᵢ⟩]
