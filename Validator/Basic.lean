@@ -308,6 +308,13 @@ lemma List.map_toFinset {α β} [DecidableEq α] [DecidableEq β] {f : α → β
   ext b
   simp
 
+lemma List.length_flatten_short {α} (ass : List (List α)) (h : ∀ as ∈ ass, as.length < 2) :
+   ass.flatten.length ≤ ass.length :=
+  by
+    induction ass with
+    | nil => simp
+    | cons as ass ih => grind
+
 @[simp]
 lemma Set.inter_compl_subset_union_compl
   {α} [Fintype α] {s1 s2 s3 s4 : Set α} :

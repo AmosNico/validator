@@ -29,6 +29,12 @@ lemma mem_union {n} {V V' : VarSet' n} {i} :
   by
     simp [union, List.mem_mergeDedup]
 
+def insert {n} (V : VarSet' n) (v : Fin n): VarSet' n :=
+  ⟨
+    List.orderedInsert (· < ·) v V,
+    sorry -- List.Pairwise.orderedInsert _ _ (List.SortedLT.pairwise  V.prop)
+  ⟩
+
 end VarSet'
 
 namespace Formula
@@ -119,6 +125,10 @@ namespace Cube
 def models {n} (δ : Cube n) : Models n :=
   { M | ∀ l ∈ δ, M ∈ l.models }
 
+def vars {n} (δ : Cube n) : VarSet n :=
+  { i | ∃ l ∈ δ, l.fst = i }
+
+
 @[simp]
 lemma mem_models {n} (δ : Cube n) M :
   M ∈ δ.models ↔ ∀ l ∈ δ, M ∈ l.models :=
@@ -150,7 +160,7 @@ lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, ∃ l
     simp [models]
 
 def vars {n} (φ : CNF n) : VarSet n :=
-  { i | ∃ γ ∈ φ, ∃ v ∈ γ, v.fst = i }
+  { i | ∃ γ ∈ φ, ∃ l ∈ γ, l.fst = i }
 
 @[simp]
 lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, ∃ v ∈ γ, v.fst = i :=
@@ -392,7 +402,7 @@ lemma Renaming.mem_rename_models {n R} [F : Formula n R] [Renaming n R] {φ vars
 class ToCNF n R [F : Formula n R] where
   toCNF : R → CNF n
 
-  toCNF_correct {φ} : (toCNF φ).models = F.models φ
+  toCNF_correct φ : (toCNF φ).models = F.models φ
 
 namespace ToCNF
 
