@@ -47,6 +47,31 @@ lemma vars_propagate_literal {n} {φ : CNF n} {l} : (φ.propagate_literal l).var
     simp [vars]
     grind
 
+@[simp]
+lemma mem_propagate_literal {n} {φ : CNF n} {l γ} :
+  γ ∈ (φ.propagate_literal l) ↔ ∃ γ' ∈ φ, l ∉ γ' ∧ γ = γ'.filter (· ≠ l.negate) :=
+  by
+    simp [propagate_literal]
+    grind
+
+lemma mem_models_propagate_literal {n} {φ : CNF n} {l} :
+  ∀ M ∈ l.models, M ∈ (φ.propagate_literal l).models ↔ M ∈ φ.models :=
+  by
+    intro M hM
+    simp only [propagate_literal, ne_eq, decide_not, List.contains_eq_mem, mem_models, List.mem_map,
+      List.mem_filter, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
+      forall_exists_index, and_imp]
+    constructor
+    · grind
+    · intro h1 γ' γ hγ hl rfl
+      simp only [List.mem_filter, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not]
+      specialize h1 γ hγ
+      rcases h1 with ⟨l', hl', h2⟩
+      have : l' ≠ l.negate := by
+        rintro rfl
+        simp_all
+      grind
+
 def rename {n} (φ : CNF n) (vars vars' : VarSet' n)
   (h1 : vars.val.length = vars'.val.length) : CNF n :=
   sorry
@@ -80,7 +105,7 @@ def toCNF {n} (φ : Horn n) : CNF n :=
     else
       φ.unit_literals.map (fun l ↦ [l]) ++ φ.clauses
 
-abbrev models {n} (φ : Horn n) : Models n := φ.toCNF.models
+def models {n} (φ : Horn n) : Models n := φ.toCNF.models
 
 lemma models_eq {n} {φ : Horn n} :
   φ.models = if φ.empty then ∅ else φ.unit_literals.models ∩ φ.clauses.models :=
@@ -120,16 +145,15 @@ instance {n} : Formula n (Horn n) where
     simp_all only [Literal.mem_models, eq_iff_iff]
     use l, h2
 
-def unit_propagate_aux {n} (φ : Horn n) (todo : Cube n) : Horn n :=
-  match todo with
+def unit_propagate {n} (φ : Horn n) (δ : Cube n) : Horn n :=
+  match δ with
   | [] => φ
   | l :: todo =>
     let res := (φ.clauses.propagate_literal l).partition fun γ ↦ γ.length < 2
-    let empty := res.fst.contains []
-    let todo' := todo ++ res.fst.flatten
+    let δ' := todo ++ res.fst.flatten
     let φ' := {
-      vars := φ.vars
-      empty := empty
+      vars := φ.vars.insert l.1
+      empty := φ.empty ∨ res.fst.contains []
       unit_literals := l :: φ.unit_literals
       clauses := res.snd
       horn_prop := by
@@ -139,16 +163,14 @@ def unit_propagate_aux {n} (φ : Horn n) (todo : Cube n) : Horn n :=
       clauses_prop := by
         simp [res, List.forall_iff_forall_mem]
       subset_vars := by
-        simp only [Cube.vars, List.mem_cons, exists_eq_or_imp,
-          Set.mem_union, Set.mem_setOf_eq, CNF.mem_vars]
-        intro i hi
-        rcases hi with ⟨rfl | h⟩ | h
-        · sorry
-        · sorry
-        sorry
+        simp only [Cube.vars, List.mem_cons, exists_eq_or_imp, res, CNF.propagate_literal,
+          Set.mem_union, Set.mem_setOf_eq, CNF.mem_vars, VarSet'.mem_insert]
+        have h1 := φ.subset_vars
+        simp only [Cube.vars, Set.mem_union, Set.mem_setOf_eq, CNF.mem_vars] at h1
+        grind
     }
-    unit_propagate_aux φ' todo'
-termination_by todo.length + φ.clauses.length
+    unit_propagate φ' δ'
+termination_by δ.length + φ.clauses.length
 decreasing_by
   simp only [List.length_append, add_assoc, List.length_cons,
     Nat.add_lt_add_iff_left, Nat.lt_one_add_iff]
@@ -156,10 +178,108 @@ decreasing_by
   simp only [List.partition_eq_filter_filter, Function.comp_def, ← List.length_eq_length_filter_add]
   apply φ.clauses.length_propagate_literal
 
-def unit_propagate {n} (φ : Horn n) :
-  { ψ : Horn n // ψ.unit_literals.vars ∩ ψ.clauses.vars = ∅ } where
-    val := sorry
-    property := sorry
+/-
+lemma models_unit_propagate {n} {φ : Horn n} {δ} :
+  (φ.unit_propagate δ).models = φ.models ∩ δ.models :=
+  by
+    fun_induction unit_propagate with
+    | case1 φ => simp [Cube.models]
+    | case2 φ l todo res δ' φ' ih =>
+      ext M
+      have h := φ.clauses.mem_models_propagate_literal (l := l)
+      simp only [ih, models_eq, Cube.models_append, Set.mem_inter_iff, Set.mem_ite_empty_left,
+        Bool.not_eq_true, Cube.mem_models, List.mem_cons, forall_eq_or_imp, CNF.mem_models,
+        List.mem_flatten, forall_exists_index, and_imp, φ', δ']
+      simp only [List.contains_eq_mem, decide_eq_true_eq, Bool.decide_or, Bool.decide_eq_true,
+        Bool.or_eq_false_iff, decide_eq_false_iff_not]
+
+      constructor
+      · rintro ⟨⟨⟨h1, h2⟩, ⟨hM, h3⟩, h4⟩, h5, h6⟩
+        simp_all only [implies_true, and_self, true_and, and_true]
+        intro γ hγ
+        apply h4 -- ?
+        simp [res, CNF.mem_models_propagate_literal]
+        sorry
+      · sorry
+-/
+
+lemma models_unit_propagate {n} {φ : Horn n} {δ} :
+  (φ.unit_propagate δ).models = φ.models ∩ δ.models :=
+  by
+    fun_induction unit_propagate with
+    | case1 φ => simp [Cube.models]
+    | case2 φ l todo res δ' φ' ih =>
+      ext M
+      --have h := φ.clauses.mem_models_propagate_literal (l := l)
+      simp only [ih, models_eq, Cube.models_append, Set.mem_inter_iff, Set.mem_ite_empty_left,
+        Bool.not_eq_true, Cube.mem_models, List.mem_cons, forall_eq_or_imp,
+        List.mem_flatten, forall_exists_index, and_imp, φ', δ']
+      simp only [List.contains_eq_mem, decide_eq_true_eq, Bool.decide_or, Bool.decide_eq_true,
+        Bool.or_eq_false_iff, decide_eq_false_iff_not]
+
+      constructor
+      · rintro ⟨⟨⟨h1, h2⟩, ⟨hM, h3⟩, h4⟩, h5, h6⟩
+        simp_all only [implies_true, and_self, true_and, and_true]
+        simp only [List.partition_eq_filter_filter, CNF.mem_models, List.mem_filter,
+          Function.comp_apply, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
+          not_lt, res] at h4
+        simp only [CNF.mem_propagate_literal, ne_eq, decide_not, forall_exists_index, and_imp] at h4
+        intro γ hγ
+        rcases Classical.em (l ∈ γ) with h7 | h7
+        · use l
+        · specialize h4 _ γ hγ h7 rfl (by sorry)
+          grind
+      · rintro ⟨⟨h1, h2, h3⟩, h4, h5⟩
+        simp_all only [CNF.mem_models, true_and, implies_true, and_self]
+        simp only [List.partition_eq_filter_filter, List.mem_filter, List.length_nil,
+          Nat.zero_lt_succ, decide_true, and_true, Function.comp_apply, Bool.not_eq_eq_eq_not,
+          Bool.not_true, decide_eq_false_iff_not, not_lt, and_imp,
+          decide_eq_true_eq, res]
+        simp only [CNF.mem_propagate_literal, ne_eq, decide_not, List.nil_eq,
+          List.filter_eq_nil_iff, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
+          Decidable.not_not, not_exists, not_and, not_forall, forall_exists_index, and_imp]
+        split_ands
+        · sorry
+        · sorry
+        · sorry
+
+lemma models_unit_propagate' {n} {φ : Horn n} {δ} :
+  (φ.unit_propagate δ).models = φ.models ∩ δ.models :=
+  by
+    fun_induction unit_propagate with
+    | case1 φ => simp [Cube.models]
+    | case2 φ l todo res δ' φ' ih =>
+      ext M
+      --have h := φ.clauses.mem_models_propagate_literal (l := l)
+      simp only [ih, models_eq, Cube.models_append, Set.mem_inter_iff, Set.mem_ite_empty_left,
+        Bool.not_eq_true, Cube.mem_models, List.mem_cons, forall_eq_or_imp,
+        List.mem_flatten, forall_exists_index, and_imp, φ', δ']
+      simp only [List.contains_eq_mem, decide_eq_true_eq, Bool.decide_or, Bool.decide_eq_true,
+        Bool.or_eq_false_iff, decide_eq_false_iff_not]
+
+      constructor
+      · rintro ⟨⟨⟨h1, h2⟩, ⟨hM, h3⟩, h4⟩, h5, h6⟩
+        simp_all only [implies_true, and_self, true_and, and_true]
+        rw [← CNF.mem_models_propagate_literal M hM]
+        simp only [List.partition_eq_filter_filter, CNF.mem_models, List.mem_filter,
+          Function.comp_apply, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
+          not_lt, and_imp, res] at h4
+        intro γ hγ
+        apply h4 γ hγ -- ?
+        sorry
+      · rintro ⟨⟨h1, h2, h3⟩, h4, h5⟩
+        simp_all only [CNF.mem_models, true_and, implies_true, and_self]
+        simp only [List.partition_eq_filter_filter, List.mem_filter, List.length_nil,
+          Nat.zero_lt_succ, decide_true, and_true, Function.comp_apply, Bool.not_eq_eq_eq_not,
+          Bool.not_true, decide_eq_false_iff_not, not_lt, and_imp,
+          decide_eq_true_eq, res]
+        simp only [CNF.mem_propagate_literal, ne_eq, decide_not, List.nil_eq,
+          List.filter_eq_nil_iff, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
+          Decidable.not_not, not_exists, not_and, not_forall, forall_exists_index, and_imp]
+        split_ands
+        · sorry
+        · sorry
+        · sorry
 
 instance {n} : Top n (Horn n) where
 

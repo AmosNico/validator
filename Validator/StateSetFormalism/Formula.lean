@@ -29,11 +29,14 @@ lemma mem_union {n} {V V' : VarSet' n} {i} :
   by
     simp [union, List.mem_mergeDedup]
 
-def insert {n} (V : VarSet' n) (v : Fin n): VarSet' n :=
-  ⟨
-    List.orderedInsert (· < ·) v V,
-    sorry -- List.Pairwise.orderedInsert _ _ (List.SortedLT.pairwise  V.prop)
-  ⟩
+def insert {n} (V : VarSet' n) (v : Fin n) : VarSet' n :=
+  ⟨List.insertDedup V.val v, List.insertDedup_sorted V.prop⟩
+
+@[simp]
+lemma mem_insert {n} {V : VarSet' n} {v i} :
+  i ∈ (V.insert v).val ↔ i ∈ V.val ∨ i = v :=
+  by
+    simp [insert, List.mem_insertDedup]
 
 end VarSet'
 

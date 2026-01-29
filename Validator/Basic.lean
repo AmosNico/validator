@@ -272,12 +272,36 @@ lemma List.mergeDedup_sorted {α} [LinearOrder α] {xs ys : List α} :
       exact Trans.trans h h1
     · grind
 
-
-/-
+/--
 Similar to `List.merge`, but also remove duplicates.
 I tried to combine `List.merge` with `List.dedup`, but there are no lemmas for
 `List.dedup` with sorted. There is also `Array.mergeDedup`, but that also has no lemmas.
 -/
+def List.insertDedup {α} [Ord α] : (xs : List α) → (x : α) → List α
+| [], x => [x]
+| x :: xs, y =>
+  match compare x y with
+  | .lt => x :: xs.insertDedup y
+  | .eq => x :: xs
+  | .gt => y :: x :: xs
+
+lemma List.mem_insertDedup {α} [LinearOrder α] {xs : List α} {x a} :
+  a ∈ insertDedup xs x ↔ a ∈ xs ∨ a = x := by
+  fun_induction insertDedup
+  all_goals simp
+  all_goals grind
+
+lemma List.insertDedup_sorted {α} [LinearOrder α] {xs : List α} {x} :
+  xs.SortedLT → (insertDedup xs x).SortedLT := by
+  simp only [sortedLT_iff_pairwise]
+  fun_induction insertDedup
+  · grind
+  · simp_all only [compare_lt_iff_lt, pairwise_cons, mem_insertDedup]
+    grind
+  · simp
+  · simp_all only [compare_gt_iff_gt, pairwise_cons]
+    grind
+
 def List.diff' {α} [Ord α] : (xs ys : List α) → List α
 | [], _ => []
 | xs, [] => xs
@@ -316,8 +340,7 @@ lemma List.length_flatten_short {α} (ass : List (List α)) (h : ∀ as ∈ ass,
     | cons as ass ih => grind
 
 @[simp]
-lemma Set.inter_compl_subset_union_compl
-  {α} [Fintype α] {s1 s2 s3 s4 : Set α} :
+lemma Set.inter_compl_subset_union_compl {α} {s1 s2 s3 s4 : Set α} :
   s1 ∩ s2ᶜ ⊆ s3 ∪ s4ᶜ ↔ s1 ∩ s4 ⊆ s3 ∪ s2 := by
   simp [Set.subset_def]
   grind
