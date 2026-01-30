@@ -131,7 +131,6 @@ def models {n} (δ : Cube n) : Models n :=
 def vars {n} (δ : Cube n) : VarSet n :=
   { i | ∃ l ∈ δ, l.fst = i }
 
-
 @[simp]
 lemma mem_models {n} (δ : Cube n) M :
   M ∈ δ.models ↔ ∀ l ∈ δ, M ∈ l.models :=
@@ -144,6 +143,13 @@ lemma models_append {n} (δ1 δ2 : Cube n) :
     ext M
     simp [models, -Prod.forall]
     grind
+
+@[simp]
+lemma models_cons {n l} (δ : Cube n) :
+  models (l :: δ) = l.models ∩ δ.models :=
+  by
+    ext M
+    simp only [models, List.mem_cons, forall_eq_or_imp, Set.mem_setOf_eq, Set.mem_inter_iff]
 
 end Cube
 
@@ -161,6 +167,11 @@ def models {n} (φ : CNF n) : Models n :=
 lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, ∃ l ∈ γ, M ∈ l.models :=
   by
     simp [models]
+
+lemma models_mem_empty {n} (φ : CNF n) (h : [] ∈ φ) : φ.models = ∅ :=
+  by
+    simp only [models]
+    grind
 
 def vars {n} (φ : CNF n) : VarSet n :=
   { i | ∃ γ ∈ φ, ∃ l ∈ γ, l.fst = i }
