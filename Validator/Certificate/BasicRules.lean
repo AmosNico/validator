@@ -534,12 +534,8 @@ lemma mem_toStates_addVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
 
 -- Only return deleting effects that are not adding effects
 def delVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
-  let vars := List.diff' pt.actions'[aᵢ].del'.val pt.actions'[aᵢ].add'.val
-  have h : vars.SortedLT := by
-    apply List.diff'_sorted
-    · exact pt.actions'[aᵢ].del'.prop
-    · exact pt.actions'[aᵢ].add'.prop
-  UnprimedVariable.ofVarset' (R.type pt) ⟨vars, h⟩ false
+  let vars := pt.actions'[aᵢ].del'.diff pt.actions'[aᵢ].add'
+  UnprimedVariable.ofVarset' (R.type pt) vars false
 
 @[simp]
 lemma mem_models_delVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
@@ -549,7 +545,6 @@ lemma mem_models_delVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
     rcases aᵢ with ⟨aᵢ, haᵢ⟩
     simp [delVariable, UnprimedVariable.mem_models_ofVarSet']
     simp [Action.del, Action.add, convertVarSet, Set.subset_def]
-    simp [List.mem_diff' pt.actions'[aᵢ].del'.prop pt.actions'[aᵢ].add'.prop]
 
 @[simp]
 lemma mem_toStates_delVariable {R} {aᵢ : Fin pt.actions'.length} {s} :

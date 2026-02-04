@@ -70,10 +70,10 @@ instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.OfPartialMode
 | horn => Horn.instOfPartialModel
 | mods => MODS.instOfPartialModel
 
-instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Renaming (2 * n) (R.type pt)
-| bdd => BDD.instRenaming
-| horn => Horn.instRenaming
-| mods => MODS.instRenaming
+instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Rename (2 * n) (R.type pt)
+| bdd => BDD.instRename
+| horn => Horn.instRename
+| mods => MODS.instRename
 
 open Formalism Formula.Bot Formula.OfPartialModel
 variable {n} (pt : STRIPS n) (R : StateSetFormalism)

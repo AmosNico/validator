@@ -272,11 +272,6 @@ lemma List.mergeDedup_sorted {α} [LinearOrder α] {xs ys : List α} :
       exact Trans.trans h h1
     · grind
 
-/--
-Similar to `List.merge`, but also remove duplicates.
-I tried to combine `List.merge` with `List.dedup`, but there are no lemmas for
-`List.dedup` with sorted. There is also `Array.mergeDedup`, but that also has no lemmas.
--/
 def List.insertDedup {α} [Ord α] : (xs : List α) → (x : α) → List α
 | [], x => [x]
 | x :: xs, y =>

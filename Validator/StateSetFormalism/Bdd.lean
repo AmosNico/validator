@@ -68,7 +68,7 @@ instance {n} : OfPartialModel n (BDD n) where
 
   ofPartialModel_correct := sorry
 
-instance {n} : Renaming n (BDD n) where
+instance {n} : Rename n (BDD n) where
 
   rename := sorry
 

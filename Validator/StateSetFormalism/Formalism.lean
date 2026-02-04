@@ -228,6 +228,7 @@ lemma mem_models_iff_of_eq_unprimedState [Formalism pt R]
     have := mem_models_of_eq_toState h2.symm (x := ⟨x, h1⟩)
     grind
 
+-- TODO : check if needed
 def toPrimedAux {n} (oldVars : List (Fin (2 * n))) (h : ∀ i ∈ oldVars, Even i.val)
   (toRename : List (Fin n)) : List (Fin (2 * n)) :=
   match oldVars, toRename with
@@ -310,7 +311,7 @@ lemma toPrimedAux_eq {n} {oldVars : VarSet' (2 * n)} {h} {toRename : VarSet' n} 
 Make all unprimed vars in `x` corresponding to the vars in `V` primed.
 TODO : clarify the difference between all kinds of variables.
 -/
-def toPrimed [Formalism pt R] [Renaming (2 * n) R]
+def toPrimedOld [Formalism pt R] [RenamingOld (2 * n) R]
   (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
   let vars : List (Fin (2 * n)) :=
     toPrimedAux x.val.vars (by grind) V.val
@@ -326,15 +327,15 @@ def toPrimed [Formalism pt R] [Renaming (2 * n) R]
     obtain ⟨vj, h5⟩ := h2 x.val.vars.val[j] (by simp)
     simp_all only [Fin.lt_def, Nat.reduceLT, Nat.mul_lt_mul_left]
     grind
-  Renaming.rename x ⟨vars, hvars⟩ (by simp [vars, toPrimedAux_eq])
+  RenamingOld.rename x ⟨vars, hvars⟩ (by simp [vars, toPrimedAux_eq])
 
-lemma mem_models_toPrimed_iff [Formalism pt R] [Renaming (2 * n) R]
+lemma mem_models_toPrimedOld_iff [Formalism pt R] [RenamingOld (2 * n) R]
   {x : UnprimedVariable pt R} {V M} :
-  M ∈ (x.toPrimed V).models ↔ M.toPrimed V ∈ x.val.models :=
+  M ∈ (x.toPrimedOld V).models ↔ M.toPrimed V ∈ x.val.models :=
   by
-    simp only [Variable.models, toPrimed, toPrimedAux_eq, Renaming.mem_rename_models]
+    simp only [Variable.models, toPrimedOld, toPrimedAux_eq, RenamingOld.mem_rename_models]
     apply Formula.models_equiv
-    simp only [Variable.vars, Renaming.renameModel, Fin.getElem_fin, List.getElem_map,
+    simp only [Variable.vars, RenamingOld.renameModel, Fin.getElem_fin, List.getElem_map,
       List.getElem_attach, Model.toPrimed_eq, dite_not, eq_iff_iff]
     intro i hi
     have h2  := x.prop i hi
@@ -362,6 +363,41 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Renaming (2 * n) R]
             mul_div_cancel_left₀]
           simp [← h3] at h4
         simp_all
+
+/--
+Make all unprimed vars in `x` corresponding to the vars in `V` primed.
+TODO : clarify the difference between all kinds of variables.
+-/
+def toPrimed [Formalism pt R] [Rename (2 * n) R]
+  (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
+  let f := fun i ↦
+    -- TODO make more efficient by using that V is ordered
+    if h : Even i.val ∧ Fin.mk (i.val / 2) (by omega) ∈ V.val then
+      i.toPrimed h.1
+    else
+      i
+  have h1 : StrictMonoOn f V.toUnprimed.val.toFinset := by
+    simp [StrictMonoOn, VarSet'.toUnprimed, Fin.toUnprimed]
+    simp_all [f, Fin.toPrimed]
+  have h2 : ∀ i ∉ V.toUnprimed.val.toFinset, f i = i := by
+    simp [VarSet'.toUnprimed, Fin.toUnprimed, f]
+    grind only [= Nat.even_iff]
+  Rename.rename x ⟨f, h1, h2⟩
+
+lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
+  {x : UnprimedVariable pt R} {V M} :
+  M ∈ (x.toPrimed V).models ↔ M.toPrimed V ∈ x.val.models :=
+  by
+    simp only [Variable.models, toPrimed, Rename.mem_rename_models]
+    apply Formula.models_equiv
+    simp only [Variable.vars, Model.rename, Model.toPrimed_eq, Nat.not_even_iff_odd,
+      eq_iff_iff]
+    intro i hi
+    have h2  := x.prop i hi
+    simp only [h2, true_and]
+    split
+    case _ => simp_all [Fin.toPrimed]
+    case _ j h3 => grind
 
 end UnprimedVariable
 
@@ -580,11 +616,11 @@ lemma inter_subset_union_iff_models [F : Formalism pt R]
       specialize @h1 M h2
       grind
 
-def toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
+def toPrimed [F : Formalism pt R] [Rename (2 * n) R]
   (X : UnprimedVariables pt R) (V : VarSet' n) : Variables pt R :=
   X.map (UnprimedVariable.toPrimed · V)
 
-lemma mem_inter_toPrimed [F : Formalism pt R] [Renaming (2 * n) R]
+lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
   {X : UnprimedVariables pt R} {V s} :
   s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V.val, i ∈ s' ↔ i ∈ s :=
   by

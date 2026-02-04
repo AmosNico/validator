@@ -75,7 +75,7 @@ instance {n} : OfPartialModel n (TwoCNF n) where
 
   ofPartialModel_correct := sorry
 
-instance {n} : Renaming n (TwoCNF n) where
+instance {n} : Rename n (TwoCNF n) where
 
   rename := sorry
 

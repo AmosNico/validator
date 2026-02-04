@@ -40,13 +40,17 @@ def contains_literal {n} {V : VarSet' n} (M : PartialModel V) : Literal n → Bo
 -- TODO : remove?
 lemma contains_literal_iff {n} {V : VarSet' n} (M : PartialModel V) (l : Literal n) :
   M.contains_literal l ↔ ∃ i : Fin V.val.length, V.val[i] = l.1 ∧ M[i] = l.2 :=
-  by simp [contains_literal]
+  by
+    simp [Literal, contains_literal]
+    grind
 
 lemma mem_models_to_mem_literal_models
   {n} {V : VarSet' n} {M : PartialModel V} {l : Literal n} {M'} :
   M.contains_literal l → M' ∈ M.models →  M' ∈ l.models :=
   by
-    simp only [contains_literal, List.any_eq_true, List.mem_finRange, Bool.and_eq_true,
+    unfold contains_literal Literal
+    split
+    simp only [List.any_eq_true, List.mem_finRange, Bool.and_eq_true,
       decide_eq_true_eq, true_and, models, Literal.mem_models, forall_exists_index, and_imp]
     intro i h1 h2 h3
     rw [← h1, ← h2]
@@ -110,7 +114,7 @@ instance {n} : ClausalEntailment n (MODS n) where
   entails_correct :=
     by
       intro φ γ
-      simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, Prod.exists,
+      simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, Literal, Prod.exists,
         Clause.isTrivial_iff, Formula.models, Set.subset_def, mem_models, Clause.mem_models,
         forall_exists_index, and_imp]
       constructor
@@ -167,7 +171,7 @@ instance {n} : OfPartialModel n (MODS n) where
   ofPartialModel_correct := by
     simp [Formula.models, models, Formula.vars]
 
-instance {n} : Renaming n (MODS n) where
+instance {n} : Rename n (MODS n) where
 
   rename := sorry
 

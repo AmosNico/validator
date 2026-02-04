@@ -38,6 +38,15 @@ lemma mem_insert {n} {V : VarSet' n} {v i} :
   by
     simp [insert, List.mem_insertDedup]
 
+def diff {n} (V V' : VarSet' n) : VarSet' n :=
+  ⟨List.diff' V.val V'.val, List.diff'_sorted V.prop V'.prop⟩
+
+@[simp]
+lemma mem_diff {n} {V V' : VarSet' n} {i} :
+  i ∈ (V.diff V').val ↔ i ∈ V.val ∧ i ∉ V'.val :=
+  by
+    simp [diff, List.mem_diff' V.prop V'.prop]
+
 end VarSet'
 
 namespace Formula
@@ -66,7 +75,8 @@ def PartialModel.models {n} {V : VarSet' n} (M : PartialModel V) : Models n :=
 A Literal is a variable `i` (represented by `(i, true)`) or
 its negation (represented by `(i, false)`).
 -/
-abbrev Literal n := Fin n × Bool
+def Literal n := Fin n × Bool
+  deriving DecidableEq, Repr
 
 namespace Literal
 
@@ -90,6 +100,14 @@ lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ :=
     simp [negate]
     split
     all_goals simp [models, Set.compl_setOf]
+
+lemma eq_or_eq_negate_iff_var_eq {n} {l l' : Literal n} : l.1 = l'.1 ↔ l = l' ∨ l = l'.negate :=
+  by
+    rcases l with ⟨v, b⟩
+    rcases l' with ⟨v', b'⟩
+    simp [negate, Literal]
+    grind
+
 
 end Literal
 
@@ -128,9 +146,6 @@ namespace Cube
 def models {n} (δ : Cube n) : Models n :=
   { M | ∀ l ∈ δ, M ∈ l.models }
 
-def vars {n} (δ : Cube n) : VarSet n :=
-  { i | ∃ l ∈ δ, l.fst = i }
-
 @[simp]
 lemma mem_models {n} (δ : Cube n) M :
   M ∈ δ.models ↔ ∀ l ∈ δ, M ∈ l.models :=
@@ -151,7 +166,51 @@ lemma models_cons {n l} (δ : Cube n) :
     ext M
     simp only [models, List.mem_cons, forall_eq_or_imp, Set.mem_setOf_eq, Set.mem_inter_iff]
 
+def vars {n} (δ : Cube n) : VarSet n :=
+  { i | ∃ l ∈ δ, l.fst = i }
+
+@[simp]
+lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = {l.1} ∪ δ.vars :=
+  by
+    simp [vars]
+    grind
+
+def consistent {n} (δ : Cube n) : Bool :=
+  δ.all fun l ↦ l.negate ∉ δ
+
+lemma consistent_iff {n} {δ : Cube n} : δ.consistent ↔ δ.models ≠ ∅ :=
+  by
+    simp only [consistent, decide_not, List.all_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not, ne_eq, Set.ext_iff, mem_models, Set.mem_empty_iff_false, iff_false,
+      not_forall, not_exists, not_not, Literal.mem_models]
+    constructor
+    · intro h1
+      use fun i ↦ (i, true) ∈ δ
+      intro l hl
+      simp [Literal.negate] at h1
+      grind only
+    · rintro ⟨M, h1⟩ l h2 h3
+      have h4 := h1 l.negate h3
+      simp only [Literal.negate] at h4
+      grind only
+
 end Cube
+
+/-- The negation of a clause -/
+def Clause.neg {n} (γ : Clause n) : Cube n :=
+  γ.map Literal.negate
+
+lemma Clause.models_neg {n} {γ : Clause n} : γ.neg.models = γ.modelsᶜ :=
+  by
+    simp [neg, Cube.models, Clause.models, compl]
+
+/-- The negation of a cube -/
+def Cube.neg {n} (δ : Cube n) : Clause n :=
+  δ.map Literal.negate
+
+lemma Cube.models_neg {n} {δ : Cube n} : δ.neg.models = δ.modelsᶜ :=
+  by
+    simp [neg, Cube.models, Clause.models, compl]
 
 /-! ## CNF -/
 
@@ -280,30 +339,30 @@ class Consistency n R [F : Formula n R] where
 
   consistent : (φ : R) → Bool
 
-  consistent_correct {φ} : consistent φ ↔ Nonempty (F.models φ)
+  consistent_correct φ : consistent φ ↔ (F.models φ).Nonempty
 
 class ClausalEntailment n R [F : Formula n R] where
 
   entails : (φ : R) → (γ : Clause n) → Bool
 
-  entails_correct {φ γ} : entails φ γ ↔ F.models φ ⊆ γ.models
+  entails_correct φ γ : entails φ γ ↔ F.models φ ⊆ γ.models
 
 class Implicant n R [F : Formula n R] where
 
   entails : (δ : Cube n) → (φ : R) → Bool
 
-  entails_correct {δ φ} : entails δ φ ↔ δ.models  ⊆ F.models φ
+  entails_correct δ φ : entails δ φ ↔ δ.models  ⊆ F.models φ
 
 class SententialEntailment n R [F : Formula n R] where
 
   entails : (φ ψ : R)  → Bool
 
-  entails_correct {φ ψ} : entails φ ψ ↔ F.models φ ⊆ F.models ψ
+  entails_correct φ ψ : entails φ ψ ↔ F.models φ ⊆ F.models ψ
 
 class BoundedConjuction n R [F : Formula n R] where
   and : R → R → R
 
-  and_correct {φ ψ} : F.models (and φ ψ) = F.models φ ∩ F.models ψ
+  and_correct φ ψ : F.models (and φ ψ) = F.models φ ∩ F.models ψ
 
 namespace BoundedConjuction
 
@@ -330,7 +389,7 @@ end BoundedConjuction
 class BoundedDisjunction n R [F : Formula n R] where
   or : R → R → R
 
-  or_correct {φ ψ} : F.models (or φ ψ) = F.models φ ∪ F.models ψ
+  or_correct φ ψ : F.models (or φ ψ) = F.models φ ∪ F.models ψ
 
 namespace BoundedDisjunction
 
@@ -368,15 +427,82 @@ class OfPartialModel n R [F : Formula n R] where
   ofPartialModel_correct {V M} :
     F.models (ofPartialModel V M) = M.models ∧ F.vars (ofPartialModel V M) = V
 
+structure Renaming {n} (dom : VarSet' n) where
+  rename : Fin n → Fin n
+  mono : StrictMonoOn rename dom.val.toFinset
+  prop : ∀ i ∉ dom.val.toFinset, rename i = i
+
+def Model.rename {n} {V : VarSet' n} (r : Renaming V) (M : Model n) : Model n :=
+  fun i ↦ M (r.rename i)
+
+def Literal.rename {n} {V : VarSet' n} (r : Renaming V) (l : Literal n) : Literal n :=
+  (r.rename l.1, l.2)
+
+def Clause.rename {n} {V : VarSet' n} (r : Renaming V) (γ : Clause n) : Clause n :=
+  γ.map (Literal.rename r)
+
+def Cube.rename {n} {V : VarSet' n} (r : Renaming V) (δ : Cube n) : Cube n :=
+  δ.map (Literal.rename r)
+
+def CNF.rename {n} {V : VarSet' n} (r : Renaming V) (φ : CNF n) : CNF n :=
+  φ.map (Clause.rename r)
+
+-- TODO : this is not correct, only the renamed variables that are in V' should be added
+def VarSet'.rename {n} {V : VarSet' n} (r : Renaming V) (V' : VarSet' n) : VarSet' n :=
+  (V'.diff V).union
+  ⟨V.val.map r.rename, by
+    have h1 := r.mono
+    have h2 := V.prop
+    simp [List.sortedLT_iff_getElem_lt_getElem_of_lt, StrictMonoOn] at *
+    grind⟩
+
+lemma VarSet'.mem_rename {n} {V : VarSet' n} {r : Renaming V} {V' : VarSet' n} {i} :
+  i ∈ (VarSet'.rename r V').val ↔ (i ∈ V'.val ∧ i ∉ V.val) ∨ ∃ j ∈ V.val, i = r.rename j :=
+  by
+    simp [rename]
+    grind
+
+
 /-- Renaming consistent with order -/
-class Renaming n R [F : Formula n R] where
+class Rename n R [F : Formula n R] where
+  --rename (φ : R) (r : { i : Fin n // i ∈ (F.vars φ).val } → Fin n) (h : StrictMono r) : R
+  rename (φ : R) {V} (f : Renaming V) : R
+
+  rename_correct φ V (f : Renaming V) :
+    (∀ i, i ∈ (F.vars (rename φ f)).val ↔ i ∈ f.rename '' (F.vars φ).val.toFinset) ∧
+    F.models (rename φ f) =
+      { M | ∃ M' ∈ F.models φ, ∀ i ∈ (F.vars φ).val.attach, M (f.rename i) ↔ M' i }
+
+namespace Rename
+
+-- TODO : replace rename_correct by this?
+lemma mem_rename_models {n R} [F : Formula n R] [Rename n R] {φ V} {r : Renaming V} {M} :
+  M ∈ F.models (rename φ r) ↔ M.rename r ∈ F.models φ :=
+  by
+    simp only [rename_correct, Set.mem_setOf_eq]
+    constructor
+    · rintro ⟨M', h1, h2⟩
+      unfold Model.rename
+      rw [Formula.models_equiv]
+      · exact h1
+      · simp_all
+    · intro h1
+      use M.rename r, h1
+      simp [Model.rename]
+
+end Rename
+
+/-- Renaming consistent with order -/
+class RenamingOld n R [F : Formula n R] where
   rename : (φ : R) → (vars' : VarSet' n) → vars'.val.length = (F.vars φ).val.length → R
 
   rename_correct {φ vars' h} :
     F.vars (rename φ vars' h) = vars' ∧ F.models (rename φ vars' h) =
       { M | ∃ M' ∈ F.models φ, ∀ i : Fin vars'.val.length, M vars'.val[i] ↔ M' (F.vars φ).val[i] }
 
-def Renaming.renameModel {n}
+namespace RenamingOld
+
+def renameModel {n}
   (V V' : VarSet' n) (h : V'.val.length = V.val.length) (M : Model n) : Model n :=
   fun i ↦
     match V.val.finIdxOf? i with
@@ -384,7 +510,7 @@ def Renaming.renameModel {n}
     | some j => M (V'.val[j]'(by omega))
 
 -- TODO : replace rename_correct by this?
-lemma Renaming.mem_rename_models {n R} [F : Formula n R] [Renaming n R] {φ vars' h M} :
+lemma mem_rename_models {n R} [F : Formula n R] [RenamingOld n R] {φ vars' h M} :
   M ∈ F.models (rename φ vars' h) ↔ renameModel (F.vars φ) vars' (by simp [h]) M ∈ F.models φ :=
   by
     simp only [rename_correct, Fin.getElem_fin, Set.mem_setOf_eq]
@@ -412,6 +538,15 @@ lemma Renaming.mem_rename_models {n R} [F : Formula n R] [Renaming n R] {φ vars
         have h3 := List.SortedLT.nodup (F.vars φ).prop
         apply (List.Nodup.getElem_inj_iff h3).1 at h1
         simp_all only
+
+-- TODO this seems quite inefficient
+def renameLiteral {n} (V V' : VarSet' n) (h : V'.val.length = V.val.length) (l : Literal n) :
+  Literal n :=
+  match V.val.finIdxOf? l.1 with
+  | none => l
+  | some j => (V'.val[j], l.2)
+
+end RenamingOld
 
 class ToCNF n R [F : Formula n R] where
   toCNF : R → CNF n
@@ -445,6 +580,7 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
         · specialize ih φ' h1 h2 γ2 hγ2
           grind
 
+-- TODO : Use Clause.neg
 /-- Transform ¬x to a DNF formula by translating x to a CNF-formula and applying De Morgans laws. -/
 def negToDNF {n} {R} [Formula n R] [h : ToCNF n R] (φ : R) : DNF n :=
   (h.toCNF φ).map (List.map Literal.negate)
@@ -491,6 +627,7 @@ lemma conjunctionToDnF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
         simp [-Prod.forall]
         grind
 
+-- Use Cube.neg
 /-- Transform ¬x to a CNF formula by translating x to a DNF-formula and applying De Morgans laws. -/
 def negToCNF {n} {R} [Formula n R] [h : ToDNF n R] (φ : R) : CNF n :=
   (h.toDNF φ).map (List.map Literal.negate)
