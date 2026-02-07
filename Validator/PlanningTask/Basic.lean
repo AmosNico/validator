@@ -1,6 +1,7 @@
 /- TODO : Copyright -/
 import Mathlib.Data.Fintype.Powerset
 import Validator.PlanningTask.Core
+import Validator.Basic
 
 namespace Validator
 
@@ -295,4 +296,154 @@ lemma sub_progression_iff_sub_regression {n} {pt : STRIPS n} {S S' A} :
       have : s ∈ Sᶜ := h1 hs_regr
       simp_all
 
-end Validator
+-- TODO : documentation
+/-! ## VarSet' -/
+namespace VarSet'
+
+instance {n} {i : Fin n} {V : VarSet' n} : Decidable (i ∈ V) := by
+  simp only [instMembershipFin]
+  infer_instance
+
+@[reducible]
+instance {n} : HasSubset (VarSet' n) where
+  Subset V V' := ∀ i ∈ V, i ∈ V'
+
+lemma ext {n} {V V' : VarSet' n} : V = V' ↔ ∀ i, i ∈ V ↔ i ∈ V' :=
+  by
+    simp only [instMembershipFin, VarSet', BitVec.eq_of_getElem_eq_iff, Fin.getElem_fin]
+    constructor
+    · grind
+    · intro h i hi
+      specialize h ⟨i, hi⟩
+      grind
+
+
+@[simp]
+lemma mem_empty {n i} : i ∉ @empty n :=
+  by
+    simp [empty, VarSet'.instMembershipFin]
+
+def union {n} (V V' : VarSet' n) : VarSet' n :=
+  V ||| V'
+
+@[simp]
+lemma mem_union {n} {V V' : VarSet' n} {i} :
+  i ∈ (V.union V') ↔ i ∈ V ∨ i ∈ V' :=
+  by
+    simp [union, VarSet'.instMembershipFin]
+
+def inter {n} (V V' : VarSet' n) : VarSet' n :=
+  V &&& V'
+
+@[simp]
+lemma mem_inter {n} {V V' : VarSet' n} {i} :
+  i ∈ (V.inter V') ↔ i ∈ V ∧ i ∈ V' :=
+  by
+    simp [inter, VarSet'.instMembershipFin]
+
+@[simp]
+lemma mem_insert {n} {V : VarSet' n} {i j} :
+  j ∈ (V.insert i) ↔ j ∈ V ∨ i = j :=
+  by
+    simp [insert, VarSet'.instMembershipFin]
+    grind
+
+def diff {n} (V V' : VarSet' n) : VarSet' n :=
+  V &&& ~~~V'
+
+@[simp]
+lemma mem_diff {n} {V V' : VarSet' n} {i} :
+  i ∈ (V.diff V') ↔ i ∈ V ∧ i ∉ V' :=
+  by
+    simp [diff, instMembershipFin]
+
+def Disjoint {n} (V V' : VarSet' n) : Prop :=
+  V &&& V' = 0#n
+
+lemma Disjoint_iff {n} {V V' : VarSet' n} :
+  V.Disjoint V' ↔ ∀ i, i ∈ V → i ∈ V' → False :=
+  by
+    simp only [Disjoint, ext, BitVec.getElem_and, BitVec.getElem_zero, instMembershipFin,
+      Fin.getElem_fin, imp_false, Bool.not_eq_true]
+    grind
+
+@[simp]
+lemma Disjoint_empty_left {n} {V : VarSet' n} : empty.Disjoint V :=
+  by
+    simp only [Disjoint, empty, BitVec.zero_eq, BitVec.zero_and]
+
+@[simp]
+lemma Disjoint_empty_right {n} {V : VarSet' n} : V.Disjoint empty :=
+  by
+    simp only [Disjoint, empty, BitVec.zero_eq, BitVec.and_zero]
+
+def foldl {α n} (f : α → Fin n → α) (init : α) (V : VarSet' n) : α :=
+  Fin.foldl n (fun a i ↦ if i ∈ V then f a i else a) init
+
+lemma foldl_cons {α n} {V : VarSet' n} {f : Fin n → α} {a as} :
+  a ∈ V.foldl (fun a i ↦ f i :: a) as ↔ (∃ i ∈ V, a = f i) ∨ a ∈ as :=
+  by
+    simp only [foldl]
+    induction V using BitVec.cons_induction with
+    | nil => simp
+    | @cons n' b V ih =>
+      simp only [instMembershipFin, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
+        Fin.val_castSucc] at *
+      have h1 : ∀ i : Fin n', i.val ≠ n' := by omega
+      split
+      · simp only [BitVec.getElem_cons, h1, ↓reduceDIte, List.mem_cons, ih]
+        constructor
+        · grind
+        · rw [← or_assoc]
+          apply Or.imp_left
+          rintro ⟨i, h2, rfl⟩
+          split at h2
+          · grind
+          · apply Or.inr
+            use ⟨i.val, by omega⟩
+            simp [h2]
+      · simp only [BitVec.getElem_cons, h1, ↓reduceDIte, ih]
+        constructor
+        · grind
+        · apply Or.imp_left
+          rintro ⟨i, h2, rfl⟩
+          split at h2
+          · grind
+          · use ⟨i.val, by omega⟩
+            simp [h2]
+
+-- TODO : can this be done more efficiently?
+def map {n m} (V : VarSet' n) (f : Fin n → Fin m) : VarSet' m :=
+  V.foldl (fun V' i ↦ V'.insert (f i)) empty
+  -- Fin.foldl n (fun V' i ↦ if i ∈ V then V'.insert (f i) else V') empty
+
+lemma mem_map {n m} {V : VarSet' n} {f : Fin n → Fin m} {i} :  i ∈ V.map f ↔ (∃ j ∈ V, i = f j) :=
+  by
+    simp only [map, foldl, insert]
+    induction V using BitVec.cons_induction with
+    | nil => simp
+    | @cons n' b V ih =>
+      simp only [instMembershipFin, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
+        Fin.val_castSucc] at *
+      have h1 : ∀ i : Fin n', i.val ≠ n' := by omega
+      split
+      · simp only [BitVec.getElem_cons, h1, ↓reduceDIte, BitVec.getElem_or, BitVec.getElem_twoPow,
+        Bool.or_eq_true, ih, decide_eq_true_eq]
+        constructor
+        · grind
+        · rintro ⟨i, h2, rfl⟩
+          split at h2
+          · grind
+          · apply Or.inl
+            use ⟨i.val, by omega⟩
+            simp [h2]
+      · simp only [BitVec.getElem_cons, h1, ↓reduceDIte, ih]
+        constructor
+        · grind
+        · rintro ⟨i, h2, rfl⟩
+          split at h2
+          · grind
+          · use ⟨i.val, by omega⟩
+            simp [h2]
+
+end Validator.VarSet'

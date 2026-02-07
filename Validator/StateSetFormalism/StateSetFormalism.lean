@@ -93,49 +93,58 @@ lemma toStates_mkEmpty : (mkEmpty pt R).val.toStates = ∅ :=
     simp [mkEmpty, Variable.toStates_eq, Variable.models,  bot_correct]
 
 def mkInit : UnprimedVariable' pt R :=
+  let M : PartialModel (2 * n) := {
+    pos := VarSet'.toUnprimed pt.init'
+    neg := VarSet'.toUnprimed (~~~pt.init')
+    disjoint := by
+      simp only [VarSet'.Disjoint_iff, VarSet'.instMembershipFin, VarSet'.toUnprimed]
+      grind
+  }
   ⟨
-    ofPartialModel (VarSet'.unprimedVars n) (pt.init'.cast (by simp [VarSet'.unprimedVars])),
-    by simp only [ofPartialModel_correct]; exact VarSet'.isUnprimed_unprimedVars
+    ofPartialModel M,
+    by
+      simp only [VarSet'.IsUnprimed, VarSet'.instMembershipFin, VarSet'.toUnprimed, Bool.decide_and,
+        Bool.decide_eq_true, ofPartialModel_correct, PartialModel.vars', VarSet'.mem_union, M];
+      grind
   ⟩
 
 @[simp]
 lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} :=
   by
     ext s
-    simp only [mkInit, Variable.toStates_eq, Variable.models, ofPartialModel_correct, Set.mem_image,
-      Set.mem_singleton_iff]
-    simp only [Model.unprimedState, Fin.toUnprimed, PartialModel.models, VarSet'.unprimedVars,
-      Fin.getElem_fin, List.getElem_ofFn, BitVec.getElem_cast, Set.mem_setOf_eq]
+    simp only [mkInit, Variable.toStates_eq, Variable.models, ofPartialModel_correct,
+      PartialModel.models, Set.mem_image, Set.mem_setOf_eq, Set.mem_singleton_iff]
+    simp only [VarSet'.instMembershipFin, Fin.getElem_fin, VarSet'.mem_toUnprimed, Fin.divNat',
+      and_imp, BitVec.getElem_not, Bool.not_eq_eq_eq_not, Bool.not_true, Model.unprimedState,
+      Fin.toUnprimed]
     simp only [STRIPS.init, convertState]
     constructor
-    · grind
+    · rintro ⟨M, ⟨h1, h2⟩, rfl⟩
+      ext i
+      specialize h1 ⟨2 * i, by omega⟩ (by simp)
+      specialize h2 ⟨2 * i, by omega⟩ (by simp)
+      grind
     · intro rfl
       obtain ⟨M, h⟩ := Model.exists_model_of_state pt.init
       use M
       simp [STRIPS.init, convertState, Model.unprimedState, Fin.toUnprimed, Set.ext_iff] at h
-      grind
+      split_ands
+      · grind
+      · grind
+      · grind
 
 def mkGoal : UnprimedVariable' pt R :=
-  ⟨
-    ofPartialModel pt.goal'.toUnprimed (BitVec.allOnes _),
-    by simp only [ofPartialModel_correct]; exact VarSet'.isUnprimed_toUnprimed
-  ⟩
+  UnprimedVariable.ofVarset' (R.type pt) pt.goal'
 
 @[simp]
 lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goal_states :=
   by
     ext s
-    simp only [mkGoal, Variable.toStates_eq, Variable.models, ofPartialModel_correct]
-    simp only [Model.unprimedState, Fin.toUnprimed, PartialModel.models, VarSet'.toUnprimed,
-      Fin.getElem_fin, List.getElem_map, BitVec.getElem_allOnes, iff_true, Set.mem_image]
-    simp only [STRIPS.goal_states, STRIPS.GoalState, convertVarSet, List.coe_toFinset,
-      Set.mem_setOf_eq]
+    simp only [mkGoal, Variable.toStates_eq, Set.mem_image, UnprimedVariable.mem_models_ofVarSet',
+      iff_true, Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq]
+    simp only [STRIPS.goal_states, STRIPS.GoalState, VarSet'.toVarSet, Set.mem_setOf_eq]
     constructor
-    · rintro ⟨M, h, rfl⟩
-      simp only [Set.setOf_subset_setOf]
-      intro i hi
-      obtain ⟨j, h2, rfl⟩ := List.getElem_of_mem hi
-      exact h ⟨j, by simp [h2]⟩
+    · grind
     · intro h
       obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
       use M

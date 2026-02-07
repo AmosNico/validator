@@ -24,6 +24,7 @@ Exceptions are `Action` and `STRIPS` which can be used for both purposes.
 -/
 
 /-! ### Sets of variables
+TODO : update documentation
 
 Variables have type `Fin n`, and sets of variables therefore have type `Finset(Fin n)`.
 At runtime we use an `Array` instead of `Finset`.
@@ -31,10 +32,26 @@ At runtime we use an `Array` instead of `Finset`.
 
 abbrev VarSet n := Set (Fin n)
 
-abbrev VarSet' n := { vars : List (Fin n) // vars.SortedLT }
+abbrev VarSet' n := BitVec n
 
-def convertVarSet {n} (V : VarSet' n) : VarSet n :=
-  V.val.toFinset
+namespace VarSet'
+
+def empty {n} : (VarSet' n) :=
+  BitVec.zero n
+
+def insert {n} (V : VarSet' n) (i : Fin n) :=
+  V ||| BitVec.twoPow n i
+
+def ofList {n} (l : List (Fin n)) : VarSet' n :=
+  l.foldl insert empty
+
+instance {n} : Membership (Fin n) (VarSet' n) where
+  mem V i := V[i]
+
+def toVarSet {n} (V : VarSet' n) : VarSet n :=
+  { i | i ∈ V }
+
+end VarSet'
 
 /-! ### States and sets of states
 
@@ -43,7 +60,7 @@ by a vector with boolean values to indicate which variables are in the set.
 
 TODO : sets of states at runtime
 -/
-
+-- TODO : merge with VarSet / VarSet'?
 abbrev State n := Set (Fin n)
 
 -- TODO : use BitVec
@@ -72,11 +89,11 @@ structure Action n where
 
 namespace Action
 
-def pre {n} (a : Action n) : VarSet n := convertVarSet a.pre'
+def pre {n} (a : Action n) : VarSet n := a.pre'.toVarSet
 
-def add {n} (a : Action n) : VarSet n := convertVarSet a.add'
+def add {n} (a : Action n) : VarSet n := a.add'.toVarSet
 
-def del {n} (a : Action n) : VarSet n := convertVarSet a.del'
+def del {n} (a : Action n) : VarSet n := a.del'.toVarSet
 
 end Action
 
@@ -127,7 +144,7 @@ def init {n} (pt : STRIPS n) : State n :=
   convertState pt.init'
 
 def GoalState {n} (pt : STRIPS n) (s : State n) : Prop :=
-  convertVarSet pt.goal' ⊆ s
+  pt.goal'.toVarSet ⊆ s
 
 end STRIPS
 

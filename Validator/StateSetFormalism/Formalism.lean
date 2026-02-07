@@ -1,3 +1,4 @@
+import Batteries.Data.BitVec.Lemmas
 import Validator.StateSetFormalism.Formula
 
 open Validator.Formula (Model Models Renaming OfPartialModel)
@@ -11,6 +12,9 @@ represented by `2 * i + 1` and `2 * i` respectively.
 def Fin.toUnprimed {n} : Fin n → Fin (2 * n) :=
   fun i ↦ ⟨2 * i.val, by omega⟩
 
+def Fin.divNat' {n m} (i : Fin (m * n)) : Fin n :=
+  ⟨i / m, Nat.div_lt_of_lt_mul <| i.is_lt⟩
+
 lemma Fin.toUnprimedStrictMono {n} : StrictMono (@toUnprimed n) :=
   by
     simp [toUnprimed, StrictMono]
@@ -21,34 +25,43 @@ def Fin.toPrimed {n} (i : Fin (2 * n)) (h : Even i.val) : Fin (2 * n) :=
 namespace Validator.VarSet'
 
 abbrev IsUnprimed {n} (V : VarSet' (2 * n)) : Prop :=
-  ∀ i ∈ V.val, Even i.val
+  ∀ i ∈ V, Even i.val
 
 @[simp]
 lemma isUnprimed_empty {n} : empty.IsUnprimed (n := n) :=
-  by simp [empty, IsUnprimed]
+  by simp [empty, instMembershipFin, IsUnprimed]
+
+@[simp]
+lemma isUnprimed_union {n} {V V' : VarSet' (2 * n)} :
+  (V.union V').IsUnprimed ↔ V.IsUnprimed ∧ V'.IsUnprimed :=
+  by
+    simp [union, instMembershipFin, IsUnprimed]
+    grind
 
 def toUnprimed {n} (V : VarSet' n) : VarSet' (2 * n) :=
-  ⟨V.val.map Fin.toUnprimed, by
-    rw [StrictMono.sortedLT_listMap  Fin.toUnprimedStrictMono]
-    exact V.prop⟩
+  BitVec.ofFnLE fun i ↦ Even i.val ∧ i.divNat' ∈ V
+
+lemma mem_toUnprimed {n} {V : VarSet' n} {i} :
+  i ∈ V.toUnprimed ↔ Even i.val ∧ i.divNat' ∈ V :=
+  by
+    simp [toUnprimed, instMembershipFin, BitVec.getElem_ofFnLE]
 
 @[simp]
 lemma toUnprimed_mem_toUnprimed_iff {n} {V : VarSet' n} {i : Fin n} :
-  i.toUnprimed ∈ V.toUnprimed.val ↔ i ∈ V.val :=
+  i.toUnprimed ∈ V.toUnprimed ↔ i ∈ V :=
   by
-    simp [toUnprimed, Fin.toUnprimed, Fin.val_inj]
+    simp [mem_toUnprimed, Fin.toUnprimed, Fin.divNat']
 
 lemma isUnprimed_toUnprimed {n} {V : VarSet' n} : IsUnprimed (toUnprimed V) :=
-  by simp [toUnprimed, IsUnprimed, Fin.toUnprimed]
+  by
+    simp [mem_toUnprimed, IsUnprimed]
+    grind
 
 def unprimedVars n : VarSet' (2 * n) :=
-    let vars := List.ofFn Fin.toUnprimed
-    have h : vars.SortedLT := by
-      simp [vars, List.sortedLT_iff_pairwise, Fin.toUnprimed]
-    ⟨vars, h⟩
+    BitVec.ofFnLE fun i ↦ Even i.val
 
 lemma isUnprimed_unprimedVars {n} : IsUnprimed (unprimedVars n) :=
-  by simp [unprimedVars, IsUnprimed, Fin.toUnprimed]
+  by simp [unprimedVars, IsUnprimed, instMembershipFin, BitVec.getElem_ofFnLE]
 
 end VarSet'
 
@@ -66,7 +79,7 @@ def toPrimed {n} (V : VarSet' n)
   fun i ↦
     if h : ¬Even i.val then
       M ⟨i - 1, by omega⟩
-    else if ⟨i / 2, by omega⟩ ∈  V.val then
+    else if i.divNat' ∈  V then
       M ⟨i + 1, by grind⟩
     else
       M i
@@ -76,15 +89,18 @@ lemma toPrimed_eq {n} (V : VarSet' n) (M : Model (2 * n)) :
   fun i : Fin (2 * n) ↦
     if h : ¬Even i.val then
       M ⟨i - 1, by omega⟩
-    else if ⟨i / 2, by omega⟩ ∈  V.val then
+    else if i.divNat' ∈  V then
       M ⟨i + 1, by grind⟩
     else
       M i := rfl
 
 lemma unprimedState_eq_iff_unprimedVars {n} {M M' : Model (2 * n)} :
-  M.unprimedState = M'.unprimedState ↔ ∀ i ∈ (VarSet'.unprimedVars n).val, M i = M' i :=
+  M.unprimedState = M'.unprimedState ↔ ∀ i ∈ (VarSet'.unprimedVars n), M i = M' i :=
   by
-    simp [Model.unprimedState, VarSet'.unprimedVars, Fin.toUnprimed, Set.ext_iff]
+    simp [Model.unprimedState, VarSet'.unprimedVars, Fin.toUnprimed, Set.ext_iff,
+      VarSet'.instMembershipFin, BitVec.getElem_ofFnLE]
+    sorry
+
 
 /-
 lemma unprimedState_eq_iff_even {n} {M M' : Model (2 * n)} :
@@ -162,7 +178,7 @@ lemma toStates_eq [Formalism pt R] {x : Variable pt R} :
 @[simp]
 instance [F : Formalism pt R] : Membership (Fin (2 * n)) (Variable pt R) where
 
-  mem x i := i ∈ x.vars.val
+  mem x i := i ∈ x.vars
 
 end Variable
 
@@ -173,32 +189,39 @@ namespace UnprimedVariable
 
 def ofVarset' R [Formalism pt R] [h : OfPartialModel (2 * n) R]
   (V : VarSet' n) (pos := true) : UnprimedVariable pt R :=
-  let x : Variable pt R :=
-    h.ofPartialModel V.toUnprimed (BitVec.fill _ pos)
+  let M : PartialModel (2 * n) :=
+    if pos then
+      ⟨V.toUnprimed, VarSet'.empty, by simp⟩
+    else
+      ⟨VarSet'.empty, V.toUnprimed, by simp⟩
+  let x : Variable pt R := h.ofPartialModel M
   have hx : x.vars.IsUnprimed := by
-    simp only [h.ofPartialModel_correct, x]
-    exact VarSet'.isUnprimed_toUnprimed
+    simp only [h.ofPartialModel_correct, x, PartialModel.vars', M]
+    split
+    all_goals
+      simp only [VarSet'.IsUnprimed, VarSet'.mem_union, VarSet'.mem_empty, or_false, false_or]
+      exact VarSet'.isUnprimed_toUnprimed
   ⟨x, hx⟩
 
 @[simp]
-lemma toUnprimed_mem_vars_ofVarSet' [Formalism pt R] [h : OfPartialModel (2 * n) R]
-  {V : VarSet' n} {pos i} : i.toUnprimed ∈ (ofVarset' (h := h) R V pos).val.vars.val ↔ i ∈ V.val :=
+lemma mem_vars_ofVarSet' [Formalism pt R] [h : OfPartialModel (2 * n) R] {V pos i} :
+  i ∈ (ofVarset' (h := h) R V pos).val.vars ↔ Even i.val ∧ i.divNat' ∈ V :=
   by
-    simp [ofVarset', OfPartialModel.ofPartialModel_correct]
+    simp [ofVarset', OfPartialModel.ofPartialModel_correct, PartialModel.vars']
+    split
+    all_goals simp [VarSet'.mem_toUnprimed]
 
 @[simp]
 lemma mem_models_ofVarSet' [Formalism pt R] [h : OfPartialModel (2 * n) R]
   {V : VarSet' n} {pos M} :
-  M ∈ (ofVarset' (h := h) R V pos).val.models ↔ (∀ i ∈ V.val, i ∈ M.unprimedState ↔ pos):=
+  M ∈ (ofVarset' (h := h) R V pos).val.models ↔ (∀ i ∈ V, i ∈ M.unprimedState ↔ pos):=
   by
-    simp only [Variable.models, ofVarset', OfPartialModel.ofPartialModel_correct]
-    simp only [PartialModel.models, VarSet'.toUnprimed, Fin.getElem_fin, List.getElem_map,
-      Fin.toUnprimed, BitVec.getElem_fill, Set.mem_setOf_eq, Model.unprimedState]
-    constructor
-    · intro h1 i hi
-      obtain ⟨j, h2, rfl⟩ := List.getElem_of_mem hi
-      exact h1 ⟨j, by simp [h2]⟩
-    · simp_all only [List.getElem_mem, implies_true]
+    simp only [Variable.models, ofVarset', OfPartialModel.ofPartialModel_correct,
+      PartialModel.models, Set.mem_setOf_eq]
+    split
+    all_goals
+      simp_all [Model.unprimedState, VarSet'.mem_toUnprimed, Fin.divNat', Fin.toUnprimed]
+      grind
 
 lemma mem_models_of_eq_toState [Formalism pt R]
   {x : UnprimedVariable pt R} {M M' : Model (2 * n)} :
@@ -228,161 +251,21 @@ lemma mem_models_iff_of_eq_unprimedState [Formalism pt R]
     have := mem_models_of_eq_toState h2.symm (x := ⟨x, h1⟩)
     grind
 
--- TODO : check if needed
-def toPrimedAux {n} (oldVars : List (Fin (2 * n))) (h : ∀ i ∈ oldVars, Even i.val)
-  (toRename : List (Fin n)) : List (Fin (2 * n)) :=
-  match oldVars, toRename with
-  | [], _ => []
-  | oldVars, [] => oldVars
-  | i :: oldVars, j :: toRename =>
-    match compare i j.toUnprimed with
-    | .lt => i :: toPrimedAux oldVars (by simp_all) (j :: toRename)
-    | .eq =>
-      have hi : i + 1 < 2 * n := by
-        simp [even_iff_exists_two_mul] at h
-        omega
-      ⟨i + 1, hi⟩ :: toPrimedAux oldVars (by simp_all) toRename
-    | .gt => toPrimedAux (i :: oldVars) (by simp_all) toRename
-
-private lemma toPrimedAux_eq' {n}
-  {oldVars : List (Fin (2 * n))} (h1 : oldVars.SortedLT) {h2}
-  {toRename} (h3 : toRename.SortedLT) :
-  toPrimedAux oldVars h2 toRename = oldVars.attach.map (fun ⟨i, hi⟩ ↦
-    if i ∈ (VarSet'.toUnprimed ⟨toRename, h3⟩).val then
-      i.toPrimed (h2 i hi)
-    else i) :=
-  by
-    unfold toPrimedAux
-    split
-    case h_1 => simp
-    case h_2 => simp [VarSet'.toUnprimed]
-    case h_3 i oldVars j toRename h4 =>
-      simp [VarSet'.toUnprimed, Fin.toUnprimed]
-      split
-      case h_1 heq =>
-        rcases i with ⟨i, hi⟩
-        have h := @toPrimedAux_eq' _ oldVars (by grind) (by grind) (j :: toRename) h3
-        simp [VarSet'.toUnprimed, Fin.toUnprimed, h]
-        simp [compare_lt_iff_lt] at heq
-        simp [List.sortedLT_iff_pairwise] at h3
-        grind
-      case h_2 heq =>
-        have h := @toPrimedAux_eq' _ oldVars (by grind) (by grind) toRename (by grind)
-        simp only [compare_eq_iff_eq] at heq
-        subst heq
-        simp only [h, VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed, Fin.toPrimed, ↓reduceIte,
-          List.cons.injEq, List.map_inj_left, Function.comp_apply, Subtype.forall,
-          true_and, true_or]
-        simp [List.sortedLT_iff_pairwise] at h1
-        rintro i' h5
-        split
-        · grind
-        · grind
-      case h_3 heq =>
-        have h := @toPrimedAux_eq' _ (i :: oldVars) (by simp_all) (by grind) toRename (by grind)
-        simp only [compare_gt_iff_gt] at heq h3
-        simp only [h, VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed, List.attach_cons,
-          List.map_cons, List.map_map, List.cons.injEq, List.map_inj_left, List.mem_attach,
-          Function.comp_apply, forall_const, Subtype.forall]
-        simp only [List.mem_cons, even_iff_exists_two_mul, forall_eq_or_imp] at h4
-        constructor
-        · split
-          · grind
-          · grind
-        · intro ⟨i', hi'⟩ h5
-          obtain ⟨j', rfl⟩ := h4.2 ⟨i', hi'⟩ h5
-          simp [List.sortedLT_iff_pairwise] at h1
-          split
-          · grind
-          · grind
-termination_by oldVars.length + toRename.length
-
-lemma toPrimedAux_eq {n} {oldVars : VarSet' (2 * n)} {h} {toRename : VarSet' n} :
-  toPrimedAux oldVars.val h toRename = oldVars.val.attach.map (fun ⟨i, hi⟩ ↦
-    if i ∈ toRename.toUnprimed.val then
-      have hi : i + 1 < 2 * n := by
-        simp only [even_iff_exists_two_mul] at h
-        have := h i hi
-        omega
-      ⟨i + 1, hi⟩
-    else i) := toPrimedAux_eq' oldVars.prop toRename.prop
-
-/--
-Make all unprimed vars in `x` corresponding to the vars in `V` primed.
-TODO : clarify the difference between all kinds of variables.
--/
-def toPrimedOld [Formalism pt R] [RenamingOld (2 * n) R]
-  (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
-  let vars : List (Fin (2 * n)) :=
-    toPrimedAux x.val.vars (by grind) V.val
-  have hvars : vars.SortedLT := by
-    have h1 := x.val.vars.prop
-    simp_all only [List.sortedLT_iff_pairwise, List.pairwise_iff_getElem, toPrimedAux_eq,
-      List.length_map, List.length_attach, List.getElem_map, List.getElem_attach, vars]
-    have h2 := x.prop
-    simp only [VarSet'.IsUnprimed, even_iff_exists_two_mul] at h2
-    intro i j hi hj h3
-    specialize h1 i j hi hj h3
-    obtain ⟨vi, h4⟩ := h2 x.val.vars.val[i] (by simp)
-    obtain ⟨vj, h5⟩ := h2 x.val.vars.val[j] (by simp)
-    simp_all only [Fin.lt_def, Nat.reduceLT, Nat.mul_lt_mul_left]
-    grind
-  RenamingOld.rename x ⟨vars, hvars⟩ (by simp [vars, toPrimedAux_eq])
-
-lemma mem_models_toPrimedOld_iff [Formalism pt R] [RenamingOld (2 * n) R]
-  {x : UnprimedVariable pt R} {V M} :
-  M ∈ (x.toPrimedOld V).models ↔ M.toPrimed V ∈ x.val.models :=
-  by
-    simp only [Variable.models, toPrimedOld, toPrimedAux_eq, RenamingOld.mem_rename_models]
-    apply Formula.models_equiv
-    simp only [Variable.vars, RenamingOld.renameModel, Fin.getElem_fin, List.getElem_map,
-      List.getElem_attach, Model.toPrimed_eq, dite_not, eq_iff_iff]
-    intro i hi
-    have h2  := x.prop i hi
-    simp only [h2, ↓reduceDIte]
-    split
-    case _ => simp_all
-    case _ j h3 =>
-      simp only [List.finIdxOf?_eq_some_iff] at h3
-      rcases h3 with ⟨rfl, _⟩
-      simp_all only [VarSet'.toUnprimed, List.mem_map, Fin.toUnprimed]
-      split
-      case _ h4 =>
-        have : ⟨(Formula.vars x.val).val[j] / 2, by omega⟩ ∈ V.val := by
-          rcases h4 with ⟨i, h3, h4⟩
-          simp only [Fin.getElem_fin, ← h4, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
-            mul_div_cancel_left₀, h3]
-        simp_all only [List.getElem_mem, Fin.getElem_fin, ↓reduceIte]
-      case _ h4 =>
-        have : ¬⟨(Formula.vars x.val).val[j] / 2, by omega⟩ ∈ V.val := by
-          intro h5
-          simp_all only [Fin.getElem_fin, even_iff_exists_two_mul, not_exists, not_and]
-          rcases h2 with ⟨i, h3⟩
-          specialize h4 _ h5
-          simp_all only [List.getElem_mem, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
-            mul_div_cancel_left₀]
-          simp [← h3] at h4
-        simp_all
-
-/--
-Make all unprimed vars in `x` corresponding to the vars in `V` primed.
-TODO : clarify the difference between all kinds of variables.
--/
 def toPrimed [Formalism pt R] [Rename (2 * n) R]
   (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
   let f := fun i ↦
     -- TODO make more efficient by using that V is ordered
-    if h : Even i.val ∧ Fin.mk (i.val / 2) (by omega) ∈ V.val then
+    if h : Even i.val ∧ i.divNat' ∈ V then
       i.toPrimed h.1
     else
       i
-  have h1 : StrictMonoOn f V.toUnprimed.val.toFinset := by
-    simp [StrictMonoOn, VarSet'.toUnprimed, Fin.toUnprimed]
+  have h1 : StrictMonoOn f V.toUnprimed.toVarSet := by
+    simp [StrictMonoOn, VarSet'.toUnprimed, VarSet'.toVarSet]
     simp_all [f, Fin.toPrimed]
-  have h2 : ∀ i ∉ V.toUnprimed.val.toFinset, f i = i := by
-    simp [VarSet'.toUnprimed, Fin.toUnprimed, f]
-    grind only [= Nat.even_iff]
-  Rename.rename x ⟨f, h1, h2⟩
+    sorry
+  have h2 : x.val.vars ⊆ V.toUnprimed := by
+    sorry
+  Rename.rename x ⟨f, h1⟩ h2
 
 lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
   {x : UnprimedVariable pt R} {V M} :
@@ -622,7 +505,7 @@ def toPrimed [F : Formalism pt R] [Rename (2 * n) R]
 
 lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
   {X : UnprimedVariables pt R} {V s} :
-  s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V.val, i ∈ s' ↔ i ∈ s :=
+  s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V, i ∈ s' ↔ i ∈ s :=
   by
     simp only [Variables.inter, toPrimed, List.mem_map, Subtype.exists, forall_exists_index,
       and_imp, Set.mem_setOf_eq, val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
@@ -635,7 +518,7 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
         specialize h1 (UnprimedVariable.toPrimed ⟨x, h2⟩ V) x h2 h3 rfl
         simp only [UnprimedVariable.mem_models_toPrimed_iff] at h1
         exact h1
-      · simp [Model.toPrimed_eq, Model.unprimedState, Fin.toUnprimed]
+      · simp [Model.toPrimed_eq, Model.unprimedState, Fin.toUnprimed, Fin.divNat']
         grind
     · rintro ⟨M, h1, h2⟩
       -- Take unprimed variables from `s` and primed variables from `M.unprimedState`
@@ -656,7 +539,7 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
       simp [Model.toPrimed_eq, h6, Nat.even_add_one]
       simp only [even_iff_exists_two_mul] at h6
       rcases h6 with ⟨j, rfl⟩
-      simp_all [Model.unprimedState, Fin.toUnprimed]
+      simp_all [Model.unprimedState, Fin.toUnprimed, Fin.divNat']
       grind
 
 end UnprimedVariables

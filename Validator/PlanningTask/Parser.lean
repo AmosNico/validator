@@ -113,22 +113,12 @@ private def parseVar {n} : Parser (Fin n) :=
 
 private def parseVarLn {n} : Parser (Fin n) := parseVar <* parseEol
 
-private def toVarset {n} (l : List (Fin n)) : VarSet' n :=
-  ⟨l.toFinset.sort (· ≤ ·), Finset.sortedLT_sort l.toFinset⟩
-
 private def parseVarSet {n} : Parser (VarSet' n) :=
-  do
-    let ⟨l⟩ ← Parser.takeMany parseVarLn
-    return toVarset l
-
-private def parseState {n} : Parser (State' n) :=
-  do
-    let as ← Parser.takeMany parseVarLn
-    return as.foldl (fun s (v : Fin n) ↦ s ||| BitVec.twoPow n v) (BitVec.zero n)
+  VarSet'.ofList <$> Array.toList <$> Parser.takeMany parseVarLn
 
 private def parseInit n : Parser (State' n) :=
   Parser.withErrorMessage "error while parsing the inital state"
-    (checkLine "begin_init" *> parseState <* checkLine "end_init")
+    (checkLine "begin_init" *> parseVarSet <* checkLine "end_init")
 
 private def parseGoal n : Parser (VarSet' n) :=
   Parser.withErrorMessage "error while parsing the goal"
@@ -153,7 +143,7 @@ private def parseAction n : Parser (Action n) :=
     let name ← parseLine
     let cost ← readLine "cost:" parseNat
     let ⟨pre, add, del⟩ ← parseConditions (@Conditions.mk n [] [] [])
-    return (Action.mk name (toVarset pre) (toVarset add) (toVarset del) cost)
+    return Action.mk name (VarSet'.ofList pre) (VarSet'.ofList add) (VarSet'.ofList del) cost
 
 private def parseActions n : Parser (List (Action n)) :=
   Parser.withErrorMessage "error while parsing the actions"

@@ -223,104 +223,6 @@ lemma List.mem_multiply {α} {asss as} :
         apply h
 -/
 
-/--
-Similar to `List.merge`, but also remove duplicates.
-I tried to combine `List.merge` with `List.dedup`, but there are no lemmas for
-`List.dedup` with sorted. There is also `Array.mergeDedup`, but that also has no lemmas.
--/
-def List.mergeDedup {α} [Ord α] : (xs ys : List α) → List α
-| [], ys => ys
-| xs, [] => xs
-| x :: xs, y :: ys =>
-  match compare x y with
-  | .lt => x :: mergeDedup xs (y :: ys)
-  | .eq => x :: mergeDedup xs ys
-  | .gt => y :: mergeDedup (x :: xs) ys
-
-lemma List.mem_mergeDedup {α} [LinearOrder α] {xs ys : List α} {a} :
-  a ∈ mergeDedup xs ys ↔ a ∈ xs ∨ a ∈ ys := by
-  fun_induction mergeDedup
-  all_goals simp
-  all_goals grind
-
-lemma List.mergeDedup_sorted {α} [LinearOrder α] {xs ys : List α} :
-  xs.SortedLT → ys.SortedLT → (mergeDedup xs ys).SortedLT := by
-  fun_induction mergeDedup
-  · tauto
-  · tauto
-  case _ x xs y ys h ih =>
-    simp only [compare_lt_iff_lt] at h
-    simp_all only [sortedLT_iff_pairwise, pairwise_cons, and_imp, mem_mergeDedup, mem_cons,
-      implies_true, and_true]
-    intro h1 h2 h3 h4 x' hx'
-    rcases hx' with hx' | rfl | hx'
-    · grind
-    · exact h
-    · specialize h3 x' hx'
-      exact Trans.trans h h3
-  case _ x xs y ys h ih =>
-    simp [List.sortedLT_iff_pairwise, mem_mergeDedup]
-    grind
-  case _ x xs y ys h ih =>
-    simp only [compare_gt_iff_gt] at h
-    simp_all only [sortedLT_iff_pairwise, pairwise_cons, and_imp, mem_mergeDedup, mem_cons,
-      implies_true, and_true]
-    intro h1 h2 h3 h4 x' hx'
-    rcases hx' with (rfl | hx') | hx'
-    · exact h
-    · specialize h1 x' hx'
-      exact Trans.trans h h1
-    · grind
-
-def List.insertDedup {α} [Ord α] : (xs : List α) → (x : α) → List α
-| [], x => [x]
-| x :: xs, y =>
-  match compare x y with
-  | .lt => x :: xs.insertDedup y
-  | .eq => x :: xs
-  | .gt => y :: x :: xs
-
-lemma List.mem_insertDedup {α} [LinearOrder α] {xs : List α} {x a} :
-  a ∈ insertDedup xs x ↔ a ∈ xs ∨ a = x := by
-  fun_induction insertDedup
-  all_goals simp
-  all_goals grind
-
-lemma List.insertDedup_sorted {α} [LinearOrder α] {xs : List α} {x} :
-  xs.SortedLT → (insertDedup xs x).SortedLT := by
-  simp only [sortedLT_iff_pairwise]
-  fun_induction insertDedup
-  · grind
-  · simp_all only [compare_lt_iff_lt, pairwise_cons, mem_insertDedup]
-    grind
-  · simp
-  · simp_all only [compare_gt_iff_gt, pairwise_cons]
-    grind
-
-def List.diff' {α} [Ord α] : (xs ys : List α) → List α
-| [], _ => []
-| xs, [] => xs
-| x :: xs, y :: ys =>
-  match compare x y with
-  | .lt => x :: diff' xs (y :: ys)
-  | .eq => diff' xs ys
-  | .gt => diff' (x :: xs) ys
-
-lemma List.mem_diff' {α} [LinearOrder α] {xs ys : List α}
-  (h1 : xs.SortedLT) (h2 : ys.SortedLT) :
-  ∀ a, a ∈ diff' xs ys ↔ a ∈ xs ∧ a ∉ ys := by
-  fun_induction diff'
-  · tauto
-  · tauto
-  all_goals
-    simp [List.sortedLT_iff_pairwise] at *
-    simp_all [compare_lt_iff_lt, compare_gt_iff_gt]
-    grind
-
-lemma List.diff'_sorted {α} [LinearOrder α] {xs ys : List α} :
-  xs.SortedLT→ ys.SortedLT → (diff' xs ys).SortedLT := by
-  fun_induction diff'
-  all_goals simp_all [List.sortedLT_iff_pairwise, mem_diff']
 
 lemma List.map_toFinset {α β} [DecidableEq α] [DecidableEq β] {f : α → β} {xs : List α} :
   (xs.map f).toFinset = xs.toFinset.image f := by
@@ -339,3 +241,16 @@ lemma Set.inter_compl_subset_union_compl {α} {s1 s2 s3 s4 : Set α} :
   s1 ∩ s2ᶜ ⊆ s3 ∪ s4ᶜ ↔ s1 ∩ s4 ⊆ s3 ∪ s2 := by
   simp [Set.subset_def]
   grind
+
+@[induction_eliminator, elab_as_elim]
+theorem BitVec.cons_induction {motive : (w : Nat) → BitVec w → Prop} (nil : motive 0 .nil)
+    (cons : ∀ {w : Nat} (b : Bool) (bv : BitVec w), motive w bv → motive (w + 1) (.cons b bv)) :
+    ∀ {w : Nat} (x : BitVec w), motive w x := by
+  intros w x
+  induction w
+  case zero =>
+    simp only [BitVec.eq_nil x, nil]
+  case succ wl ih =>
+    rw [← cons_msb_setWidth x]
+    apply cons
+    apply ih

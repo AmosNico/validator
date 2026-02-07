@@ -7,50 +7,13 @@ import Validator.Basic
 This file provides typeclasses for formulas and different operations these formulas can support.
 Note that this file does not implement any of these operations, but it formalizes what these
 operations should do. More specifically the file contains
-* some functions for working with `Validator.VarSet'`,
 * definitions and methods for models, partial models,
   literals, clauses, cubes, CNF-formulas and DNF-formulas, and
 * type classes for formulas and various operations on formulas.
 -/
 
-/-! ## VarSet' -/
-namespace Validator.VarSet'
-
--- TODO : check if List.sortedLT_iff_pairwise is needed
-def empty {n} : VarSet' n :=
-  ⟨[], by simp [List.sortedLT_iff_pairwise]⟩
-
-def union {n} (V V' : VarSet' n) : VarSet' n :=
-  ⟨List.mergeDedup V V', List.mergeDedup_sorted V.prop V'.prop⟩
-
-@[simp]
-lemma mem_union {n} {V V' : VarSet' n} {i} :
-  i ∈ (V.union V').val ↔ i ∈ V.val ∨ i ∈ V'.val :=
-  by
-    simp [union, List.mem_mergeDedup]
-
-def insert {n} (V : VarSet' n) (v : Fin n) : VarSet' n :=
-  ⟨List.insertDedup V.val v, List.insertDedup_sorted V.prop⟩
-
-@[simp]
-lemma mem_insert {n} {V : VarSet' n} {v i} :
-  i ∈ (V.insert v).val ↔ i ∈ V.val ∨ i = v :=
-  by
-    simp [insert, List.mem_insertDedup]
-
-def diff {n} (V V' : VarSet' n) : VarSet' n :=
-  ⟨List.diff' V.val V'.val, List.diff'_sorted V.prop V'.prop⟩
-
-@[simp]
-lemma mem_diff {n} {V V' : VarSet' n} {i} :
-  i ∈ (V.diff V').val ↔ i ∈ V.val ∧ i ∉ V'.val :=
-  by
-    simp [diff, List.mem_diff' V.prop V'.prop]
-
-end VarSet'
-
-namespace Formula
-/-! ## Model and PartialModel -/
+namespace Validator.Formula
+/-! ## Model -/
 
 /--
 `Model` is usually in the in the context of a formula, where it represents a model of this formula,
@@ -61,13 +24,6 @@ abbrev Model n := Fin n → Prop
 
 /-- A set of models. -/
 abbrev Models n := Set (Model n)
-
-/-- Partial models are partial assignments. In contrast to `Model`, these are used at runtime. -/
-abbrev PartialModel {n} (V : VarSet' n) := BitVec V.val.length
-
-/-- All models corresponding to to partial model `M`. -/
-def PartialModel.models {n} {V : VarSet' n} (M : PartialModel V) : Models n :=
-  { M' | ∀ i : Fin V.val.length, M' ⟨V.val[i], by simp⟩ ↔ M[i] }
 
 /-! ## Literal -/
 
@@ -227,6 +183,14 @@ lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, ∃ l
   by
     simp [models]
 
+@[simp]
+lemma models_append {n} (φ ψ : CNF n) : (φ ++ ψ).models = φ.models ∩ ψ.models :=
+  by
+    ext M
+    simp
+    grind
+
+
 lemma models_mem_empty {n} (φ : CNF n) (h : [] ∈ φ) : φ.models = ∅ :=
   by
     simp only [models]
@@ -275,7 +239,180 @@ lemma DNF.exists_iff_models_subset {n} {φ : DNF n} {Ms} :
     simp [DNF.models, Set.subset_def, -Prod.forall]
     grind
 
-end Formula
+/-! ## PartialModel -/
+/-- Partial models are partial assignments. In contrast to `Model`, these are used at runtime. -/
+structure PartialModel (n : ℕ) where
+  pos : VarSet' n
+  neg : VarSet' n
+  disjoint : pos.Disjoint neg
+  deriving DecidableEq, Repr
+
+namespace PartialModel
+
+instance {n} : Membership (Literal n) (PartialModel n) where
+  mem M
+  | (i, true) => i ∈ M.pos
+  | (i, false) => i ∈ M.neg
+
+instance {n l} {M : PartialModel n} : Decidable (l ∈ M) :=
+  by
+    simp only [instMembershipLiteral]
+    split
+    all_goals
+      exact VarSet'.instDecidableMemFin
+
+-- TODO : check if needed
+def vars' {n} (M : PartialModel n) : VarSet' n :=
+  M.pos.union M.neg
+
+def vars {n} (M : PartialModel n) : VarSet n :=
+  M.vars'.toVarSet
+
+lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ i ∈ M.pos ∨ i ∈ M.neg :=
+  by
+    simp [vars, VarSet'.toVarSet, vars', Set.mem_setOf_eq]
+
+lemma mem_vars' {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.1 = i :=
+  by
+    simp [mem_vars, instMembershipLiteral, Literal]
+    grind
+
+/-- All models corresponding to to partial model `M`. -/
+def models {n} (M : PartialModel n) : Models n :=
+  { M' | (∀ i ∈ M.pos, M' i) ∧ (∀ i ∈ M.neg, ¬ M' i) }
+
+lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M, M' ∈ l.models :=
+  by
+    simp only [models, Set.mem_setOf_eq, instMembershipLiteral, Literal.models]
+    constructor
+    · grind
+    · intro h1
+      constructor
+      · intro i hi
+        specialize h1 (i, true) hi
+        simp_all only [Set.mem_setOf_eq]
+      · intro i hi
+        specialize h1 (i, false) hi
+        simp_all only [Set.mem_setOf_eq, not_false_eq_true]
+
+lemma models_nonempty {n} (M : PartialModel n) : Nonempty M.models :=
+  by
+    constructor
+    use fun i ↦ (i, true) ∈ M
+    simp only [instMembershipLiteral, mem_models, Literal.mem_models]
+    intro l
+    split
+    case h_1 l i => tauto
+    case h_2 l i =>
+      have := M.disjoint
+      grind [VarSet'.Disjoint_iff]
+
+def empty {n} : PartialModel n :=
+  ⟨VarSet'.empty, VarSet'.empty, by simp⟩
+
+@[simp]
+lemma vars_empty {n} : (@empty n).vars = ∅ :=
+  by simp [empty, Set.ext_iff, mem_vars]
+
+@[simp]
+lemma models_empty {n} : (@empty n).models = Set.univ :=
+  by
+    simp [empty, Set.ext_iff, mem_models, instMembershipLiteral]
+    grind
+
+/-- Returns none if the negation of the literal already occurs in M -/
+def insert {n} (M : PartialModel n) : Literal n → Option (PartialModel n)
+| (i, true) =>
+  if h : i ∈ M.neg then
+    none
+  else
+    some { M with
+      pos := M.pos.insert i
+      disjoint := by
+        have := M.disjoint
+        simp [VarSet'.Disjoint_iff] at *
+        grind
+      }
+| (i, false) =>
+  if h : i ∈ M.pos then
+    none
+  else
+    some { M with
+      neg := M.neg.insert i
+      disjoint := by
+        have := M.disjoint
+        simp [VarSet'.Disjoint_iff] at *
+        grind
+      }
+
+@[simp]
+lemma insert_eq_none_iff {n} {M : PartialModel n} {l} : M.insert l = none ↔ l.negate ∈ M :=
+  by
+    simp [insert, Literal.negate, instMembershipLiteral]
+    grind
+
+@[simp]
+lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
+  M.insert l = some M' ↔ l.negate ∉ M ∧ ∀ l', l' ∈ M' ↔ l' ∈ M ∨ l' = l :=
+  by
+    simp only [insert, instMembershipLiteral, Literal.negate]
+    split
+    all_goals
+      rename_i l i
+      simp only [Option.dite_none_left_eq_some, Option.some.injEq]
+      constructor
+      · rintro ⟨h1, rfl⟩
+        simp only [h1, not_false_eq_true, VarSet'.mem_insert, true_and]
+        grind
+      · rintro ⟨h1, h2⟩
+        use h1
+        congr 1
+        all_goals
+          simp only [VarSet'.ext, VarSet'.mem_insert]
+          intro i
+          have h3 := h2 (i, false)
+          specialize h2 (i, true)
+          grind
+
+lemma vars_insert {n} {M M' : PartialModel n} {l} (h : M.insert l = some M') :
+  M'.vars = M.vars ∪ {l.1} :=
+  by
+    have ⟨h1, h2⟩ := insert_eq_some_iff.1 h
+    ext i
+    simp only [mem_vars', h2, Set.union_singleton, Set.mem_insert_iff]
+    grind
+
+lemma models_insert {n} {M M' : PartialModel n} {l} :
+  M.insert l = some M' → M'.models = M.models ∩ l.models :=
+  by
+    simp only [insert_eq_some_iff, Set.ext_iff, mem_models, Set.mem_inter_iff]
+    grind
+
+def foldl {α n} (f : α → Literal n → α) (init : α) (M : PartialModel n) : α :=
+  M.pos.foldl (fun a i ↦ f a (i, true)) (M.neg.foldl (fun a i ↦ f a (i, false)) init)
+
+lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
+  a ∈ M.foldl (fun a l ↦ f l :: a) [] ↔ ∃ l ∈ M, a = f l :=
+  by
+    simp only [foldl, VarSet'.foldl_cons, List.not_mem_nil, or_false]
+    simp only [instMembershipLiteral]
+    grind
+
+
+def toCNF {n} (M : PartialModel n) : CNF n :=
+  M.foldl (fun φ l ↦ [l] :: φ) []
+
+lemma mem_toCNF {n} {M : PartialModel n} {γ} : γ ∈ M.toCNF ↔ ∃ l ∈ M, γ = [l] :=
+  by
+    simp [toCNF, foldl_cons, instMembershipLiteral]
+
+lemma models_toCNF {n} {M : PartialModel n} : M.toCNF.models = M.models :=
+  by
+    ext M'
+    simp only [CNF.mem_models, mem_toCNF, forall_exists_index, and_imp, mem_models]
+    grind
+
+end Formula.PartialModel
 
 /-! ## Formula -/
 
@@ -295,7 +432,7 @@ class Formula n (R : Type) where
   if the first one is a model of `φ`.
   -/
   models_equiv_right (φ : R) (M M' : Formula.Model n) :
-    (∀ i ∈ (vars φ).val, M i = M' i) → M ∈ models φ → M' ∈ models φ
+    (∀ i ∈ vars φ, M i = M' i) → M ∈ models φ → M' ∈ models φ
 
 namespace Formula
 
@@ -304,7 +441,7 @@ If two assignments `M` and `M'` coincide on the variables of `φ`, then `M` is a
 `φ` iff `M'` is a model of `φ`.
 -/
 lemma models_equiv {n} {R} [h : Formula n R] {φ : R} {M M' : Model n}
-  (h1 : ∀ i ∈ (h.vars φ).val, M i = M' i) : M ∈ h.models φ ↔ M' ∈ h.models φ :=
+  (h1 : ∀ i ∈ h.vars φ, M i = M' i) : M ∈ h.models φ ↔ M' ∈ h.models φ :=
   by
     constructor
     · apply models_equiv_right
@@ -422,131 +559,114 @@ class OfCube n R [F : Formula n R] where
 -/
 
 class OfPartialModel n R [F : Formula n R] where
-  ofPartialModel : (V : VarSet' n) → PartialModel V → R
+  ofPartialModel : PartialModel n → R
 
-  ofPartialModel_correct {V M} :
-    F.models (ofPartialModel V M) = M.models ∧ F.vars (ofPartialModel V M) = V
+  ofPartialModel_correct {M} :
+    F.models (ofPartialModel M) = M.models ∧ F.vars (ofPartialModel M) = M.vars'
 
 structure Renaming {n} (dom : VarSet' n) where
   rename : Fin n → Fin n
-  mono : StrictMonoOn rename dom.val.toFinset
-  prop : ∀ i ∉ dom.val.toFinset, rename i = i
+  mono : StrictMonoOn rename dom.toVarSet
+  --prop : ∀ i ∉ dom.toVarSet, rename i = i
 
-def Model.rename {n} {V : VarSet' n} (r : Renaming V) (M : Model n) : Model n :=
+lemma Renaming.ne {n} {dom : VarSet' n} {r : Renaming dom} :
+  ∀ i ∈ dom, ∀ j ∈ dom, i ≠ j → r.rename i ≠ r.rename j :=
+  by
+    intro i hi j hj
+    apply Set.InjOn.ne (StrictMonoOn.injOn r.mono)
+    · simp [VarSet'.toVarSet, hi]
+    · simp [VarSet'.toVarSet, hj]
+
+def Model.rename {n} {dom : VarSet' n} (r : Renaming dom) (M : Model n) : Model n :=
   fun i ↦ M (r.rename i)
 
-def Literal.rename {n} {V : VarSet' n} (r : Renaming V) (l : Literal n) : Literal n :=
+def Literal.rename {n} {dom : VarSet' n} (r : Renaming dom) (l : Literal n) : Literal n :=
   (r.rename l.1, l.2)
 
-def Clause.rename {n} {V : VarSet' n} (r : Renaming V) (γ : Clause n) : Clause n :=
+def Clause.rename {n} {dom : VarSet' n} (r : Renaming dom) (γ : Clause n) : Clause n :=
   γ.map (Literal.rename r)
 
-def Cube.rename {n} {V : VarSet' n} (r : Renaming V) (δ : Cube n) : Cube n :=
+def Cube.rename {n} {dom : VarSet' n} (r : Renaming dom) (δ : Cube n) : Cube n :=
   δ.map (Literal.rename r)
 
-def CNF.rename {n} {V : VarSet' n} (r : Renaming V) (φ : CNF n) : CNF n :=
+def CNF.rename {n} {dom : VarSet' n} (r : Renaming dom) (φ : CNF n) : CNF n :=
   φ.map (Clause.rename r)
 
--- TODO : this is not correct, only the renamed variables that are in V' should be added
-def VarSet'.rename {n} {V : VarSet' n} (r : Renaming V) (V' : VarSet' n) : VarSet' n :=
-  (V'.diff V).union
-  ⟨V.val.map r.rename, by
-    have h1 := r.mono
-    have h2 := V.prop
-    simp [List.sortedLT_iff_getElem_lt_getElem_of_lt, StrictMonoOn] at *
-    grind⟩
-
-lemma VarSet'.mem_rename {n} {V : VarSet' n} {r : Renaming V} {V' : VarSet' n} {i} :
-  i ∈ (VarSet'.rename r V').val ↔ (i ∈ V'.val ∧ i ∉ V.val) ∨ ∃ j ∈ V.val, i = r.rename j :=
+@[simp]
+lemma CNF.vars_rename {n} {dom : VarSet' n} {r : Renaming dom} {φ : CNF n} :
+  (φ.rename r).vars = φ.vars.image r.rename :=
   by
-    simp [rename]
+    simp [rename, Set.ext_iff, mem_vars, Clause.rename, Literal.rename, Set.mem_image]
     grind
 
+@[simp]
+lemma CNF.models_rename {n} {dom : VarSet' n} {r : Renaming dom} {φ : CNF n} :
+  (φ.rename r).models = φ.models.preimage (Model.rename r) :=
+  by
+    simp only [models, rename, List.mem_map, Clause.rename, Literal.mem_models, forall_exists_index,
+      and_imp, forall_apply_eq_imp_iff₂, Literal.rename, exists_exists_and_eq_and,
+      Set.preimage_setOf_eq, Model.rename]
+
+def VarSet'.rename {n} {dom : VarSet' n} (r : Renaming dom) (V : VarSet' n) : VarSet' n :=
+  V.map r.rename
+
+@[simp]
+lemma VarSet'.mem_rename {n} {dom : VarSet' n} {r : Renaming dom} {V : VarSet' n} {i} :
+  i ∈ (VarSet'.rename r V) ↔ ∃ j ∈ V, i = r.rename j :=
+  by
+    simp [rename, VarSet'.mem_map]
+
+def PartialModel.rename {n} {dom : VarSet' n} (r : Renaming dom) (M : PartialModel n)
+  (h1 : M.vars' ⊆ dom) : PartialModel n where
+    pos := VarSet'.rename r M.pos
+    neg := VarSet'.rename r M.neg
+    disjoint := by
+      have h3 := r.mono
+      simp only [VarSet'.Disjoint_iff, imp_false, VarSet'.mem_rename, not_exists, not_and,
+        forall_exists_index, and_imp]
+      intro _ i hi rfl j hj
+      apply Renaming.ne
+      · apply h1
+        simp [PartialModel.vars', hi]
+      · apply h1
+        simp [PartialModel.vars', hj]
+      · have h2 := M.disjoint
+        grind only [VarSet'.Disjoint_iff]
+
+@[simp]
+lemma PartialModel.vars_rename {n} {dom : VarSet' n} {r : Renaming dom} {M : PartialModel n} {h1} :
+  (M.rename r h1).vars = M.vars.image r.rename :=
+  by
+    simp only [rename, Set.ext_iff, mem_vars, VarSet'.mem_rename, Set.mem_image]
+    grind
+
+@[simp]
+lemma PartialModel.models_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1} :
+  (M.rename r h1).models = M.models.preimage (Model.rename r) :=
+  by
+    ext M'
+    simp only [models, rename, VarSet'.mem_rename, forall_exists_index, and_imp, Set.mem_setOf_eq,
+      Set.preimage_setOf_eq, Model.rename]
+    grind
 
 /-- Renaming consistent with order -/
 class Rename n R [F : Formula n R] where
   --rename (φ : R) (r : { i : Fin n // i ∈ (F.vars φ).val } → Fin n) (h : StrictMono r) : R
-  rename (φ : R) {V} (f : Renaming V) : R
+  rename (φ : R) {V} (f : Renaming V) (h1 : F.vars φ ⊆ V) : R
 
-  rename_correct φ V (f : Renaming V) :
-    (∀ i, i ∈ (F.vars (rename φ f)).val ↔ i ∈ f.rename '' (F.vars φ).val.toFinset) ∧
-    F.models (rename φ f) =
-      { M | ∃ M' ∈ F.models φ, ∀ i ∈ (F.vars φ).val.attach, M (f.rename i) ↔ M' i }
+  rename_correct φ V (r : Renaming V) h :
+    (∀ i, i ∈ F.vars (rename φ r h) ↔ i ∈ r.rename '' (F.vars φ).toVarSet) ∧
+    F.models (rename φ r h) = (F.models φ).preimage (Model.rename r)
 
 namespace Rename
 
 -- TODO : replace rename_correct by this?
-lemma mem_rename_models {n R} [F : Formula n R] [Rename n R] {φ V} {r : Renaming V} {M} :
-  M ∈ F.models (rename φ r) ↔ M.rename r ∈ F.models φ :=
+lemma mem_rename_models {n R} [F : Formula n R] [Rename n R] {φ V} {r : Renaming V} {h M} :
+  M ∈ F.models (rename φ r h) ↔ M.rename r ∈ F.models φ :=
   by
-    simp only [rename_correct, Set.mem_setOf_eq]
-    constructor
-    · rintro ⟨M', h1, h2⟩
-      unfold Model.rename
-      rw [Formula.models_equiv]
-      · exact h1
-      · simp_all
-    · intro h1
-      use M.rename r, h1
-      simp [Model.rename]
+    simp only [rename_correct, Set.mem_preimage]
 
 end Rename
-
-/-- Renaming consistent with order -/
-class RenamingOld n R [F : Formula n R] where
-  rename : (φ : R) → (vars' : VarSet' n) → vars'.val.length = (F.vars φ).val.length → R
-
-  rename_correct {φ vars' h} :
-    F.vars (rename φ vars' h) = vars' ∧ F.models (rename φ vars' h) =
-      { M | ∃ M' ∈ F.models φ, ∀ i : Fin vars'.val.length, M vars'.val[i] ↔ M' (F.vars φ).val[i] }
-
-namespace RenamingOld
-
-def renameModel {n}
-  (V V' : VarSet' n) (h : V'.val.length = V.val.length) (M : Model n) : Model n :=
-  fun i ↦
-    match V.val.finIdxOf? i with
-    | none => M i
-    | some j => M (V'.val[j]'(by omega))
-
--- TODO : replace rename_correct by this?
-lemma mem_rename_models {n R} [F : Formula n R] [RenamingOld n R] {φ vars' h M} :
-  M ∈ F.models (rename φ vars' h) ↔ renameModel (F.vars φ) vars' (by simp [h]) M ∈ F.models φ :=
-  by
-    simp only [rename_correct, Fin.getElem_fin, Set.mem_setOf_eq]
-    constructor
-    · rintro ⟨M', h1, h2⟩
-      unfold renameModel
-      rw [Formula.models_equiv]
-      · exact h1
-      · simp only [Fin.getElem_fin, eq_iff_iff]
-        intro i hi
-        split
-        · grind
-        · rename_i j h
-          simp_all
-          grind
-    · intro h1
-      use renameModel (vars φ) vars' h M, h1
-      simp only [renameModel, Fin.getElem_fin]
-      intro i
-      split
-      · grind
-      · rename_i j h
-        simp_all only [List.finIdxOf?_eq_some_iff, Fin.getElem_fin]
-        rcases h with ⟨h1, h2⟩
-        have h3 := List.SortedLT.nodup (F.vars φ).prop
-        apply (List.Nodup.getElem_inj_iff h3).1 at h1
-        simp_all only
-
--- TODO this seems quite inefficient
-def renameLiteral {n} (V V' : VarSet' n) (h : V'.val.length = V.val.length) (l : Literal n) :
-  Literal n :=
-  match V.val.finIdxOf? l.1 with
-  | none => l
-  | some j => (V'.val[j], l.2)
-
-end RenamingOld
 
 class ToCNF n R [F : Formula n R] where
   toCNF : R → CNF n

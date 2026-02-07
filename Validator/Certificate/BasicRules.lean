@@ -504,7 +504,7 @@ lemma mem_models_preVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
   M ∈ (preVariable R aᵢ).val.models ↔ pt.actions'[aᵢ].pre ⊆ M.unprimedState :=
   by
     simp [preVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.pre, convertVarSet, Set.subset_def]
+    simp [Action.pre, VarSet'.toVarSet, Set.subset_def]
 
 @[simp]
 lemma mem_toStates_preVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
@@ -522,7 +522,7 @@ lemma mem_models_addVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
   M ∈ (addVariable R aᵢ).val.models ↔ pt.actions'[aᵢ].add ⊆ M.unprimedState :=
   by
     simp [addVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.add, convertVarSet, Set.subset_def]
+    simp [Action.add, VarSet'.toVarSet, Set.subset_def]
 
 @[simp]
 lemma mem_toStates_addVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
@@ -544,7 +544,7 @@ lemma mem_models_delVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
   by
     rcases aᵢ with ⟨aᵢ, haᵢ⟩
     simp [delVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.del, Action.add, convertVarSet, Set.subset_def]
+    simp [Action.del, Action.add, VarSet'.toVarSet, Set.subset_def]
 
 @[simp]
 lemma mem_toStates_delVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
@@ -577,10 +577,10 @@ def effectVarSet' (aᵢ : Fin pt.actions'.length) : VarSet' n :=
 
 @[simp]
 lemma mem_effectVarSet' {aᵢ : Fin pt.actions'.length} {i} :
-  i ∈ (effectVarSet' aᵢ).val ↔ i ∈ pt.actions'[aᵢ].add ∨ i ∈ pt.actions'[aᵢ].del :=
+  i ∈ effectVarSet' aᵢ ↔ i ∈ pt.actions'[aᵢ].add ∨ i ∈ pt.actions'[aᵢ].del :=
   by
-    simp [effectVarSet', VarSet'.union, List.mem_mergeDedup]
-    simp [Action.add, Action.del, convertVarSet]
+    simp [effectVarSet', VarSet'.mem_union]
+    simp [Action.add, Action.del, VarSet'.toVarSet]
 
 def checkB2' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt R) : Bool :=
   let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet' aᵢ)
