@@ -49,11 +49,11 @@ jobs:
         run: make doc
 
       - name: Setup Graphviz
-        if: github.ref_name == 'main'
+        if: always()
         uses: ts-graphviz/setup-graphviz@v2
 
       - name: Build dependencies graph
-        if: github.ref_name == 'main'
+        if: always()
         run: make dependencies
 
       - name: Copy documentation to `home_page/docs`
