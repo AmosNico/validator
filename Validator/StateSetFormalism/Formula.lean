@@ -263,7 +263,7 @@ instance {n l} {M : PartialModel n} : Decidable (l ∈ M) :=
 
 -- TODO : check if needed
 def vars' {n} (M : PartialModel n) : VarSet' n :=
-  M.pos.union M.neg
+  M.pos ∪ M.neg
 
 def vars {n} (M : PartialModel n) : VarSet n :=
   M.vars'.toVarSet
@@ -555,7 +555,7 @@ class OfCube n R [F : Formula n R] where
   ofCube : Cube n → R
 
   ofCube_correct {δ} :
-    F.models (ofCube δ) = δ.models ∧ F.vars (ofCube δ) = sorry
+    F.models (ofCube δ) = δ.models ∧ F.vars (ofCube δ) = _
 -/
 
 class OfPartialModel n R [F : Formula n R] where

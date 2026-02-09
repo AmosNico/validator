@@ -350,7 +350,7 @@ instance {n} : SententialEntailment n (Horn n) where
 instance {n} : BoundedConjuction n (Horn n) where
   and φ ψ :=
     let χ : Horn n := {
-      vars := VarSet'.union φ.vars ψ.vars
+      vars := φ.vars ∪ ψ.vars
       empty := φ.empty ∨ ψ.empty
       unit_literals := PartialModel.empty
       clauses := φ.clauses ++ ψ.clauses

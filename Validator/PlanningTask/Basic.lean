@@ -323,23 +323,23 @@ lemma mem_empty {n i} : i ∉ @empty n :=
   by
     simp [empty, VarSet'.instMembershipFin]
 
-def union {n} (V V' : VarSet' n) : VarSet' n :=
-  V ||| V'
+instance {n} : Union (VarSet' n) where
+  union V V' := V ||| V'
 
 @[simp]
 lemma mem_union {n} {V V' : VarSet' n} {i} :
-  i ∈ (V.union V') ↔ i ∈ V ∨ i ∈ V' :=
+  i ∈ V ∪  V' ↔ i ∈ V ∨ i ∈ V' :=
   by
-    simp [union, VarSet'.instMembershipFin]
+    simp [instUnion, VarSet'.instMembershipFin]
 
-def inter {n} (V V' : VarSet' n) : VarSet' n :=
-  V &&& V'
+instance {n} : Inter (VarSet' n) where
+  inter V V' := V &&& V'
 
 @[simp]
 lemma mem_inter {n} {V V' : VarSet' n} {i} :
-  i ∈ (V.inter V') ↔ i ∈ V ∧ i ∈ V' :=
+  i ∈ V ∩ V' ↔ i ∈ V ∧ i ∈ V' :=
   by
-    simp [inter, VarSet'.instMembershipFin]
+    simp [instInter, VarSet'.instMembershipFin]
 
 @[simp]
 lemma mem_insert {n} {V : VarSet' n} {i j} :
@@ -348,14 +348,22 @@ lemma mem_insert {n} {V : VarSet' n} {i j} :
     simp [insert, VarSet'.instMembershipFin]
     grind
 
-def diff {n} (V V' : VarSet' n) : VarSet' n :=
-  V &&& ~~~V'
+-- TODO : remove if not used
+instance {n} : Compl (VarSet' n) where
+  compl V := ~~~V
+
+@[simp]
+lemma mem_compl {n} {V : VarSet' n} {i} :
+  i ∈ Vᶜ ↔ i ∉ V :=
+  by simp [instCompl, instMembershipFin]
+
+instance {n} : SDiff (VarSet' n) where
+  sdiff V V' := V &&& ~~~V'
 
 @[simp]
 lemma mem_diff {n} {V V' : VarSet' n} {i} :
-  i ∈ (V.diff V') ↔ i ∈ V ∧ i ∉ V' :=
-  by
-    simp [diff, instMembershipFin]
+  i ∈ V \ V' ↔ i ∈ V ∧ i ∉ V' :=
+  by simp [instSDiff, instMembershipFin]
 
 def Disjoint {n} (V V' : VarSet' n) : Prop :=
   V &&& V' = 0#n

@@ -534,7 +534,7 @@ lemma mem_toStates_addVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
 
 -- Only return deleting effects that are not adding effects
 def delVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
-  let vars := pt.actions'[aᵢ].del'.diff pt.actions'[aᵢ].add'
+  let vars := pt.actions'[aᵢ].del' \ pt.actions'[aᵢ].add'
   UnprimedVariable.ofVarset' (R.type pt) vars false
 
 @[simp]
@@ -573,7 +573,7 @@ lemma mem_effectVariables {R} {aᵢ : Fin pt.actions'.length} {x} :
     simp [effectVariables]
 
 def effectVarSet' (aᵢ : Fin pt.actions'.length) : VarSet' n :=
-  VarSet'.union pt.actions'[aᵢ].add' pt.actions'[aᵢ].del'
+  pt.actions'[aᵢ].add' ∪ pt.actions'[aᵢ].del'
 
 @[simp]
 lemma mem_effectVarSet' {aᵢ : Fin pt.actions'.length} {i} :
@@ -667,38 +667,6 @@ lemma checkB3_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
   by
     simp [checkB3, checkB3'_correct, STRIPS.regression, ← Set.inter_assoc]
     grind
-
-/-
-def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
-  Result' (l1.val.toStates ⊆ l2.val.toStates) :=
-  if h : R1 == R2 then by
-    rw [beq_iff_eq] at h
-    subst h
-    if h : checkB1 R1 (UnprimedLiterals.single l1) (UnprimedLiterals.single l2) then
-      sorry
-    else sorry
-  else
-    match l1, l2 with
-    | (v1, true), (v2, true) =>
-      match heq1 : R1, heq2 : R2 with
-      | mods, _ => return ⟨check_variable_subset_pos_pos_1 v1 v2, sorry⟩
-      | _, mods => check_variable_subset_pos_pos_2 v1 v2
-      | bdd, horn => check_variable_subset_pos_pos_2 v1 v2
-      | bdd, _ => sorry
-      | _, _ => sorry -- throwUnsuportedB4 R1 R2
-    | (v1, true), (v2, false) => sorry
-    | (v1, false), (v2, true) => sorry
-    | (v1, false), (v2, false) => checkB4 R2 R1 (v2, true) (v1, true)
-    termination_by Bool.toNat (not l1.snd && not l2.snd)
-
--- Since not all cases can be verified efficiently, only one direction holds
-lemma checkB4_correct {R1 R2} {l1 : UnprimedLiteral' pt R1} {l2 : UnprimedLiteral' pt R2} :
- checkB4 R1 R2 l1 l2 → l1.val.toStates ⊆ l2.val.toStates :=
-  by
-    unfold checkB4
-    sorry
-
--/
 
 def throwUnsuportedB4 {α : outParam Type} {p}
   (R1 R2 : StateSetFormalism) : Result α p :=

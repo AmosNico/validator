@@ -33,9 +33,9 @@ lemma isUnprimed_empty {n} : empty.IsUnprimed (n := n) :=
 
 @[simp]
 lemma isUnprimed_union {n} {V V' : VarSet' (2 * n)} :
-  (V.union V').IsUnprimed ↔ V.IsUnprimed ∧ V'.IsUnprimed :=
+  (V ∪ V').IsUnprimed ↔ V.IsUnprimed ∧ V'.IsUnprimed :=
   by
-    simp [union, instMembershipFin, IsUnprimed]
+    simp [instUnion, instMembershipFin, IsUnprimed]
     grind
 
 def toUnprimed {n} (V : VarSet' n) : VarSet' (2 * n) :=
@@ -60,8 +60,11 @@ lemma isUnprimed_toUnprimed {n} {V : VarSet' n} : IsUnprimed (toUnprimed V) :=
 def unprimedVars n : VarSet' (2 * n) :=
     BitVec.ofFnLE fun i ↦ Even i.val
 
+lemma mem_unprimedVars {n i} : i ∈ (unprimedVars n) ↔ Even i.val :=
+  by simp [unprimedVars, instMembershipFin, BitVec.getElem_ofFnLE]
+
 lemma isUnprimed_unprimedVars {n} : IsUnprimed (unprimedVars n) :=
-  by simp [unprimedVars, IsUnprimed, instMembershipFin, BitVec.getElem_ofFnLE]
+  by simp [mem_unprimedVars, IsUnprimed]
 
 end VarSet'
 
@@ -97,9 +100,13 @@ lemma toPrimed_eq {n} (V : VarSet' n) (M : Model (2 * n)) :
 lemma unprimedState_eq_iff_unprimedVars {n} {M M' : Model (2 * n)} :
   M.unprimedState = M'.unprimedState ↔ ∀ i ∈ (VarSet'.unprimedVars n), M i = M' i :=
   by
-    simp [Model.unprimedState, VarSet'.unprimedVars, Fin.toUnprimed, Set.ext_iff,
-      VarSet'.instMembershipFin, BitVec.getElem_ofFnLE]
-    sorry
+    simp only [unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq,
+      VarSet'.mem_unprimedVars, eq_iff_iff]
+    constructor
+    · intro h1 i h2
+      specialize h1 i.divNat'
+      grind only [Fin.divNat', = Nat.even_iff]
+    · grind
 
 
 /-
@@ -254,17 +261,19 @@ lemma mem_models_iff_of_eq_unprimedState [Formalism pt R]
 def toPrimed [Formalism pt R] [Rename (2 * n) R]
   (x : UnprimedVariable pt R) (V : VarSet' n) : Variable pt R :=
   let f := fun i ↦
-    -- TODO make more efficient by using that V is ordered
     if h : Even i.val ∧ i.divNat' ∈ V then
       i.toPrimed h.1
     else
       i
-  have h1 : StrictMonoOn f V.toUnprimed.toVarSet := by
-    simp [StrictMonoOn, VarSet'.toUnprimed, VarSet'.toVarSet]
-    simp_all [f, Fin.toPrimed]
-    sorry
-  have h2 : x.val.vars ⊆ V.toUnprimed := by
-    sorry
+  let dom := VarSet'.unprimedVars n
+  have h1 : StrictMonoOn f dom.toVarSet := by
+    simp only [StrictMonoOn, VarSet'.toVarSet, VarSet'.mem_unprimedVars, Set.mem_setOf_eq, dom]
+    simp only [Fin.toPrimed, f, Fin.divNat', ← Fin.val_fin_lt]
+    grind
+  have h2 : x.val.vars ⊆ dom := by
+    intro i hi
+    have h1 := x.prop i hi
+    simp only [VarSet'.mem_unprimedVars, h1, dom]
   Rename.rename x ⟨f, h1⟩ h2
 
 lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
