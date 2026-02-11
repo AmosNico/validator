@@ -90,6 +90,14 @@ lemma models_append {n} (γ1 γ2 : Clause n) :
     simp [models, -Prod.forall]
     grind
 
+def vars' {n} (γ : Clause n) : VarSet' n :=
+  VarSet'.ofList (γ.map Prod.fst)
+
+@[simp]
+lemma mem_vars' {n} (γ : Clause n) {i} : i ∈ γ.vars' ↔ ∃ l ∈ γ, l.1 = i :=
+  by
+    simp only [vars', VarSet'.mem_ofList, List.mem_map, Literal]
+
 end Clause
 
 /-! ## Cube -/
@@ -182,6 +190,12 @@ def models {n} (φ : CNF n) : Models n :=
 lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, ∃ l ∈ γ, M ∈ l.models :=
   by
     simp [models]
+
+@[simp]
+lemma models_cons {n} (φ : CNF n) {γ} : CNF.models (γ :: φ) = γ.models ∩ φ.models :=
+  by
+    simp only [models, List.mem_cons, forall_eq_or_imp, Clause.models, Set.inter_def,
+      Set.mem_setOf_eq]
 
 @[simp]
 lemma models_append {n} (φ ψ : CNF n) : (φ ++ ψ).models = φ.models ∩ ψ.models :=
@@ -295,9 +309,8 @@ lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M
         specialize h1 (i, false) hi
         simp_all only [Set.mem_setOf_eq, not_false_eq_true]
 
-lemma models_nonempty {n} (M : PartialModel n) : Nonempty M.models :=
+lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty :=
   by
-    constructor
     use fun i ↦ (i, true) ∈ M
     simp only [instMembershipLiteral, mem_models, Literal.mem_models]
     intro l
@@ -306,6 +319,12 @@ lemma models_nonempty {n} (M : PartialModel n) : Nonempty M.models :=
     case h_2 l i =>
       have := M.disjoint
       grind [VarSet'.Disjoint_iff]
+
+-- TODO : remove?
+lemma subset_models_of_mem {n} {M : PartialModel n} {l} : l ∈ M →  M.models ⊆ l.models :=
+  by
+    simp [Set.subset_def, mem_models]
+    grind
 
 def empty {n} : PartialModel n :=
   ⟨VarSet'.empty, VarSet'.empty, by simp⟩

@@ -348,6 +348,19 @@ lemma mem_insert {n} {V : VarSet' n} {i j} :
     simp [insert, VarSet'.instMembershipFin]
     grind
 
+@[simp]
+lemma mem_ofList {n} {l : List (Fin n)} {i} :
+  i ∈ (VarSet'.ofList l) ↔ i ∈ l :=
+  by
+    simp only [ofList]
+    suffices h : ∀ V, i ∈ List.foldl insert V l ↔ i ∈ V ∨ i ∈ l by
+      have := h empty
+      simp_all only [mem_empty, false_or]
+    induction l with
+    | nil => simp only [List.foldl_nil, List.not_mem_nil, or_false, implies_true]
+    | cons j l ih =>
+      grind only [List.foldl_cons, List.mem_cons, mem_insert]
+
 -- TODO : remove if not used
 instance {n} : Compl (VarSet' n) where
   compl V := ~~~V

@@ -37,6 +37,30 @@ def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
     let idx ← parseNat
     return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
 
+def parseLiteral n : Parser (Formula.Literal n) :=
+  do
+    sorry
+
+def parseClause n : Parser (Formula.Clause n) :=
+  do
+    let ⟨l, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
+    return l.toList
+
+def parseCNF {n} : Parser (Formula.CNF n) :=
+  withErrorMessage "Parsing CNF-formula in DIMACS format"
+  do
+    checkString "p" *> checkString "cnf" *> checkString (toString n)
+    let nb_clauses ← parseNat
+    let l ← take nb_clauses (parseClause n)
+    return l.toList
+
+def parseHorn {n} : Parser (Horn n) :=
+  do
+    let φ ← parseCNF
+    match Horn.fromCNF φ with
+    | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
+    | some φ => return φ
+
 def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
