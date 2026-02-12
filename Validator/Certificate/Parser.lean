@@ -37,9 +37,23 @@ def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
     let idx ← parseNat
     return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
 
-def parseLiteral n : Parser (Formula.Literal n) :=
+def parsePosLiteral {n} : Parser (Formula.Literal n) :=
   do
-    sorry
+    let i ← parseNat
+    if h : i < 0 && i < n + 1
+    then return (⟨i - 1, by grind⟩, true)
+    else Parser.throwUnexpected
+
+def parseNegLiteral {n} : Parser (Formula.Literal n) :=
+  do
+    let i ← checkString "-" *> parseNat
+    if h : 0 < i && i < n + 1
+    then return (⟨i - 1, by grind⟩, false)
+    else Parser.throwUnexpected
+
+def parseLiteral n : Parser (Formula.Literal n) :=
+  withErrorMessage "Parsing a literal."
+    (parsePosLiteral <|> parseNegLiteral)
 
 def parseClause n : Parser (Formula.Clause n) :=
   do

@@ -1,7 +1,6 @@
 import Mathlib.Data.Fin.Parity
 
 import Validator.PlanningTask.Basic
-import Validator.Basic
 
 /-! # Formulas
 This file provides typeclasses for formulas and different operations these formulas can support.
@@ -416,7 +415,6 @@ lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
     simp only [foldl, VarSet'.foldl_cons, List.not_mem_nil, or_false]
     simp only [instMembershipLiteral]
     grind
-
 
 def toCNF {n} (M : PartialModel n) : CNF n :=
   M.foldl (fun φ l ↦ [l] :: φ) []

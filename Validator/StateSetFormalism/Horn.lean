@@ -1,20 +1,68 @@
 import Validator.StateSetFormalism.Formula
 
-namespace Validator.Formula
+namespace Validator.Formula.Cube
 
-abbrev Clause.IsHorn {n} (γ : Clause n) : Prop :=
-  γ.countP Prod.snd ≤ 1
-
-def Cube.ofPartialModel {n} (M : PartialModel n) : Cube n :=
+def ofPartialModel {n} (M : PartialModel n) : Cube n :=
   M.foldl (fun δ l ↦ l :: δ) []
 
 @[simp]
-lemma Cube.models_ofPartialModel {n} {M : PartialModel n} :
+lemma models_ofPartialModel {n} {M : PartialModel n} :
   models (ofPartialModel M) = M.models := by
     ext M'
     simp [ofPartialModel, PartialModel.foldl_cons, PartialModel.mem_models]
 
+/-- Translate `δ` to a partial model. Returns `none` if `δ` is inconsistent. -/
+def toPartialModel {n} (δ : Cube n) : Option (PartialModel n) :=
+  δ.foldlM PartialModel.insert PartialModel.empty
+
+@[simp]
+lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
+  δ.toPartialModel = none ↔ δ.models = ∅ := by
+    suffices h1 : ∀ M, δ.foldlM PartialModel.insert M = none ↔ δ.models ∩ M.models = ∅ by
+      have := h1 PartialModel.empty
+      simp_all only [PartialModel.models_empty, Set.inter_univ, toPartialModel]
+    induction δ with
+    | nil =>
+      intro M
+      have := M.models_nonempty
+      simp_all only [List.foldlM_nil, Option.pure_def, reduceCtorEq, models, List.not_mem_nil,
+        IsEmpty.forall_iff, implies_true, Set.setOf_true, Set.univ_inter, Set.nonempty_iff_ne_empty]
+    | cons l δ' ih =>
+      intro M
+      simp only [List.foldlM_cons, Option.bind_eq_bind, Option.bind_eq_none_iff, models_cons, ih]
+      cases h1 : M.insert l with
+      | none =>
+        simp only [reduceCtorEq, IsEmpty.forall_iff, implies_true, Set.inter_assoc, true_iff]
+        rw [PartialModel.insert_eq_none_iff] at h1
+        apply PartialModel.subset_models_of_mem at h1
+        grind [Literal.models_negate]
+      | some M' =>
+        have := M.models_insert h1
+        grind only [PartialModel.insert_eq_some_iff, Option.some.injEq]
+
+@[simp]
+lemma models_toPartialModel {n} {δ : Cube n} {M} :
+  δ.toPartialModel = some M → M.models = δ.models :=
+  by
+    suffices h1 :
+      ∀ M', (δ.foldlM PartialModel.insert M') = some M → M.models = δ.models ∩ M'.models by
+      intro h2
+      have := h1 PartialModel.empty h2
+      simp_all only [PartialModel.models_empty, Set.inter_univ]
+    induction δ generalizing M with
+    | nil =>
+      grind only [models, = List.foldlM_nil, = Option.pure_apply, = Set.mem_inter_iff,
+        usr Set.mem_setOf_eq, ← List.not_mem_nil]
+    | cons l δ' ih =>
+      simp_all only [List.foldlM_cons, Option.bind_eq_bind, models_cons, Option.bind_eq_some_iff]
+      rintro M'' ⟨M', h3, h4⟩
+      grind only [PartialModel.models_insert h3]
+
+end Cube
 namespace Clause
+
+abbrev IsHorn {n} (γ : Clause n) : Prop :=
+  γ.countP Prod.snd ≤ 1
 
 -- M.models ∩ γ.models = M.models ∩ γ'.models
 def propagate_assignment {n} (M : PartialModel n) : Clause n → Option (Clause n)
@@ -529,12 +577,6 @@ instance {n} : ClausalEntailment n (Horn n) where
       Set.nonempty_def, Set.mem_inter_iff, Set.mem_compl_iff, Clause.mem_models, Set.subset_def]
     grind only
 
-instance {n} : Implicant n (Horn n) where
-
-  entails δ φ := sorry
-
-  entails_correct δ φ := sorry
-
 instance {n} : SententialEntailment n (Horn n) where
 
   entails φ ψ := ψ.toCNF.all fun γ ↦ ClausalEntailment.entails φ γ
@@ -590,6 +632,22 @@ instance {n} : OfPartialModel n (Horn n) where
 
   ofPartialModel_correct := by
     simp [instFormula, models_eq, CNF.models]
+
+-- TODO : can this be done more directly?
+instance {n} : Implicant n (Horn n) where
+
+  entails δ φ :=
+    match δ.toPartialModel with
+    | none => true
+    | some M => SententialEntailment.entails n (instOfPartialModel.ofPartialModel M) φ
+
+  entails_correct δ φ := by
+    split
+    case _ h1 =>
+      simp_all only [Cube.toPartialModel_eq_none_iff, Set.empty_subset]
+    case _ M h1 =>
+      simp only [SententialEntailment.entails_correct, OfPartialModel.ofPartialModel_correct,
+        Cube.models_toPartialModel h1]
 
 instance {n} : Rename n (Horn n) where
 
