@@ -1,65 +1,6 @@
 import Validator.StateSetFormalism.Formula
 
-namespace Validator.Formula.Cube
-
-def ofPartialModel {n} (M : PartialModel n) : Cube n :=
-  M.foldl (fun δ l ↦ l :: δ) []
-
-@[simp]
-lemma models_ofPartialModel {n} {M : PartialModel n} :
-  models (ofPartialModel M) = M.models := by
-    ext M'
-    simp [ofPartialModel, PartialModel.foldl_cons, PartialModel.mem_models]
-
-/-- Translate `δ` to a partial model. Returns `none` if `δ` is inconsistent. -/
-def toPartialModel {n} (δ : Cube n) : Option (PartialModel n) :=
-  δ.foldlM PartialModel.insert PartialModel.empty
-
-@[simp]
-lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
-  δ.toPartialModel = none ↔ δ.models = ∅ := by
-    suffices h1 : ∀ M, δ.foldlM PartialModel.insert M = none ↔ δ.models ∩ M.models = ∅ by
-      have := h1 PartialModel.empty
-      simp_all only [PartialModel.models_empty, Set.inter_univ, toPartialModel]
-    induction δ with
-    | nil =>
-      intro M
-      have := M.models_nonempty
-      simp_all only [List.foldlM_nil, Option.pure_def, reduceCtorEq, models, List.not_mem_nil,
-        IsEmpty.forall_iff, implies_true, Set.setOf_true, Set.univ_inter, Set.nonempty_iff_ne_empty]
-    | cons l δ' ih =>
-      intro M
-      simp only [List.foldlM_cons, Option.bind_eq_bind, Option.bind_eq_none_iff, models_cons, ih]
-      cases h1 : M.insert l with
-      | none =>
-        simp only [reduceCtorEq, IsEmpty.forall_iff, implies_true, Set.inter_assoc, true_iff]
-        rw [PartialModel.insert_eq_none_iff] at h1
-        apply PartialModel.subset_models_of_mem at h1
-        grind [Literal.models_negate]
-      | some M' =>
-        have := M.models_insert h1
-        grind only [PartialModel.insert_eq_some_iff, Option.some.injEq]
-
-@[simp]
-lemma models_toPartialModel {n} {δ : Cube n} {M} :
-  δ.toPartialModel = some M → M.models = δ.models :=
-  by
-    suffices h1 :
-      ∀ M', (δ.foldlM PartialModel.insert M') = some M → M.models = δ.models ∩ M'.models by
-      intro h2
-      have := h1 PartialModel.empty h2
-      simp_all only [PartialModel.models_empty, Set.inter_univ]
-    induction δ generalizing M with
-    | nil =>
-      grind only [models, = List.foldlM_nil, = Option.pure_apply, = Set.mem_inter_iff,
-        usr Set.mem_setOf_eq, ← List.not_mem_nil]
-    | cons l δ' ih =>
-      simp_all only [List.foldlM_cons, Option.bind_eq_bind, models_cons, Option.bind_eq_some_iff]
-      rintro M'' ⟨M', h3, h4⟩
-      grind only [PartialModel.models_insert h3]
-
-end Cube
-namespace Clause
+namespace Validator.Formula.Clause
 
 abbrev IsHorn {n} (γ : Clause n) : Prop :=
   γ.countP Prod.snd ≤ 1
@@ -202,7 +143,7 @@ lemma mem_models_propagate_literal {n} {φ : CNF n} {l} :
     intro M hM
     simp only [propagate_literal, ne_eq, decide_not, List.contains_eq_mem, mem_models, List.mem_map,
       List.mem_filter, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not,
-      forall_exists_index, and_imp]
+      forall_exists_index, and_imp, Clause.mem_models]
     constructor
     · grind
     · intro h1 γ' γ hγ hl rfl
@@ -349,7 +290,7 @@ lemma models_unit_propagate {n} {φ : Horn n} {δ} :
       simp only [bot, models_eq, ↓reduceIte, Set.mem_empty_iff_false, Cube.models, List.mem_cons,
         forall_eq_or_imp, Set.mem_inter_iff, Set.mem_ite_empty_left, Bool.not_eq_true,
         PartialModel.mem_models, CNF.mem_models, Set.mem_setOf_eq, false_iff, not_and, not_forall,
-        and_imp]
+        and_imp, Clause.mem_models]
       intro h1 h2 h3 h4
       specialize h2 l.negate h
       simp [h4] at h2
@@ -379,7 +320,7 @@ lemma models_unit_propagate {n} {φ : Horn n} {δ} :
           have h : Cube.models res.1.flatten = CNF.models res.1 := by
             ext M
             simp only [Cube.mem_models, List.mem_flatten, forall_exists_index, and_imp,
-              CNF.mem_models]
+              CNF.mem_models, Clause.mem_models]
             constructor
             · intro h2 γ hγ
               rcases γ with ⟨⟩ | ⟨l', ⟨⟩ | γ'⟩
@@ -431,7 +372,7 @@ def insert {n} (φ : Horn n) (γ : Clause n) (h : γ.IsHorn) : Horn n :=
         suffices  ∀ i ∈ Clause.vars' (l1 :: l2 :: γ'), i ∉ φ.unit_literals.vars by
           have := φ.vars_prop
           grind only [Set.mem_inter_iff, CNF.mem_vars, Clause.mem_vars', List.mem_cons]
-        grind only [PartialModel.mem_vars', Clause.mem_vars'_propagate_assignment h1]
+        grind only [PartialModel.mem_vars, Clause.mem_vars'_propagate_assignment h1]
     }
 
 lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.models ∩ γ.models :=
@@ -458,7 +399,7 @@ lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.mo
         have := Clause.mem_models_propagate_assignment h3
         ext M
         simp only [models_eq, Set.mem_ite_empty_left, Bool.not_eq_true, Set.mem_inter_iff,
-          CNF.mem_models, List.mem_cons, forall_eq_or_imp, exists_eq_or_imp]
+          CNF.mem_models, List.mem_cons, forall_eq_or_imp]
         grind only [models_eq, Clause.mem_models, = List.mem_cons, usr List.eq_or_mem_of_mem_cons]
 
 def insert' {n} (φ : Horn n) (γ : Clause n) : Option (Horn n) :=
@@ -495,7 +436,7 @@ instance {n} : Formula n (Horn n) where
   models := models
 
   models_equiv_right φ M M' h1 := by
-    simp only [models, CNF.mem_models]
+    simp only [models, CNF.mem_models, Clause.mem_models]
     intro h2 γ hγ
     specialize h2 γ hγ
     rcases h2 with ⟨l, h2, hM⟩
@@ -505,8 +446,9 @@ instance {n} : Formula n (Horn n) where
       split at hγ
       · grind
       · simp_all only [eq_iff_iff, Bool.not_eq_true, List.mem_append, PartialModel.mem_toCNF,
-          PartialModel.instMembershipLiteral, Set.mem_union, PartialModel.mem_vars, CNF.mem_vars]
-        grind
+        PartialModel.instMembershipLiteral, Set.mem_union,
+        PartialModel.mem_vars_iff_mem_pos_or_mem_neg, CNF.mem_vars]
+        grind only [= List.mem_cons, ← List.not_mem_nil]
     specialize h1 l.1 h3
     simp_all only [Literal.mem_models, eq_iff_iff]
     use l, h2
@@ -563,8 +505,8 @@ instance {n} : Consistency n (Horn n) where
         iff_false, true_and]
       intro h3
       have h4 := Set.eq_empty_iff_forall_notMem.1 φ.vars_prop i
-      simp only [Set.mem_inter_iff, PartialModel.mem_vars, h3, true_or, CNF.mem_vars, true_and,
-        not_exists, not_and] at h4
+      simp only [Set.mem_inter_iff, PartialModel.mem_vars_iff_mem_pos_or_mem_neg, h3, true_or,
+        CNF.mem_vars, true_and, not_exists, not_and] at h4
       exact h4 γ hγ (i, false) h2 rfl
 
 instance {n} : ClausalEntailment n (Horn n) where
@@ -608,7 +550,7 @@ instance {n} : BoundedConjuction n (Horn n) where
         grind
       vars_prop := by
         simp }
-    χ.unit_propagate (Cube.ofPartialModel φ.unit_literals ++ Cube.ofPartialModel ψ.unit_literals)
+    χ.unit_propagate (φ.unit_literals.toCube ++ ψ.unit_literals.toCube)
 
   and_correct φ ψ := by
     ext M
@@ -626,7 +568,7 @@ instance {n} : OfPartialModel n (Horn n) where
       horn_prop := by simp
       clauses_prop := by simp
       subset_vars := by
-        simp [PartialModel.vars, VarSet'.toVarSet]
+        grind only [PartialModel.mem_vars', = Set.mem_union, CNF.mem_vars, ← List.not_mem_nil]
       vars_prop := by
         simp [CNF.vars] }
 

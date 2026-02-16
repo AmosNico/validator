@@ -138,6 +138,15 @@ instance {α} [Fintype α] [DecidableEq α] {n} : Fintype (Vector α n) where
         intro a v
         use v, ih v, a
 
+/-- Variant of `Vector.mem_iff_getElem` using `Fin`. -/
+lemma Vector.mem_iff_getElem' {α n} {a : α} {xs : Vector α n} :
+  a ∈ xs ↔ ∃ i : Fin n, xs[i] = a :=
+  by
+    simp only [mem_iff_getElem, Fin.getElem_fin]
+    constructor
+    · rintro ⟨i, hi, h1⟩
+      use ⟨i, hi⟩
+    · grind only [usr Fin.isLt]
 /--
 Combine every element of the first list with every element of the second list
 using the function `f`.
