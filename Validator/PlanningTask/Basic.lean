@@ -324,10 +324,16 @@ instance {n} : Union (VarSet n) where
   union V V' := V ||| V'
 
 @[simp]
-lemma mem_union {n} {V V' : VarSet n} {i} :
-  i ∈ V ∪  V' ↔ i ∈ V ∨ i ∈ V' :=
-  by
-    simp [instUnion, mem_iff]
+lemma mem_union {n} {V V' : VarSet n} {i} : i ∈ V ∪  V' ↔ i ∈ V ∨ i ∈ V' :=
+  by simp [instUnion, mem_iff]
+
+@[simp]
+lemma empty_union {n} {V : VarSet n} : ∅ ∪ V = V :=
+  by simp only [SetLike.ext_iff, mem_union, mem_empty, false_or, implies_true]
+
+@[simp]
+lemma union_empty {n} {V : VarSet n} : V ∪ ∅ = V :=
+  by simp only [SetLike.ext_iff, mem_union, mem_empty, or_false, implies_true]
 
 instance {n} : Inter (VarSet n) where
   inter V V' := V &&& V'

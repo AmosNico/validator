@@ -22,8 +22,6 @@ def parseActionSetExpr (idx : ℕ) : Parser ActionSetExpr :=
     ("a", return ActionSetExpr.all)
   ]
 
-def parserTODO {α : outParam Type} : Parser α := Parser.throwUnexpectedWithMessage none "TODO"
-
 def parseConstStateSetExpr {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   parseCases [
     ("e", return StateSetExpr.empty),
@@ -35,9 +33,9 @@ def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
     let path ← parseWord
     let idx ← parseNat
-    return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
+    return StateSetExpr.bdd sorry
 
-def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
+def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
   do
     let i ← parseNat
     -- The variables in dimacs format start counting with 1, whereas we start with 0
@@ -46,29 +44,29 @@ def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed }
     then return ⟨(⟨2 * (i - 1), by grind⟩, true), by grind⟩
     else Parser.throwUnexpected
 
-def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
+def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
   do
     let i ← checkString "-" *> parseNat
     if h : 0 < i && i < n + 1
     then return ⟨(⟨2 * (i - 1), by grind⟩, false), by grind⟩
     else Parser.throwUnexpected
 
-def parseLiteral n : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
+def parseLiteral n : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
   Parser.withErrorMessage "Parsing a literal."
     (parsePosLiteral <|> parseNegLiteral)
 
-def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.IsUnprimed } :=
+def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } :=
   do
     let ⟨γ, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
-    return ⟨γ.toList, by simp [Formula.Clause.IsUnprimed]; grind⟩
+    return ⟨γ.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.IsUnprimed } :=
+def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
   Parser.withErrorMessage "Parsing CNF-formula in DIMACS format"
   do
     checkString "p" *> checkString "cnf" *> checkString (toString n)
     let nb_clauses ← parseNat
     let as ← take nb_clauses (parseClause n)
-    return ⟨as.toList, by simp [Formula.CNF.IsUnprimed]; grind⟩
+    return ⟨as.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
 def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
@@ -77,16 +75,19 @@ def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
     | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
     | some ψ =>
       have h2 : ψ.vars.IsUnprimed := by
-        simp [VarSet.IsUnprimed]
-        sorry
+        apply Horn.vars_fromCNF at h
+        simp_all only [VarSet.IsUnprimed, VarSet.instHasSubset, implies_true]
       return StateSetExpr.horn ⟨ψ, h2⟩
+
+def parseMods {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
+  sorry
 
 def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
     ("b", parseBdd pt),
     ("h", parseHorn pt),
-    ("e", parserTODO),
+    ("e", parseMods pt),
     ("n", return StateSetExpr.neg (← parseNat)),
     ("i", return StateSetExpr.inter (← parseNat) (← parseNat)),
     ("u", return StateSetExpr.union (← parseNat) (← parseNat)),

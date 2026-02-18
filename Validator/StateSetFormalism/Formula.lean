@@ -135,9 +135,14 @@ def vars {n} (δ : Cube n) : VarSet n :=
 @[simp]
 lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = δ.vars.insert l.1 :=
   by
-    simp only [vars, List.map_cons, SetLike.ext_iff, VarSet.mem_ofList, List.mem_cons, List.mem_map,
-       VarSet.mem_insert]
-    grind
+    rw [SetLike.ext_iff]
+    grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
+
+-- TODO : remove
+lemma vars_append {n} (δ δ' : Cube n) : Cube.vars (δ ++ δ') = δ.vars ∪ δ'.vars :=
+  by
+    rw [SetLike.ext_iff]
+    grind only [vars, VarSet.mem_union, VarSet.mem_ofList, = List.map_append, = List.mem_append]
 
 def consistent {n} (δ : Cube n) : Bool :=
   δ.all fun l ↦ l.negate ∉ δ
@@ -220,6 +225,12 @@ lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, i ∈ γ.
     induction φ with
     | nil => simp
     | cons γ φ ih => grind only [List.foldl_cons, VarSet.mem_union, List.mem_cons]
+
+@[simp]
+lemma vars_cons {n γ} {φ : CNF n} : CNF.vars (γ :: φ) = γ.vars ∪ φ.vars :=
+  by
+    simp only [SetLike.ext_iff, mem_vars, List.mem_cons, Clause.mem_vars, exists_eq_or_imp,
+      VarSet.mem_union, implies_true]
 
 @[simp]
 lemma forall_iff_subset_models {n} {φ : CNF n} {Ms} :

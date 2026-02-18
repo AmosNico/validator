@@ -123,20 +123,23 @@ lemma IsHorn_propagate_literal {n} {φ : CNF n} {l} :
     rw [List.filter_comm]
     grind only [List.length_filter_le]
 
-/- TODO : remove?
-lemma vars_propagate_literal {n} {φ : CNF n} {l} : (φ.propagate_literal l).vars ⊆ φ.vars \ {l.1} :=
-  by
-    intro v hv
-    simp [vars, propagate_literal, Literal, Literal.negate] at hv
-    simp [vars, Literal]
-    grind-/
-
 @[simp]
 lemma mem_propagate_literal {n} {φ : CNF n} {l γ} :
   γ ∈ (φ.propagate_literal l) ↔ ∃ γ' ∈ φ, l ∉ γ' ∧ γ = γ'.filter (· ≠ l.negate) :=
   by
     simp [propagate_literal]
     grind
+
+/- TODO : remove
+lemma vars_propagate_literal {n} {φ : CNF n} {l} :
+  ∀ i ∈ (φ.propagate_literal l).vars, i ∈ φ.vars ∧ i ≠ l.1 :=
+  by
+    simp only [mem_vars, mem_propagate_literal, ne_eq, decide_not, Clause.mem_vars, ↓existsAndEq,
+      and_true, List.mem_filter, Bool.not_eq_eq_eq_not, Bool.not_true,
+      decide_eq_false_iff_not]
+    rintro i ⟨γ, h1, l', h2, rfl⟩
+    grind only [Literal.eq_or_eq_negate_iff_var_eq]
+-/
 
 lemma mem_models_propagate_literal {n} {φ : CNF n} {l} :
   ∀ M ∈ l.models, M ∈ (φ.propagate_literal l).models ↔ M ∈ φ.models :=
@@ -209,9 +212,12 @@ def top {n} : Horn n where
     vars_prop := by simp only [PartialModel.vars_empty, VarSet.empty_inter]
 
 @[simp]
+lemma vars_top {n} : (@top n).vars = ∅ :=
+  by simp only [top]
+
+@[simp]
 lemma models_top {n} : (@top n).models = Set.univ :=
-  by
-    simp [Set.ext_iff, top, models_eq]
+  by simp [Set.ext_iff, top, models_eq]
 
 def bot {n} : Horn n where
     vars := ∅
@@ -222,6 +228,10 @@ def bot {n} : Horn n where
     clauses_prop := by simp
     subset_vars := by simp [CNF.vars]
     vars_prop := by simp only [PartialModel.vars_empty, VarSet.empty_inter]
+
+@[simp]
+lemma vars_bot {n} : (@bot n).vars = ∅ :=
+  by simp [bot]
 
 @[simp]
 lemma models_bot {n} : (@bot n).models = ∅ :=
@@ -282,6 +292,29 @@ decreasing_by
   · apply List.length_flatten_short
     grind only [= List.mem_filter]
   · simp [← List.length_eq_length_filter_add, φ.clauses.length_propagate_literal]
+
+lemma vars_unit_propagate {n} {φ : Horn n} {δ} : (φ.unit_propagate δ).vars ⊆ φ.vars ∪ δ.vars :=
+  by
+    simp only [VarSet.instHasSubset, VarSet.mem_union]
+    fun_induction unit_propagate with
+    | case1 φ => grind only
+    | case2 φ l todo h => grind only [!vars_bot, VarSet.mem_empty]
+    | case3 φ l todo M hM res δ' φ' ih =>
+      intro i hi
+      specialize ih i hi
+      simp only [VarSet.mem_insert, Cube.vars, List.partition_eq_filter_filter, List.map_append,
+        List.map_flatten, VarSet.mem_ofList, List.mem_append, List.mem_flatten, List.mem_map,
+        List.mem_filter, decide_eq_true_eq, exists_exists_and_eq_and, δ', res, φ'] at ih
+      simp only [Cube.vars, List.map_cons, VarSet.mem_ofList, List.mem_cons, List.mem_map]
+      rcases ih with h | ⟨γ, h1, l', h2, rfl⟩ | h
+      · grind only
+      · rw [CNF.mem_propagate_literal] at h1
+        rcases h1 with ⟨⟨γ', h1, h3, rfl⟩, h4⟩
+        simp at h2
+        apply Or.inl
+        apply φ.subset_vars
+        grind only [VarSet.mem_union, CNF.mem_vars, Clause.mem_vars]
+      · grind only
 
 lemma models_unit_propagate {n} {φ : Horn n} {δ} :
   (φ.unit_propagate δ).models = φ.models ∩ δ.models :=
@@ -379,6 +412,26 @@ def insert {n} (φ : Horn n) (γ : Clause n) (h : γ.IsHorn) : Horn n :=
         grind only [PartialModel.mem_vars, Clause.mem_vars_propagate_assignment h1]
     }
 
+lemma vars_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).vars ⊆ φ.vars ∪ γ.vars :=
+  by
+    unfold insert
+    simp only [VarSet.instHasSubset, VarSet.mem_union, Clause.mem_vars]
+    split
+    · simp only [vars_bot, VarSet.mem_empty, IsEmpty.forall_iff,
+      implies_true]
+    · split
+      next h2 h3 => grind only
+      next h2 h3 => grind only [vars_bot, VarSet.mem_empty]
+      next h2 l h3 =>
+        intro i hi
+        apply vars_unit_propagate at hi
+        simp [Cube.vars] at hi
+        apply Clause.mem_propagate_assignment at h3
+        grind only [= List.mem_cons]
+      next h2 l1 l2 γ' h3 =>
+        have := Clause.mem_propagate_assignment h3
+        grind only [VarSet.mem_union, Clause.mem_vars]
+
 lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.models ∩ γ.models :=
   by
     unfold insert
@@ -416,7 +469,29 @@ Returns `none` if the CNF-formula is not a Horn-formula.
 def fromCNF {n} (φ : CNF n) : Option (Horn n) :=
   φ.foldlM insert' top
 
-lemma models_formCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.models = φ.models :=
+lemma vars_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.vars ⊆ φ.vars :=
+  by
+    suffices h1 : ∀ ψ', φ.foldlM insert' ψ' = some ψ → ψ.vars ⊆ φ.vars ∪ ψ'.vars by
+      specialize h1 top
+      simp_all only [vars_top, VarSet.union_empty, fromCNF, implies_true]
+    induction φ with
+    | nil => simp [CNF.vars, VarSet.instHasSubset]
+    | cons γ φ ih =>
+      intro φ' h2
+      simp_all only [List.foldlM_cons, Option.bind_eq_bind, insert']
+      split at h2
+      next h3 =>
+        specialize ih (φ'.insert γ h3) h2
+        intro i hi
+        specialize ih i hi
+        simp only [VarSet.mem_union] at ih
+        rcases ih with h | h
+        · grind only [VarSet.mem_union, CNF.vars_cons]
+        · apply vars_insert at h
+          grind only [VarSet.mem_union, CNF.vars_cons, List.mem_cons]
+      next h2 => grind only [= Option.bind_none]
+
+lemma models_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.models = φ.models :=
   by
     suffices h1 : ∀ ψ', φ.foldlM insert' ψ' = some ψ → ψ.models = φ.models ∩ ψ'.models by
       specialize h1 top

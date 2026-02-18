@@ -13,13 +13,6 @@ inductive StateSetFormalism
 | mods
   deriving DecidableEq
 
-abbrev Formula.Literal.IsUnprimed {n} (l : Literal n) : Prop :=
-  Even l.1.val
-abbrev Formula.Clause.IsUnprimed {n} (γ : Clause n) : Prop :=
-  ∀ l ∈ γ, Literal.IsUnprimed l
-abbrev Formula.CNF.IsUnprimed {n} (φ : CNF n) : Prop :=
-  ∀ γ ∈ φ, Clause.IsUnprimed γ
-
 namespace StateSetFormalism
 
 instance : ToString StateSetFormalism where
@@ -39,10 +32,6 @@ instance BDD.instFormalism {n} {pt : STRIPS n} : Formalism pt (BDD (2 * n)) wher
 instance Horn.instFormalism {n} {pt : STRIPS n} : Formalism pt (Horn (2 * n)) where
 
 instance MODS.instFormalism {n} {pt : STRIPS n} : Formalism pt (MODS (2 * n)) where
-
---TODO
-def mkBDD {n} (pt : STRIPS n) : UnprimedVariable pt (BDD (2 * n)) :=
-  ⟨BDD.mk (VarSet.unprimedVars n) sorry, VarSet.isUnprimed_unprimedVars⟩
 
 instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formalism pt (R.type pt)
 | bdd => BDD.instFormalism
