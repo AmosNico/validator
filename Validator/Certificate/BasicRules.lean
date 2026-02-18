@@ -497,62 +497,40 @@ lemma checkB1_correct R {L1 L2 : UnprimedLiterals' pt R} :
     simp [checkB1, check_variables_subset_correct, Set.inter_compl_subset_union_compl]
 
 def preVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
-  UnprimedVariable.ofVarset' (R.type pt) pt.actions'[aᵢ].pre'
-
-@[simp]
-lemma mem_models_preVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
-  M ∈ (preVariable R aᵢ).val.models ↔ pt.actions'[aᵢ].pre ⊆ M.unprimedState :=
-  by
-    simp [preVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.pre, VarSet'.toVarSet, Set.subset_def]
+  UnprimedVariable.ofVarSet (R.type pt) pt.actions'[aᵢ].pre
 
 @[simp]
 lemma mem_toStates_preVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
-  s ∈ (preVariable R aᵢ).val.toStates ↔ pt.actions'[aᵢ].pre ⊆ s :=
+  s ∈ (preVariable R aᵢ).val.toStates ↔ ∀ i ∈ pt.actions'[aᵢ].pre, i ∈ s  :=
   by
     obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
-    simp [Variable.toStates_eq]
-    grind
+    grind only [Variable.toStates_eq, preVariable, Set.mem_image,
+      UnprimedVariable.mem_models_ofVarSet]
 
 def addVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
-  UnprimedVariable.ofVarset' (R.type pt) pt.actions'[aᵢ].add'
-
-@[simp]
-lemma mem_models_addVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
-  M ∈ (addVariable R aᵢ).val.models ↔ pt.actions'[aᵢ].add ⊆ M.unprimedState :=
-  by
-    simp [addVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.add, VarSet'.toVarSet, Set.subset_def]
+  UnprimedVariable.ofVarSet (R.type pt) pt.actions'[aᵢ].add
 
 @[simp]
 lemma mem_toStates_addVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
-  s ∈ (addVariable R aᵢ).val.toStates ↔ pt.actions'[aᵢ].add ⊆ s :=
+  s ∈ (addVariable R aᵢ).val.toStates ↔ ∀ i ∈ pt.actions'[aᵢ].add, i ∈ s :=
   by
     obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
-    simp [Variable.toStates_eq]
-    grind
+    grind only [Variable.toStates_eq, addVariable, = Set.mem_image,
+      UnprimedVariable.mem_models_ofVarSet]
 
 -- Only return deleting effects that are not adding effects
 def delVariable R (aᵢ : Fin pt.actions'.length) : UnprimedVariable' pt R :=
-  let vars := pt.actions'[aᵢ].del' \ pt.actions'[aᵢ].add'
-  UnprimedVariable.ofVarset' (R.type pt) vars false
-
-@[simp]
-lemma mem_models_delVariable {R} {aᵢ : Fin pt.actions'.length} {M} :
-  M ∈ (delVariable R aᵢ).val.models ↔
-    pt.actions'[aᵢ].del \ pt.actions'[aᵢ].add ⊆ M.unprimedStateᶜ :=
-  by
-    rcases aᵢ with ⟨aᵢ, haᵢ⟩
-    simp [delVariable, UnprimedVariable.mem_models_ofVarSet']
-    simp [Action.del, Action.add, VarSet'.toVarSet, Set.subset_def]
+  let vars := pt.actions'[aᵢ].del \ pt.actions'[aᵢ].add
+  UnprimedVariable.ofVarSet (R.type pt) vars false
 
 @[simp]
 lemma mem_toStates_delVariable {R} {aᵢ : Fin pt.actions'.length} {s} :
-  s ∈ (delVariable R aᵢ).val.toStates ↔ pt.actions'[aᵢ].del \ pt.actions'[aᵢ].add ⊆ sᶜ :=
+  s ∈ (delVariable R aᵢ).val.toStates ↔
+    ∀ i ∈ pt.actions'[aᵢ].del, i ∈ pt.actions'[aᵢ].add ∨ i ∉ s :=
   by
     obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
-    simp [Variable.toStates_eq]
-    grind
+    grind only [delVariable, Variable.toStates_eq, Set.mem_image,
+      UnprimedVariable.mem_models_ofVarSet, VarSet.mem_diff]
 
 def preVariables R (aᵢ : Fin pt.actions'.length) : UnprimedVariables' pt R :=
   [preVariable R aᵢ]
@@ -572,18 +550,17 @@ lemma mem_effectVariables {R} {aᵢ : Fin pt.actions'.length} {x} :
   by
     simp [effectVariables]
 
-def effectVarSet' (aᵢ : Fin pt.actions'.length) : VarSet' n :=
-  pt.actions'[aᵢ].add' ∪ pt.actions'[aᵢ].del'
+def effectVarSet (aᵢ : Fin pt.actions'.length) : VarSet n :=
+  pt.actions'[aᵢ].add ∪ pt.actions'[aᵢ].del
 
 @[simp]
-lemma mem_effectVarSet' {aᵢ : Fin pt.actions'.length} {i} :
-  i ∈ effectVarSet' aᵢ ↔ i ∈ pt.actions'[aᵢ].add ∨ i ∈ pt.actions'[aᵢ].del :=
+lemma mem_effectVarSet {aᵢ : Fin pt.actions'.length} {i} :
+  i ∈ effectVarSet aᵢ ↔ i ∈ pt.actions'[aᵢ].add ∨ i ∈ pt.actions'[aᵢ].del :=
   by
-    simp [effectVarSet', VarSet'.mem_union]
-    simp [Action.add, Action.del, VarSet'.toVarSet]
+    simp [effectVarSet, VarSet.mem_union]
 
 def checkB2' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt R) : Bool :=
-  let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet' aᵢ)
+  let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet aᵢ)
   let X1' := X0' ++ (effectVariables R aᵢ ++ X1).val
   R.check_variables_subset X1' X2
 
@@ -591,27 +568,29 @@ lemma checkB2'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
   checkB2' R aᵢ X0 X1 X2 ↔
     pt.progression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union :=
   by
-    let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet' aᵢ)
+    let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet aᵢ)
     let X := X0' ++ (effectVariables R aᵢ).val
     suffices h : X.inter = pt.progression' X0.val.inter pt.actions'[aᵢ] by
       simp [X, X0'] at h
       simp [checkB2', check_variables_subset_correct, ← Set.inter_assoc, h]
     ext s
     simp only [STRIPS.progression', UnprimedVariables.mem_inter, Successor,
-      Applicable, Set.mem_setOf_eq]
+      Applicable, Fin.getElem_fin, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union,
+      Set.mem_diff, Set.mem_setOf_eq]
     simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
       UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
       UnprimedVariables.mem_inter, mem_preVariables, forall_eq, mem_toStates_preVariable,
-      mem_effectVarSet', not_or, and_imp, mem_effectVariables, forall_eq_or_imp,
-      mem_toStates_addVariable, mem_toStates_delVariable, X, X0']
+      mem_effectVarSet, not_or, and_imp, mem_effectVariables, forall_eq_or_imp,
+      mem_toStates_addVariable, mem_toStates_delVariable, X, X0', Fin.getElem_fin]
     constructor
     · rintro ⟨⟨s', ⟨h1, h2⟩, h3⟩, h4, h5⟩
-      have : s = s' \ pt.actions'[aᵢ].del ∪ pt.actions'[aᵢ].add := by
-        simp only [Set.subset_compl_iff_disjoint_left] at h5
-        have h6 := Disjoint.notMem_of_mem_left h5
-        grind
-      grind
-    · grind
+      use s'
+      grind only
+    · rintro ⟨s', h1, h2, h3⟩
+      constructor
+      · use s'
+        grind only [usr Fin.isLt]
+      · grind only [usr Fin.isLt]
 
 def checkB2 R
   (X : UnprimedVariables' pt R) (A : ActionIds pt) (L1 L2 : UnprimedLiterals' pt R) : Bool :=
@@ -624,7 +603,7 @@ lemma checkB2_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
     grind
 
 def checkB3' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt R) : Bool :=
-  let X0' := UnprimedVariables.toPrimed ( effectVariables R aᵢ ++ X0) (effectVarSet' aᵢ)
+  let X0' := UnprimedVariables.toPrimed ( effectVariables R aᵢ ++ X0) (effectVarSet aᵢ)
   let X1' := X0' ++ (preVariables R aᵢ ++ X1).val
   R.check_variables_subset X1' X2
 
@@ -632,31 +611,29 @@ lemma checkB3'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
   checkB3' R aᵢ X0 X1 X2 ↔
     pt.regression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union :=
   by
-    let X0' := UnprimedVariables.toPrimed ( effectVariables R aᵢ ++ X0) (effectVarSet' aᵢ)
+    let X0' := UnprimedVariables.toPrimed ( effectVariables R aᵢ ++ X0) (effectVarSet aᵢ)
     let X := X0' ++ (preVariables R aᵢ).val
     suffices h : X.inter = pt.regression' X0.val.inter pt.actions'[aᵢ] by
       simp [X, X0'] at h
       simp [checkB3', check_variables_subset_correct, ← Set.inter_assoc, h]
     ext s
     simp only [STRIPS.regression', UnprimedVariables.mem_inter, Successor,
-      Applicable, exists_eq_right_right, Set.mem_setOf_eq]
+      Applicable, Fin.getElem_fin, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union,
+      Set.mem_diff, Set.mem_setOf_eq]
     simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
       UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
       UnprimedVariables.mem_inter, mem_effectVariables, forall_eq_or_imp, mem_toStates_addVariable,
-      forall_eq, mem_toStates_delVariable, Subtype.forall, mem_effectVarSet',
-      not_or, and_imp, mem_preVariables, mem_toStates_preVariable, and_congr_left_iff, X, X0']
-    intro h1
+      Fin.getElem_fin, forall_eq, mem_toStates_delVariable, mem_effectVarSet, not_or, and_imp,
+      mem_preVariables, mem_toStates_preVariable, X, X0']
     constructor
-    · rintro ⟨s', ⟨h2, h3⟩, h4⟩ x h5 h6
-      have : s' = s \ pt.actions'[aᵢ].del ∪ pt.actions'[aᵢ].add := by
-        simp only [Set.subset_compl_iff_disjoint_left] at h2
-        have h7 := Disjoint.notMem_of_mem_left h2.2
-        grind
-      grind
-    · intro h1
-      use s \ pt.actions'[aᵢ].del ∪ pt.actions'[aᵢ].add
-      simp [Set.compl_diff]
-      grind
+    · rintro ⟨⟨s', h1⟩, h2⟩
+      use s'
+      grind only
+    · rintro ⟨s', h1⟩
+      constructor
+      · use s'
+        grind only
+      · grind only
 
 def checkB3 R
   (X : UnprimedVariables' pt R) (A : ActionIds pt) (L1 L2 : UnprimedLiterals' pt R) : Bool :=

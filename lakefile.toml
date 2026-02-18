@@ -20,6 +20,12 @@ name = "Parser"
 git = "https://github.com/fgdorais/lean4-parser"
 rev = "2707e2625e3765493d3c88d3371c6c3f28309979"
 
+[[require]]
+name = "bdd"
+# git = "https://github.com/eshelyaron/lean4-bdd"
+git = "https://github.com/AmosNico/lean4-bdd"
+rev = "main"
+
 [[lean_lib]]
 name = "Validator"
 

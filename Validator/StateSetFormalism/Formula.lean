@@ -89,13 +89,13 @@ lemma models_append {n} (γ1 γ2 : Clause n) :
     simp [models, -Prod.forall]
     grind
 
-def vars' {n} (γ : Clause n) : VarSet' n :=
-  VarSet'.ofList (γ.map Prod.fst)
+def vars {n} (γ : Clause n) : VarSet n :=
+  VarSet.ofList (γ.map Prod.fst)
 
 @[simp]
-lemma mem_vars' {n} (γ : Clause n) {i} : i ∈ γ.vars' ↔ ∃ l ∈ γ, l.1 = i :=
+lemma mem_vars {n} (γ : Clause n) {i} : i ∈ γ.vars ↔ ∃ l ∈ γ, l.1 = i :=
   by
-    simp only [vars', VarSet'.mem_ofList, List.mem_map, Literal]
+    simp only [vars, VarSet.mem_ofList, List.mem_map, Literal]
 
 end Clause
 
@@ -130,12 +130,13 @@ lemma models_cons {n l} (δ : Cube n) :
     simp only [models, List.mem_cons, forall_eq_or_imp, Set.mem_setOf_eq, Set.mem_inter_iff]
 
 def vars {n} (δ : Cube n) : VarSet n :=
-  { i | ∃ l ∈ δ, l.fst = i }
+  VarSet.ofList (δ.map Prod.fst)
 
 @[simp]
-lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = {l.1} ∪ δ.vars :=
+lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = δ.vars.insert l.1 :=
   by
-    simp [vars]
+    simp only [vars, List.map_cons, SetLike.ext_iff, VarSet.mem_ofList, List.mem_cons, List.mem_map,
+       VarSet.mem_insert]
     grind
 
 def consistent {n} (δ : Cube n) : Bool :=
@@ -208,12 +209,17 @@ lemma models_mem_empty {n} (φ : CNF n) (h : [] ∈ φ) : φ.models = ∅ :=
     grind only [mem_models, = Set.mem_empty_iff_false, Clause.mem_models, ← List.not_mem_nil]
 
 def vars {n} (φ : CNF n) : VarSet n :=
-  { i | ∃ γ ∈ φ, ∃ l ∈ γ, l.fst = i }
+  φ.foldl (fun V γ ↦ V ∪ γ.vars) ∅
 
 @[simp]
-lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, ∃ v ∈ γ, v.fst = i :=
+lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, i ∈ γ.vars :=
   by
-    simp [vars]
+    suffices h : ∀ V, i ∈ List.foldl (fun V' γ ↦ V' ∪ γ.vars) V φ ↔ i ∈ V ∨ ∃ γ ∈ φ, i ∈ γ.vars by
+      have := h ∅
+      simp_all only [VarSet.mem_empty, false_or, vars]
+    induction φ with
+    | nil => simp
+    | cons γ φ ih => grind only [List.foldl_cons, VarSet.mem_union, List.mem_cons]
 
 @[simp]
 lemma forall_iff_subset_models {n} {φ : CNF n} {Ms} :
@@ -253,9 +259,9 @@ lemma DNF.exists_iff_models_subset {n} {φ : DNF n} {Ms} :
 /-! ## PartialModel -/
 /-- Partial models are partial assignments. In contrast to `Model`, these are used at runtime. -/
 structure PartialModel (n : ℕ) where
-  pos : VarSet' n
-  neg : VarSet' n
-  disjoint : pos.Disjoint neg
+  pos : VarSet n
+  neg : VarSet n
+  disjoint : pos ∩ neg = ∅
   deriving DecidableEq, Repr
 
 namespace PartialModel
@@ -275,24 +281,15 @@ instance {n l} {M : PartialModel n} : Decidable (l ∈ M) :=
     simp only [instMembershipLiteral]
     split
     all_goals
-      exact VarSet'.instDecidableMemFin
-
--- TODO : check if needed
-def vars' {n} (M : PartialModel n) : VarSet' n :=
-  M.pos ∪ M.neg
+      exact VarSet.instDecidableMemFin
 
 def vars {n} (M : PartialModel n) : VarSet n :=
-  M.vars'.toVarSet
-
-@[simp]
-lemma mem_vars' {n i} {M : PartialModel n} : i ∈ M.vars' ↔ i ∈ M.vars :=
-  by
-    simp only [vars, VarSet'.toVarSet, vars', Set.mem_setOf_eq]
+  M.pos ∪ M.neg
 
 lemma mem_vars_iff_mem_pos_or_mem_neg {n i} {M : PartialModel n} :
   i ∈ M.vars ↔ i ∈ M.pos ∨ i ∈ M.neg :=
   by
-    simp [vars, VarSet'.toVarSet, vars', Set.mem_setOf_eq]
+    simp [vars]
 
 lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.1 = i :=
   by
@@ -326,7 +323,9 @@ lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty :=
     case h_1 l i => tauto
     case h_2 l i =>
       have := M.disjoint
-      grind [VarSet'.Disjoint_iff]
+      simp_all only [SetLike.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and,
+        Bool.false_eq_true]
+      grind
 
 -- TODO : remove?
 lemma subset_models_of_mem {n} {M : PartialModel n} {l} : l ∈ M →  M.models ⊆ l.models :=
@@ -335,15 +334,11 @@ lemma subset_models_of_mem {n} {M : PartialModel n} {l} : l ∈ M →  M.models 
     grind
 
 def empty {n} : PartialModel n :=
-  ⟨VarSet'.empty, VarSet'.empty, by simp⟩
+  ⟨∅, ∅, by simp⟩
 
 @[simp]
 lemma vars_empty {n} : (@empty n).vars = ∅ :=
-  by simp [empty, Set.ext_iff, mem_vars_iff_mem_pos_or_mem_neg]
-
-@[simp]
-lemma vars'_empty {n} : (@empty n).vars' = VarSet'.empty :=
-  by simp [vars_empty, VarSet'.ext]
+  by simp [empty, SetLike.ext_iff, mem_vars_iff_mem_pos_or_mem_neg]
 
 @[simp]
 lemma models_empty {n} : (@empty n).models = Set.univ :=
@@ -361,8 +356,7 @@ def insert {n} (M : PartialModel n) : Literal n → Option (PartialModel n)
       pos := M.pos.insert i
       disjoint := by
         have := M.disjoint
-        simp [VarSet'.Disjoint_iff] at *
-        grind
+        grind only [VarSet.inter_eq_empty_iff, VarSet.mem_insert]
       }
 | (i, false) =>
   if h : i ∈ M.pos then
@@ -372,8 +366,7 @@ def insert {n} (M : PartialModel n) : Literal n → Option (PartialModel n)
       neg := M.neg.insert i
       disjoint := by
         have := M.disjoint
-        simp [VarSet'.Disjoint_iff] at *
-        grind
+        grind only [VarSet.inter_eq_empty_iff, VarSet.mem_insert]
       }
 
 @[simp]
@@ -393,24 +386,23 @@ lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
       simp only [Option.dite_none_left_eq_some, Option.some.injEq]
       constructor
       · rintro ⟨h1, rfl⟩
-        simp only [h1, not_false_eq_true, VarSet'.mem_insert, true_and]
+        simp only [h1, not_false_eq_true, VarSet.mem_insert, true_and]
         grind
       · rintro ⟨h1, h2⟩
         use h1
         congr 1
         all_goals
-          simp only [VarSet'.ext, VarSet'.mem_insert]
+          simp only [SetLike.ext_iff, VarSet.mem_insert]
           intro i
           have h3 := h2 (i, false)
           specialize h2 (i, true)
           grind
 
 lemma vars_insert {n} {M M' : PartialModel n} {l} (h : M.insert l = some M') :
-  M'.vars = M.vars ∪ {l.1} :=
+  M'.vars = M.vars.insert l.1 :=
   by
     have ⟨h1, h2⟩ := insert_eq_some_iff.1 h
-    ext i
-    simp only [mem_vars, h2, Set.union_singleton, Set.mem_insert_iff]
+    simp only [SetLike.ext_iff, mem_vars, h2, VarSet.mem_insert]
     grind
 
 lemma models_insert {n} {M M' : PartialModel n} {l} :
@@ -425,7 +417,7 @@ def foldl {α n} (f : α → Literal n → α) (init : α) (M : PartialModel n) 
 lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
   a ∈ M.foldl (fun a l ↦ f l :: a) [] ↔ ∃ l ∈ M, a = f l :=
   by
-    simp only [foldl, VarSet'.foldl_cons, List.not_mem_nil, or_false]
+    simp only [foldl, VarSet.foldl_cons, List.not_mem_nil, or_false]
     simp only [instMembershipLiteral]
     grind
 
@@ -513,7 +505,7 @@ class Formula n (R : Type) where
   The variables associated with the formula `φ`. Note that not all of these variables need
   to 'appear' in `φ`.
   -/
-  vars : (φ : R) → VarSet' n
+  vars : (φ : R) → VarSet n
 
   /-- The models of the formula `φ` -/
   models : (φ : R) → Formula.Models n
@@ -553,7 +545,7 @@ class Bot n R [F : Formula n R] where
 
   bot : R
 
-  bot_correct : F.models bot = ∅ ∧ F.vars bot = VarSet'.empty
+  bot_correct : F.models bot = ∅ ∧ F.vars bot = ∅
 
 /- TODO : remove
 class ModelTesting n R [F : Formula n R] where
@@ -653,101 +645,100 @@ class OfPartialModel n R [F : Formula n R] where
   ofPartialModel : PartialModel n → R
 
   ofPartialModel_correct {M} :
-    F.models (ofPartialModel M) = M.models ∧ F.vars (ofPartialModel M) = M.vars'
+    F.models (ofPartialModel M) = M.models ∧ F.vars (ofPartialModel M) = M.vars
 
-structure Renaming {n} (dom : VarSet' n) where
+structure Renaming {n} (dom : VarSet n) where
   rename : Fin n → Fin n
-  mono : StrictMonoOn rename dom.toVarSet
+  mono : StrictMonoOn rename dom
   --prop : ∀ i ∉ dom.toVarSet, rename i = i
 
-lemma Renaming.ne {n} {dom : VarSet' n} {r : Renaming dom} :
+lemma Renaming.ne {n} {dom : VarSet n} {r : Renaming dom} :
   ∀ i ∈ dom, ∀ j ∈ dom, i ≠ j → r.rename i ≠ r.rename j :=
   by
     intro i hi j hj
-    apply Set.InjOn.ne (StrictMonoOn.injOn r.mono)
-    · simp [VarSet'.toVarSet, hi]
-    · simp [VarSet'.toVarSet, hj]
+    exact Set.InjOn.ne (StrictMonoOn.injOn r.mono) hi hj
 
-def Model.rename {n} {dom : VarSet' n} (r : Renaming dom) (M : Model n) : Model n :=
+-- TODO : the name is a bit misleading, since it does the inverse of the other rename functions
+def Model.rename {n} {dom : VarSet n} (r : Renaming dom) (M : Model n) : Model n :=
   fun i ↦ M (r.rename i)
 
-def Literal.rename {n} {dom : VarSet' n} (r : Renaming dom) (l : Literal n) : Literal n :=
+def Literal.rename {n} {dom : VarSet n} (r : Renaming dom) (l : Literal n) : Literal n :=
   (r.rename l.1, l.2)
 
-def Clause.rename {n} {dom : VarSet' n} (r : Renaming dom) (γ : Clause n) : Clause n :=
+def Clause.rename {n} {dom : VarSet n} (r : Renaming dom) (γ : Clause n) : Clause n :=
   γ.map (Literal.rename r)
 
-def Cube.rename {n} {dom : VarSet' n} (r : Renaming dom) (δ : Cube n) : Cube n :=
+def Cube.rename {n} {dom : VarSet n} (r : Renaming dom) (δ : Cube n) : Cube n :=
   δ.map (Literal.rename r)
 
-def CNF.rename {n} {dom : VarSet' n} (r : Renaming dom) (φ : CNF n) : CNF n :=
+def CNF.rename {n} {dom : VarSet n} (r : Renaming dom) (φ : CNF n) : CNF n :=
   φ.map (Clause.rename r)
 
 @[simp]
-lemma CNF.vars_rename {n} {dom : VarSet' n} {r : Renaming dom} {φ : CNF n} :
-  (φ.rename r).vars = φ.vars.image r.rename :=
+lemma CNF.mem_vars_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} {i} :
+  i ∈ (φ.rename r).vars ↔ ∃ j ∈ φ.vars, i = r.rename j :=
   by
-    simp [rename, Set.ext_iff, mem_vars, Clause.rename, Literal.rename, Set.mem_image]
-    grind
+    simp [rename, mem_vars, List.mem_map, Clause.rename, Clause.mem_vars,
+      exists_exists_and_eq_and, Literal.rename, ↓existsAndEq, and_true]
+    grind only
 
 @[simp]
-lemma CNF.models_rename {n} {dom : VarSet' n} {r : Renaming dom} {φ : CNF n} :
+lemma CNF.models_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} :
   (φ.rename r).models = φ.models.preimage (Model.rename r) :=
   by
     simp only [models, rename, List.mem_map, Clause.rename, Clause.models, Literal.mem_models,
       Set.mem_setOf_eq, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, Literal.rename,
       exists_exists_and_eq_and, Set.preimage_setOf_eq, Model.rename]
 
-def VarSet'.rename {n} {dom : VarSet' n} (r : Renaming dom) (V : VarSet' n) : VarSet' n :=
+def VarSet.rename {n} {dom : VarSet n} (r : Renaming dom) (V : VarSet n) : VarSet n :=
   V.map r.rename
 
 @[simp]
-lemma VarSet'.mem_rename {n} {dom : VarSet' n} {r : Renaming dom} {V : VarSet' n} {i} :
-  i ∈ (VarSet'.rename r V) ↔ ∃ j ∈ V, i = r.rename j :=
+lemma VarSet.mem_rename {n} {dom : VarSet n} {r : Renaming dom} {V : VarSet n} {i} :
+  i ∈ (VarSet.rename r V) ↔ ∃ j ∈ V, i = r.rename j :=
   by
-    simp [rename, VarSet'.mem_map]
+    simp [rename, VarSet.mem_map]
 
-def PartialModel.rename {n} {dom : VarSet' n} (r : Renaming dom) (M : PartialModel n)
-  (h1 : M.vars' ⊆ dom) : PartialModel n where
-    pos := VarSet'.rename r M.pos
-    neg := VarSet'.rename r M.neg
+def PartialModel.rename {n} {dom : VarSet n} (r : Renaming dom) (M : PartialModel n)
+  (h1 : M.vars ⊆ dom) : PartialModel n where
+    pos := VarSet.rename r M.pos
+    neg := VarSet.rename r M.neg
     disjoint := by
       have h3 := r.mono
-      simp only [VarSet'.Disjoint_iff, imp_false, VarSet'.mem_rename, not_exists, not_and,
+      simp only [VarSet.inter_eq_empty_iff, VarSet.mem_rename, not_exists, not_and,
         forall_exists_index, and_imp]
       intro _ i hi rfl j hj
       apply Renaming.ne
       · apply h1
-        simp [PartialModel.vars', hi]
+        simp [PartialModel.vars, hi]
       · apply h1
-        simp [PartialModel.vars', hj]
+        simp [PartialModel.vars, hj]
       · have h2 := M.disjoint
-        grind only [VarSet'.Disjoint_iff]
+        grind only [VarSet.inter_eq_empty_iff]
 
 @[simp]
-lemma PartialModel.vars_rename {n} {dom : VarSet' n} {r : Renaming dom} {M : PartialModel n} {h1} :
-  (M.rename r h1).vars = M.vars.image r.rename :=
+lemma PartialModel.mem_vars_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1 i} :
+  i ∈ (M.rename r h1).vars ↔ ∃ j ∈ M.vars, i = r.rename j :=
   by
-    simp only [rename, Set.ext_iff, mem_vars_iff_mem_pos_or_mem_neg, VarSet'.mem_rename,
-      Set.mem_image]
-    grind
+    simp only [rename, mem_vars_iff_mem_pos_or_mem_neg, VarSet.mem_rename]
+    grind only
 
 @[simp]
 lemma PartialModel.models_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1} :
   (M.rename r h1).models = M.models.preimage (Model.rename r) :=
   by
     ext M'
-    simp only [models, rename, VarSet'.mem_rename, forall_exists_index, and_imp, Set.mem_setOf_eq,
+    simp only [models, rename, VarSet.mem_rename, forall_exists_index, and_imp, Set.mem_setOf_eq,
       Set.preimage_setOf_eq, Model.rename]
     grind
 
 /-- Renaming consistent with order -/
 class Rename n R [F : Formula n R] where
   --rename (φ : R) (r : { i : Fin n // i ∈ (F.vars φ).val } → Fin n) (h : StrictMono r) : R
-  rename (φ : R) {V} (f : Renaming V) (h1 : F.vars φ ⊆ V) : R
+  rename (φ : R) {V : VarSet n} (f : Renaming V) (h1 : F.vars φ ⊆ V) : R
 
   rename_correct φ V (r : Renaming V) h :
-    (∀ i, i ∈ F.vars (rename φ r h) ↔ i ∈ r.rename '' (F.vars φ).toVarSet) ∧
+    (∀ i, i ∈ F.vars (rename φ r h) ↔ i ∈ r.rename '' F.vars φ) ∧
     F.models (rename φ r h) = (F.models φ).preimage (Model.rename r)
 
 namespace Rename
@@ -776,22 +767,16 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
     ext M
     simp only [disjunctionToCNF, CNF.mem_models, Clause.mem_models, ← toCNF_correct,
       Set.mem_setOf_eq]
-    constructor
-    · induction φs with
-      | nil => simp
-      | cons φ φs ih =>
-        simp [-Prod.exists]
+    induction φs with
+    | nil => simp
+    | cons φ φs ih =>
+      constructor
+      · simp
         grind
-    · induction φs with
-      | nil => simp
-      | cons φ φs ih =>
-        simp only [forall_exists_index, and_imp, List.mem_cons, exists_eq_or_imp, List.map_cons,
+      · simp only [forall_exists_index, and_imp, List.mem_cons, exists_eq_or_imp, List.map_cons,
           List.multiply_cons, List.mem_flatMap, List.mem_map] at ⊢ ih
         intro h1 _ γ1 hγ1 γ2 hγ2 rfl
-        rcases h1 with h1 | ⟨φ', h1, h2⟩
-        · grind
-        · specialize ih φ' h1 h2 γ2 hγ2
-          grind
+        grind only [= List.mem_append]
 
 /-- Transform ¬x to a DNF formula by translating x to a CNF-formula and applying De Morgans laws. -/
 def negToDNF {n} {R} [Formula n R] [h : ToCNF n R] (φ : R) : DNF n :=

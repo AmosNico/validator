@@ -240,8 +240,12 @@ lemma progression_union_states {n} {pt : STRIPS n} {S1 S2 A} :
   pt.progression (S1 ∪ S2) A = pt.progression S1 A ∪ pt.progression S2 A :=
   by
     ext s
-    simp [mem_progression]
-    grind
+    simp only [mem_progression, Set.mem_union]
+    constructor
+    · grind
+    · rintro (h | ⟨a, ha, s', hs', h⟩)
+      · grind only
+      · use a, ha, s', (Or.inr hs')
 
 lemma progression_union_actions {n} {pt : STRIPS n} {S A1 A2} :
   pt.progression S (A1 ∪ A2) = pt.progression S A1 ∪ pt.progression S A2 :=
@@ -297,64 +301,63 @@ lemma sub_progression_iff_sub_regression {n} {pt : STRIPS n} {S S' A} :
       simp_all
 
 -- TODO : documentation
-/-! ## VarSet' -/
-namespace VarSet'
+/-! ## VarSet -/
+namespace VarSet
 
-instance {n} {i : Fin n} {V : VarSet' n} : Decidable (i ∈ V) := by
-  simp only [instMembershipFin]
+lemma mem_iff {n i} {V : VarSet n} : i ∈ V ↔ V[i] := by
+  simp only [SetLike.instMembership, SetLike.coe, Fin.getElem_fin, Set.mem_setOf_eq]
+
+instance {n} {i : Fin n} {V : VarSet n} : Decidable (i ∈ V) := by
+  rw [mem_iff]
   infer_instance
 
 @[reducible]
-instance {n} : HasSubset (VarSet' n) where
+instance {n} : HasSubset (VarSet n) where
   Subset V V' := ∀ i ∈ V, i ∈ V'
 
-lemma ext {n} {V V' : VarSet' n} : V = V' ↔ ∀ i, i ∈ V ↔ i ∈ V' :=
-  by
-    simp only [instMembershipFin, VarSet', BitVec.eq_of_getElem_eq_iff, Fin.getElem_fin]
-    constructor
-    · grind
-    · intro h i hi
-      specialize h ⟨i, hi⟩
-      grind
-
-
 @[simp]
-lemma mem_empty {n i} : i ∉ @empty n :=
+lemma mem_empty {n i} : i ∉ (∅ : VarSet n) :=
   by
-    simp [empty, VarSet'.instMembershipFin]
+    simp [instEmptyCollection, mem_iff]
 
-instance {n} : Union (VarSet' n) where
+instance {n} : Union (VarSet n) where
   union V V' := V ||| V'
 
 @[simp]
-lemma mem_union {n} {V V' : VarSet' n} {i} :
+lemma mem_union {n} {V V' : VarSet n} {i} :
   i ∈ V ∪  V' ↔ i ∈ V ∨ i ∈ V' :=
   by
-    simp [instUnion, VarSet'.instMembershipFin]
+    simp [instUnion, mem_iff]
 
-instance {n} : Inter (VarSet' n) where
+instance {n} : Inter (VarSet n) where
   inter V V' := V &&& V'
 
 @[simp]
-lemma mem_inter {n} {V V' : VarSet' n} {i} :
-  i ∈ V ∩ V' ↔ i ∈ V ∧ i ∈ V' :=
-  by
-    simp [instInter, VarSet'.instMembershipFin]
+lemma mem_inter {n} {V V' : VarSet n} {i} : i ∈ V ∩ V' ↔ i ∈ V ∧ i ∈ V' :=
+  by simp [instInter, mem_iff]
 
 @[simp]
-lemma mem_insert {n} {V : VarSet' n} {i j} :
-  j ∈ (V.insert i) ↔ j ∈ V ∨ i = j :=
+lemma empty_inter {n} {V : VarSet n} : ∅ ∩ V = ∅ :=
+  by simp only [SetLike.ext_iff, mem_inter, mem_empty, false_and, implies_true]
+
+@[simp]
+lemma inter_eq_empty_iff {n} {V V' : VarSet n} : V ∩ V' = ∅ ↔ ∀ i ∈ V, i ∉ V' :=
+  by simp only [SetLike.ext_iff, mem_inter, mem_empty, iff_false, not_and]
+
+@[simp]
+lemma mem_insert {n} {V : VarSet n} {i j} :
+  j ∈ (V.insert i) ↔ j ∈ V ∨ j = i :=
   by
-    simp [insert, VarSet'.instMembershipFin]
+    simp [insert, mem_iff]
     grind
 
 @[simp]
 lemma mem_ofList {n} {l : List (Fin n)} {i} :
-  i ∈ (VarSet'.ofList l) ↔ i ∈ l :=
+  i ∈ (ofList l) ↔ i ∈ l :=
   by
     simp only [ofList]
     suffices h : ∀ V, i ∈ List.foldl insert V l ↔ i ∈ V ∨ i ∈ l by
-      have := h empty
+      have := h ∅
       simp_all only [mem_empty, false_or]
     induction l with
     | nil => simp only [List.foldl_nil, List.not_mem_nil, or_false, implies_true]
@@ -362,53 +365,55 @@ lemma mem_ofList {n} {l : List (Fin n)} {i} :
       grind only [List.foldl_cons, List.mem_cons, mem_insert]
 
 -- TODO : remove if not used
-instance {n} : Compl (VarSet' n) where
+instance {n} : Compl (VarSet n) where
   compl V := ~~~V
 
 @[simp]
-lemma mem_compl {n} {V : VarSet' n} {i} :
+lemma mem_compl {n} {V : VarSet n} {i} :
   i ∈ Vᶜ ↔ i ∉ V :=
-  by simp [instCompl, instMembershipFin]
+  by simp [instCompl, mem_iff]
 
-instance {n} : SDiff (VarSet' n) where
+instance {n} : SDiff (VarSet n) where
   sdiff V V' := V &&& ~~~V'
 
 @[simp]
-lemma mem_diff {n} {V V' : VarSet' n} {i} :
+lemma mem_diff {n} {V V' : VarSet n} {i} :
   i ∈ V \ V' ↔ i ∈ V ∧ i ∉ V' :=
-  by simp [instSDiff, instMembershipFin]
+  by simp [instSDiff, mem_iff]
 
-def Disjoint {n} (V V' : VarSet' n) : Prop :=
+/- TODO : remove
+def Disjoint {n} (V V' : VarSet n) : Prop :=
   V &&& V' = 0#n
 
-lemma Disjoint_iff {n} {V V' : VarSet' n} :
+lemma Disjoint_iff {n} {V V' : VarSet n} :
   V.Disjoint V' ↔ ∀ i, i ∈ V → i ∈ V' → False :=
   by
-    simp only [Disjoint, ext, BitVec.getElem_and, BitVec.getElem_zero, instMembershipFin,
-      Fin.getElem_fin, imp_false, Bool.not_eq_true]
+    simp only [Disjoint, SetLike.ext_iff, mem_iff, Fin.getElem_fin, BitVec.getElem_and,
+      BitVec.getElem_zero, imp_false, Bool.not_eq_true]
     grind
 
 @[simp]
-lemma Disjoint_empty_left {n} {V : VarSet' n} : empty.Disjoint V :=
+lemma Disjoint_empty_left {n} {V : VarSet n} : VarSet.Disjoint ∅ V :=
   by
-    simp only [Disjoint, empty, BitVec.zero_eq, BitVec.zero_and]
+    simp only [Disjoint, instEmptyCollection, BitVec.zero_eq, BitVec.zero_and]
 
 @[simp]
-lemma Disjoint_empty_right {n} {V : VarSet' n} : V.Disjoint empty :=
+lemma Disjoint_empty_right {n} {V : VarSet n} : V.Disjoint ∅ :=
   by
-    simp only [Disjoint, empty, BitVec.zero_eq, BitVec.and_zero]
+    simp only [Disjoint, instEmptyCollection, BitVec.zero_eq, BitVec.and_zero]
+-/
 
-def foldl {α n} (f : α → Fin n → α) (init : α) (V : VarSet' n) : α :=
+def foldl {α n} (f : α → Fin n → α) (init : α) (V : VarSet n) : α :=
   Fin.foldl n (fun a i ↦ if i ∈ V then f a i else a) init
 
-lemma foldl_cons {α n} {V : VarSet' n} {f : Fin n → α} {a as} :
+lemma foldl_cons {α n} {V : VarSet n} {f : Fin n → α} {a as} :
   a ∈ V.foldl (fun a i ↦ f i :: a) as ↔ (∃ i ∈ V, a = f i) ∨ a ∈ as :=
   by
     simp only [foldl]
     induction V using BitVec.cons_induction with
     | nil => simp
     | @cons n' b V ih =>
-      simp only [instMembershipFin, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
+      simp only [mem_iff, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
         Fin.val_castSucc] at *
       have h1 : ∀ i : Fin n', i.val ≠ n' := by omega
       split
@@ -434,17 +439,17 @@ lemma foldl_cons {α n} {V : VarSet' n} {f : Fin n → α} {a as} :
             simp [h2]
 
 -- TODO : can this be done more efficiently?
-def map {n m} (V : VarSet' n) (f : Fin n → Fin m) : VarSet' m :=
-  V.foldl (fun V' i ↦ V'.insert (f i)) empty
+def map {n m} (V : VarSet n) (f : Fin n → Fin m) : VarSet m :=
+  V.foldl (fun V' i ↦ V'.insert (f i)) ∅
   -- Fin.foldl n (fun V' i ↦ if i ∈ V then V'.insert (f i) else V') empty
 
-lemma mem_map {n m} {V : VarSet' n} {f : Fin n → Fin m} {i} :  i ∈ V.map f ↔ (∃ j ∈ V, i = f j) :=
+lemma mem_map {n m} {V : VarSet n} {f : Fin n → Fin m} {i} :  i ∈ V.map f ↔ (∃ j ∈ V, i = f j) :=
   by
     simp only [map, foldl, insert]
     induction V using BitVec.cons_induction with
     | nil => simp
     | @cons n' b V ih =>
-      simp only [instMembershipFin, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
+      simp only [mem_iff, Fin.getElem_fin, Fin.foldl_succ_last, Fin.val_last,
         Fin.val_castSucc] at *
       have h1 : ∀ i : Fin n', i.val ≠ n' := by omega
       split
@@ -467,4 +472,4 @@ lemma mem_map {n m} {V : VarSet' n} {f : Fin n → Fin m} {i} :  i ∈ V.map f �
           · use ⟨i.val, by omega⟩
             simp [h2]
 
-end Validator.VarSet'
+end Validator.VarSet

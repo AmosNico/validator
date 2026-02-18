@@ -12,99 +12,67 @@ We define some basic definitions of the STRIPS formalism for automated planning 
 This file only contains the definitions that belong to the trusted core of the project,
 i.e. definitions that are needed to define planning problems themselves and unsolvability
 of planning problems. Additional definitions can be found in `Validator.PlanningTask.Basic`.
-
-## Implementation Notes
-
-Some definitions in this file have two version:
-* an primed version which uses a representation that is efficient for
-representing instances at run-time, and
-* an unprimed version which is more suited for theoretical results (usually using `Finset`).
-
-Exceptions are `Action` and `STRIPS` which can be used for both purposes.
 -/
 
-/-! ### Sets of variables
-TODO : update documentation
+/-! ## Sets of variables
 
-Variables have type `Fin n`, and sets of variables therefore have type `Finset(Fin n)`.
-At runtime we use an `Array` instead of `Finset`.
+Variables have type `Fin n`. Sets of variables are represented by a bitvector of length `n`.
 -/
 
-abbrev VarSet n := Set (Fin n)
+abbrev VarSet n := BitVec n
 
-abbrev VarSet' n := BitVec n
+namespace VarSet
 
-namespace VarSet'
+instance {n} : EmptyCollection (VarSet n) where
+  emptyCollection := BitVec.zero n
 
-def empty {n} : (VarSet' n) :=
-  BitVec.zero n
-
-def insert {n} (V : VarSet' n) (i : Fin n) :=
+def insert {n} (V : VarSet n) (i : Fin n) :=
   V ||| BitVec.twoPow n i
 
-def ofList {n} (l : List (Fin n)) : VarSet' n :=
-  l.foldl insert empty
+def ofList {n} (l : List (Fin n)) : VarSet n :=
+  l.foldl insert ∅
 
-instance {n} : Membership (Fin n) (VarSet' n) where
-  mem V i := V[i]
+instance {n} : SetLike (VarSet n) (Fin n) where
+  coe V := { i | V[i] }
 
-def toVarSet {n} (V : VarSet' n) : VarSet n :=
-  { i | i ∈ V }
+  coe_injective' V V' := by
+    simp only [VarSet, Fin.getElem_fin, Set.ext_iff, Set.mem_setOf_eq, Bool.coe_iff_coe,
+      BitVec.eq_of_getElem_eq_iff]
+    intro h i hi
+    specialize h ⟨i, hi⟩
+    grind
 
-end VarSet'
+end VarSet
 
-/-! ### States and sets of states
+/-! ## States and sets of states -/
 
-From a theoretical perspective states are just set of variables, but at runtime they are represented
-by a vector with boolean values to indicate which variables are in the set.
-
-TODO : sets of states at runtime
--/
--- TODO : merge with VarSet / VarSet'?
+/-- A state is a set of variables, containing all variables that are true. -/
 abbrev State n := Set (Fin n)
-
--- TODO : use BitVec
-abbrev State' n := BitVec n
 
 abbrev States n := Set (State n)
 
-def convertState {n} (s' : State' n) : State n :=
-  { i | s'[i] }
-
-/-! ### Actions and sets of actions -/
+/-! ## Actions and sets of actions -/
 
 /-- Actions in the STRIPS formalism -/
 structure Action n where
   /-- The name of the action. -/
   name : String
-  /-- The preconditions of the action. See `Action.pre` for the version using `VarSet`. -/
-  pre' : VarSet' n
-  /-- The adding effects of the action. See `Action.add` for the version using `VarSet`. -/
-  add' : VarSet' n
-  /-- The deleting effects of the action. See `Action.pre` for the version using `VarSet`. -/
-  del' : VarSet' n
+  /-- The preconditions of the action. -/
+  pre : VarSet n
+  /-- The adding effects of the action. -/
+  add : VarSet n
+  /-- The deleting effects of the action. -/
+  del : VarSet n
   /-- The cost of the action. -/
   cost : ℕ
   deriving Repr, DecidableEq
 
-namespace Action
-
-def pre {n} (a : Action n) : VarSet n := a.pre'.toVarSet
-
-def add {n} (a : Action n) : VarSet n := a.add'.toVarSet
-
-def del {n} (a : Action n) : VarSet n := a.del'.toVarSet
-
-end Action
-
 abbrev Actions n := Set (Action n)
 
-abbrev Actions' n := List (Action n)
-
-/-! ### Applicability and successor states -/
+/-! ## Applicability and successor states -/
 
 /-- An action is applicable in a state if all its preconditions are true in the state. -/
-abbrev Applicable {n} (s : State n) (a : Action n) : Prop := a.pre ⊆ s
+abbrev Applicable {n} (s : State n) (a : Action n) : Prop := SetLike.coe a.pre ⊆ s
 
 /--
 If an action `a` is applicable in a state `s`,
@@ -113,26 +81,25 @@ then `s[a] := (s \ a.del) ∪ a.add` is the successor of `s`.
 abbrev Successor {n} (a : Action n) (s s' : State n) : Prop :=
   Applicable s a ∧ s' = (s \ a.del) ∪ a.add
 
-/-! ### STRIPS planning problems -/
+/-! ## STRIPS planning problems -/
 /--
 A planning problem in the STRIPS formalism. The variables of the planning task are all elements of
-`Fin n`.
+`Fin n`. Note that most fields have two version:
+* an primed version which uses a representation that is efficient at run-time, and
+* an unprimed version which is more suited for theoretical results
 -/
 structure STRIPS n where
   /-- The names of the variables. -/
   varNames : Vector String n
   /-- The actions of the planning problem. See `STRIPS.actions` for the version using `Actions`. -/
-  actions' : Actions' n
-  /--
-  The initial state of the planning problem.
-  See `STRIPS.init` for the version using `State`.
-  -/
-  init' : State' n
+  actions' : List (Action n)
+  /-- The initial state of the planning problem. See `STRIPS.init` for the version using `State`. -/
+  init' : VarSet n
   /--
   The goal of the planning problem, indicating which variables need to be true in a goal state.
   See also `GoalState` and `STRIPS.goal_states` in `Validator.PlanningTask.Basic`.
   -/
-  goal' : VarSet' n
+  goal' : VarSet n
   deriving Repr
 
 namespace STRIPS
@@ -141,10 +108,10 @@ def actions {n} (pt : STRIPS n) : Actions n :=
   List.toFinset pt.actions'
 
 def init {n} (pt : STRIPS n) : State n :=
-  convertState pt.init'
+  SetLike.coe pt.init'
 
 def GoalState {n} (pt : STRIPS n) (s : State n) : Prop :=
-  pt.goal'.toVarSet ⊆ s
+  SetLike.coe pt.goal' ⊆ s
 
 end STRIPS
 

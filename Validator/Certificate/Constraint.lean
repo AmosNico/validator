@@ -349,61 +349,78 @@ lemma isActionUnion.prop_eq {C : Certificate pt} {Aᵢ A'ᵢ A''ᵢ} :
     simp only [isActionUnion, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
-def isStateConst (C : Certificate pt) (S : StateSetExpr pt) (Sᵢ : ℕ) : Constraint Unit where
+open StateSetExpr
 
-  prop := fun _ ↦ C.states[Sᵢ]? = S
+def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
+
+  prop := fun _ ↦ C.states[Sᵢ]? = some empty
 
   verify' :=
-  match heq : C.states[Sᵢ]? with
-  | some S' =>
-    if heq : S = S' then
-      return ⟨(), by simp [heq]⟩
-    else
-      StateSetConstraint.throw_unexpected Sᵢ S S'
+  match C.states[Sᵢ]? with
+  | some empty => return ⟨(), by simp⟩
+  | some S => StateSetConstraint.throw_unexpected Sᵢ (empty (pt := pt)) S
   | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
   elim_exists := elim_exists_0
 
-  message := s!"Verifying that state set #{Sᵢ} is {S}"
-
-
-def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
-  isStateConst C StateSetExpr.empty Sᵢ
+  message := s!"Verifying that state set #{Sᵢ} is {empty (pt := pt)}"
 
 @[simp]
 lemma isStateEmpty.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateEmpty C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.empty :=
+  (isStateEmpty C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some empty :=
   by
-    simp only [isStateEmpty, isStateConst, iff_and_self]
+    simp only [isStateEmpty, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
-def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
-  isStateConst C StateSetExpr.init Sᵢ
+def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
+
+  prop := fun _ ↦ C.states[Sᵢ]? = some init
+
+  verify' :=
+  match C.states[Sᵢ]? with
+  | some init => return ⟨(), by simp⟩
+  | some S => StateSetConstraint.throw_unexpected Sᵢ (init (pt := pt)) S
+  | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+
+  elim_exists := elim_exists_0
+
+  message := s!"Verifying that state set #{Sᵢ} is {init (pt := pt)}"
 
 @[simp]
 lemma isStateInit.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateInit C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.init :=
+  (isStateInit C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some init :=
   by
-    simp only [isStateInit, isStateConst, iff_and_self]
+    simp only [isStateInit, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
-def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit :=
-  isStateConst C StateSetExpr.goal Sᵢ
+def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
+
+  prop := fun _ ↦ C.states[Sᵢ]? = some goal
+
+  verify' :=
+  match C.states[Sᵢ]? with
+  | some goal => return ⟨(), by simp⟩
+  | some S => StateSetConstraint.throw_unexpected Sᵢ (goal (pt := pt)) S
+  | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+
+  elim_exists := elim_exists_0
+
+  message := s!"Verifying that state set #{Sᵢ} is {goal (pt := pt)}"
 
 @[simp]
 lemma isStateGoal.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateGoal C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some StateSetExpr.goal :=
+  (isStateGoal C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some goal :=
   by
-    simp only [isStateGoal, isStateConst, iff_and_self]
+    simp only [isStateGoal, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
 
-  prop := fun S'ᵢ ↦ C.states[Sᵢ]? = some (StateSetExpr.neg S'ᵢ)
+  prop := fun S'ᵢ ↦ C.states[Sᵢ]? = some (neg S'ᵢ)
 
   verify' :=
     match C.states[Sᵢ]? with
-    | some (StateSetExpr.neg S'ᵢ) => pure ⟨S'ᵢ, by simp⟩
+    | some (neg S'ᵢ) => pure ⟨S'ᵢ, by simp⟩
     | some S => StateSetConstraint.throw_unexpected Sᵢ "the complement of a state set" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
@@ -413,18 +430,18 @@ def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
 
 @[simp]
 lemma isStateNeg.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ} :
-  (isStateNeg C Sᵢ).prop S'ᵢ ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.neg S'ᵢ) :=
+  (isStateNeg C Sᵢ).prop S'ᵢ ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (neg S'ᵢ) :=
   by
     simp only [isStateNeg, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
-  prop := fun (S'ᵢ, S''ᵢ) ↦ C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ)
+  prop := fun (S'ᵢ, S''ᵢ) ↦ C.states[Sᵢ]? = some (inter S'ᵢ S''ᵢ)
 
   verify' :=
     match C.states[Sᵢ]? with
-    | some (StateSetExpr.inter S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
+    | some (inter S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
     | some S => StateSetConstraint.throw_unexpected Sᵢ "an intersection of states" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
@@ -435,18 +452,18 @@ def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) whe
 @[simp]
 lemma isStateInter.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
   (isStateInter C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
-  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ) :=
+  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (inter S'ᵢ S''ᵢ) :=
   by
     simp only [isStateInter, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
-  prop := fun (S'ᵢ, S''ᵢ) ↦ C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ)
+  prop := fun (S'ᵢ, S''ᵢ) ↦ C.states[Sᵢ]? = some (union S'ᵢ S''ᵢ)
 
   verify' :=
     match C.states[Sᵢ]? with
-    | some (StateSetExpr.union S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
+    | some (union S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a union of states" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
@@ -457,18 +474,18 @@ def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) whe
 @[simp]
 lemma isStateUnion.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
   (isStateUnion C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
-    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ) :=
+    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (union S'ᵢ S''ᵢ) :=
   by
     simp only [isStateUnion, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
-  prop := fun (S'ᵢ, Aᵢ) ↦ C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ)
+  prop := fun (S'ᵢ, Aᵢ) ↦ C.states[Sᵢ]? = some (progr S'ᵢ Aᵢ)
 
   verify' :=
     match C.states[Sᵢ]? with
-    | some (StateSetExpr.progr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
+    | some (progr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a progression" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
@@ -479,18 +496,18 @@ def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) whe
 @[simp]
 lemma isStateProgr.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ Aᵢ} :
   (isStateProgr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
-  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ) :=
+  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (progr S'ᵢ Aᵢ) :=
   by
     simp only [isStateProgr, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some
 
 def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
-  prop := fun (S'ᵢ, Aᵢ) ↦ C.states[Sᵢ]? = some (StateSetExpr.regr S'ᵢ Aᵢ)
+  prop := fun (S'ᵢ, Aᵢ) ↦ C.states[Sᵢ]? = some (regr S'ᵢ Aᵢ)
 
   verify' :=
     match C.states[Sᵢ]? with
-    | some (StateSetExpr.regr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
+    | some (regr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a regression" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
@@ -501,7 +518,7 @@ def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) wher
 @[simp]
 lemma isStateRegr.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ Aᵢ} :
   (isStateRegr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
-  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (StateSetExpr.regr S'ᵢ Aᵢ) :=
+  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (regr S'ᵢ Aᵢ) :=
   by
     simp only [isStateRegr, eq_mpr_eq_cast, iff_and_self]
     exact Array.lt_of_getElem?_eq_some

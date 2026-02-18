@@ -1,12 +1,13 @@
 import Validator.StateSetFormalism.Formula
 
+import Bdd.BDD
+
 namespace Validator
 open Formula
 
 structure BDD n where
-  vars : VarSet' n
-  -- TODO
-  deriving DecidableEq, Repr
+  vars : VarSet n
+  bdd : _root_.BDD
 
 namespace BDD
 

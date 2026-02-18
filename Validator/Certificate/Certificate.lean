@@ -33,7 +33,6 @@ inductive StateSetExpr {n} (pt : STRIPS n) : Type
 | union : ℕ → ℕ → StateSetExpr pt
 | progr : ℕ → ℕ → StateSetExpr pt
 | regr : ℕ → ℕ → StateSetExpr pt
-  deriving DecidableEq, Repr
 
 def StateSetExpr.toString {n} {pt : STRIPS n} : StateSetExpr pt → String
 | empty => "the constant empty set"
@@ -141,7 +140,6 @@ structure Certificate {n} (pt : STRIPS n) where
   actions : Array ActionSetExpr
   states : Array (StateSetExpr pt)
   knowledge : Array Knowledge
-  deriving Repr
 
 -- TODO : improve
 instance {n} {pt : STRIPS n} : ToString (Certificate pt) where

@@ -8,7 +8,7 @@ open Validator Parser Knowledge
 This file contains a parser for parsing certificates for the proof system.
 -/
 
-namespace Certificate
+namespace Validator.Certificate
 
 instance {α p} : Coe (Result α p) (Parser { a : α // p a }) where
   coe
@@ -37,49 +37,55 @@ def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
     let idx ← parseNat
     return StateSetExpr.bdd (StateSetFormalism.mkBDD pt) -- TODO
 
-def parsePosLiteral {n} : Parser (Formula.Literal n) :=
+def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
   do
     let i ← parseNat
-    if h : i < 0 && i < n + 1
-    then return (⟨i - 1, by grind⟩, true)
+    -- The variables in dimacs format start counting with 1, whereas we start with 0
+    -- Immediately make the variables unprimed.
+    if h : 0 < i && i < n + 1
+    then return ⟨(⟨2 * (i - 1), by grind⟩, true), by grind⟩
     else Parser.throwUnexpected
 
-def parseNegLiteral {n} : Parser (Formula.Literal n) :=
+def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
   do
     let i ← checkString "-" *> parseNat
     if h : 0 < i && i < n + 1
-    then return (⟨i - 1, by grind⟩, false)
+    then return ⟨(⟨2 * (i - 1), by grind⟩, false), by grind⟩
     else Parser.throwUnexpected
 
-def parseLiteral n : Parser (Formula.Literal n) :=
-  withErrorMessage "Parsing a literal."
+def parseLiteral n : Parser { l : Formula.Literal (2 * n) // l.IsUnprimed } :=
+  Parser.withErrorMessage "Parsing a literal."
     (parsePosLiteral <|> parseNegLiteral)
 
-def parseClause n : Parser (Formula.Clause n) :=
+def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.IsUnprimed } :=
   do
-    let ⟨l, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
-    return l.toList
+    let ⟨γ, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
+    return ⟨γ.toList, by simp [Formula.Clause.IsUnprimed]; grind⟩
 
-def parseCNF {n} : Parser (Formula.CNF n) :=
-  withErrorMessage "Parsing CNF-formula in DIMACS format"
+def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.IsUnprimed } :=
+  Parser.withErrorMessage "Parsing CNF-formula in DIMACS format"
   do
     checkString "p" *> checkString "cnf" *> checkString (toString n)
     let nb_clauses ← parseNat
-    let l ← take nb_clauses (parseClause n)
-    return l.toList
+    let as ← take nb_clauses (parseClause n)
+    return ⟨as.toList, by simp [Formula.CNF.IsUnprimed]; grind⟩
 
-def parseHorn {n} : Parser (Horn n) :=
+def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
-    let φ ← parseCNF
-    match Horn.fromCNF φ with
+    let ⟨φ, h1⟩ ← parseCNF
+    match h : Horn.fromCNF φ with
     | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
-    | some φ => return φ
+    | some ψ =>
+      have h2 : ψ.vars.IsUnprimed := by
+        simp [VarSet.IsUnprimed]
+        sorry
+      return StateSetExpr.horn ⟨ψ, h2⟩
 
 def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
     ("b", parseBdd pt),
-    ("h", parserTODO),
+    ("h", parseHorn pt),
     ("e", parserTODO),
     ("n", return StateSetExpr.neg (← parseNat)),
     ("i", return StateSetExpr.inter (← parseNat) (← parseNat)),
@@ -241,4 +247,4 @@ def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) :=
       let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString
       throw (IO.userError msg)
 
-end Certificate
+end Validator.Certificate

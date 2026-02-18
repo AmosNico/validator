@@ -4,15 +4,15 @@ namespace Validator
 open Formula
 
 structure MODS n where
-  vars : VarSet' n
+  vars : VarSet n
   mods : List (PartialModel n)
-  prop : ∀ M ∈ mods, M.vars' = vars
+  prop : ∀ M ∈ mods, M.vars = vars
   deriving DecidableEq, Repr
 
 namespace Formula.PartialModel
 
 /-
-lemma disjoint {n} {V : VarSet' n} {M1 M2 : PartialModel V} {M} :
+lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
   M ∈ M1.models → M ∈ M2.models → M1 = M2 :=
   by
     simp only [models]
@@ -93,7 +93,7 @@ instance {n} : Formula n (MODS n) where
 
 instance {n} : Top n (MODS n) where
 
-  top := ⟨VarSet'.empty, [PartialModel.empty], by simp⟩
+  top := ⟨∅, [PartialModel.empty], by simp⟩
 
   top_correct := by
     simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
@@ -101,7 +101,7 @@ instance {n} : Top n (MODS n) where
 
 instance {n} : Bot n (MODS n) where
 
-  bot := ⟨VarSet'.empty, [], by simp⟩
+  bot := ⟨∅, [], by simp⟩
 
   bot_correct := by
     simp only [Formula.models, Set.eq_empty_iff_forall_notMem, mem_models, List.not_mem_nil,
@@ -141,7 +141,7 @@ instance {n} : ClausalEntailment n (MODS n) where
             · simp only [h5, Bool.false_eq_true, iff_false, not_or]
               constructor
               · have := M.disjoint
-                grind only [VarSet'.Disjoint_iff]
+                grind only [VarSet.inter_eq_empty_iff]
               · intro h6
                 simp only [not_exists, not_and] at h3
                 specialize h3 _ h6
@@ -180,7 +180,7 @@ instance {n} : SententialEntailment n (MODS n) where
 
 instance {n} : OfPartialModel n (MODS n) where
 
-  ofPartialModel M := ⟨M.vars', [M], by simp⟩
+  ofPartialModel M := ⟨M.vars, [M], by simp⟩
 
   ofPartialModel_correct := by
     simp [Formula.models, models, Formula.vars]
@@ -193,14 +193,12 @@ instance {n} : Rename n (MODS n) where
     prop := by
       simp only [List.mem_map, List.mem_attach, true_and, Subtype.exists, forall_exists_index]
       intro M' M hM rfl
-      simp only [VarSet'.ext, PartialModel.mem_vars', PartialModel.vars_rename, Set.mem_image,
-        VarSet'.mem_map]
-      rw [← φ.prop M hM]
-      grind only [PartialModel.mem_vars']
+      simp only [← φ.prop M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
+      grind only [PartialModel.mem_vars]
     }
 
   rename_correct φ V r h1 := by
-    simp [Formula.models, Formula.vars, Set.ext_iff, VarSet'.toVarSet, VarSet'.mem_map]
+    simp [Formula.models, Formula.vars, Set.ext_iff, VarSet.mem_map]
     grind only
 
 instance {n} : ToCNF n (MODS n) where

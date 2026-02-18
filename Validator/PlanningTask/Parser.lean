@@ -113,14 +113,14 @@ private def parseVar {n} : Parser (Fin n) :=
 
 private def parseVarLn {n} : Parser (Fin n) := parseVar <* parseEol
 
-private def parseVarSet {n} : Parser (VarSet' n) :=
-  VarSet'.ofList <$> Array.toList <$> Parser.takeMany parseVarLn
+private def parseVarSet {n} : Parser (VarSet n) :=
+  VarSet.ofList <$> Array.toList <$> Parser.takeMany parseVarLn
 
-private def parseInit n : Parser (State' n) :=
+private def parseInit n : Parser (VarSet n) :=
   Parser.withErrorMessage "error while parsing the inital state"
     (checkLine "begin_init" *> parseVarSet <* checkLine "end_init")
 
-private def parseGoal n : Parser (VarSet' n) :=
+private def parseGoal n : Parser (VarSet n) :=
   Parser.withErrorMessage "error while parsing the goal"
     (checkLine "begin_goal" *> parseVarSet <* checkLine "end_goal")
 
@@ -143,7 +143,7 @@ private def parseAction n : Parser (Action n) :=
     let name ← parseLine
     let cost ← readLine "cost:" parseNat
     let ⟨pre, add, del⟩ ← parseConditions (@Conditions.mk n [] [] [])
-    return Action.mk name (VarSet'.ofList pre) (VarSet'.ofList add) (VarSet'.ofList del) cost
+    return Action.mk name (VarSet.ofList pre) (VarSet.ofList add) (VarSet.ofList del) cost
 
 private def parseActions n : Parser (List (Action n)) :=
   Parser.withErrorMessage "error while parsing the actions"
