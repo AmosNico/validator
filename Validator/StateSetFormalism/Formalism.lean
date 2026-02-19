@@ -203,7 +203,7 @@ def ofVarSet R [Formalism pt R] [h : OfPartialModel (2 * n) R]
       ⟨∅, V.toUnprimed, by simp⟩
   let x : Variable pt R := h.ofPartialModel M
   have hx : x.vars.IsUnprimed := by
-    simp only [h.ofPartialModel_correct, x, PartialModel.vars, M]
+    simp only [h.vars_ofPartialModel, x, PartialModel.vars, M]
     split
     all_goals
       simp only [VarSet.IsUnprimed, VarSet.mem_union, VarSet.mem_empty, or_false, false_or]
@@ -214,7 +214,7 @@ def ofVarSet R [Formalism pt R] [h : OfPartialModel (2 * n) R]
 lemma mem_vars_ofVarSet [Formalism pt R] [h : OfPartialModel (2 * n) R] {V pos i} :
   i ∈ (ofVarSet (h := h) R V pos).val.vars ↔ Even i.val ∧ i.divNat' ∈ V :=
   by
-    simp [ofVarSet, OfPartialModel.ofPartialModel_correct, PartialModel.vars]
+    simp [ofVarSet, OfPartialModel.vars_ofPartialModel, PartialModel.vars]
     split
     all_goals simp [VarSet.mem_toUnprimed]
 
@@ -223,7 +223,7 @@ lemma mem_models_ofVarSet [Formalism pt R] [h : OfPartialModel (2 * n) R]
   {V : VarSet n} {pos M} :
   M ∈ (ofVarSet (h := h) R V pos).val.models ↔ (∀ i ∈ V, i ∈ M.unprimedState ↔ pos):=
   by
-    simp only [Variable.models, ofVarSet, OfPartialModel.ofPartialModel_correct,
+    simp only [Variable.models, ofVarSet, OfPartialModel.models_ofPartialModel,
       PartialModel.models, Set.mem_setOf_eq]
     split
     all_goals

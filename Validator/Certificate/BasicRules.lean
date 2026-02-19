@@ -354,7 +354,7 @@ lemma check_variables_subset1_correct {R} [F : Formalism pt R]
   by
     rw [UnprimedVariables.inter_subset_union_iff_models]
     simp [check_variables_subset1, Variable.models,
-      h1.entails_correct, h2.andList_correct, h3.orList_correct]
+      h1.entails_iff, h2.models_andList, h3.models_orList]
 
 def check_variables_subset2 {R} [F : Formalism pt R]
   [h1 : ClausalEntailment (2 * n) R]
@@ -374,7 +374,7 @@ lemma check_variables_subset2_correct {R} [F : Formalism pt R]
   by
     rw [UnprimedVariables.inter_subset_union_iff_models]
     simp [check_variables_subset2, Variable.models,
-      h1.entails_correct, h2.andList_correct, h3.disjunctionToCNF_correct]
+      h1.entails_iff, h2.models_andList, h3.models_disjunctionToCNF]
 
 def check_variables_subset3 {R} [F : Formalism pt R]
   [h1 : Implicant (2 * n) R]
@@ -394,7 +394,7 @@ lemma check_variables_subset3_correct {R} [F : Formalism pt R]
   by
     rw [UnprimedVariables.inter_subset_union_iff_models]
     simp [check_variables_subset3, Variable.models,
-      h1.entails_correct, h2.orList_correct, h3.conjunctionToDnF_correct]
+      h1.entails_iff, h2.models_orList, h3.models_conjunctionToDnF]
 
 def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   [h1 : ToDNF (2 * n) R1]
@@ -404,7 +404,7 @@ def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   if h : (h1.toDNF x1).all fun δ ↦ h2.entails δ x2 then
     have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
       rw [UnprimedLiteral.subset_states_iff_subset_models]
-      simp_all [h1.toDNF_correct, h2.entails_correct, Variable.models]
+      simp_all [h1.models_toDNF, h2.entails_iff, Variable.models]
     return ⟨(), h'⟩
   else
     throwUnvalid "" -- TODO
@@ -417,7 +417,7 @@ def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   if h : (h2.toCNF x2).all fun γ ↦ h1.entails x1 γ then
     have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
       rw [UnprimedLiteral.subset_states_iff_subset_models]
-      simp_all [h1.entails_correct, h2.toCNF_correct, Variable.models]
+      simp_all [h1.entails_iff, h2.models_toCNF, Variable.models]
     return ⟨(), h'⟩
   else
     throwUnvalid "" -- TODO
@@ -429,7 +429,7 @@ def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   Result' (x1.val.toStates ⊆ x2.val.toStatesᶜ) :=
   if h : (h1.negToCNF x1).all fun γ ↦ h2.entails x2 γ then
     have h' : (UnprimedLiteral.pos x1).val.toStates ⊆ (UnprimedLiteral.neg x2).val.toStates := by
-      simp [h2.entails_correct, h1.negToCNF_correct] at h
+      simp [h2.entails_iff, h1.models_negToCNF] at h
       rw [UnprimedLiteral.subset_states_iff_subset_models]
       simp_all [Variable.models]
       grind
@@ -453,7 +453,7 @@ def check_variable_subset_neg_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
   Result' (x1.val.toStatesᶜ ⊆ x2.val.toStates) :=
   if h : (h1.negToDNF x1).all fun δ ↦ h2.entails δ x2 then
     have h' : (UnprimedLiteral.neg x1).val.toStates ⊆ (UnprimedLiteral.pos x2).val.toStates := by
-      simp [h2.entails_correct, h1.negToDNF_correct] at h
+      simp [h2.entails_iff, h1.models_negToDNF] at h
       rw [UnprimedLiteral.subset_states_iff_subset_models]
       simp_all [Variable.models]
     return ⟨(), h'⟩

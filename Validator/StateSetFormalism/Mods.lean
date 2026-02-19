@@ -95,7 +95,7 @@ instance {n} : Top n (MODS n) where
 
   top := ⟨∅, [PartialModel.empty], by simp⟩
 
-  top_correct := by
+  models_top := by
     simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
       or_false, exists_eq_left, PartialModel.models_empty, Set.mem_univ, implies_true]
 
@@ -103,15 +103,17 @@ instance {n} : Bot n (MODS n) where
 
   bot := ⟨∅, [], by simp⟩
 
-  bot_correct := by
+  vars_bot := by simp only [Formula.vars]
+
+  models_bot := by
     simp only [Formula.models, Set.eq_empty_iff_forall_notMem, mem_models, List.not_mem_nil,
-      false_and, exists_false, not_false_eq_true, implies_true, Formula.vars, and_self]
+      false_and, exists_false, not_false_eq_true, implies_true]
 
 instance {n} : ClausalEntailment n (MODS n) where
 
   entails φ γ := φ.mods.all (fun M ↦ γ.any fun l ↦ l ∈ M) || γ.isTrivial
 
-  entails_correct :=
+  entails_iff :=
     by
       intro φ γ
       simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, decide_eq_true_eq,
@@ -164,26 +166,28 @@ instance {n} : Implicant n (MODS n) where
 
   entails δ φ := sorry
 
-  entails_correct := sorry
+  entails_iff := sorry
 
 instance {n} : BoundedConjuction n (MODS n) where
 
   and φ ψ := sorry
 
-  and_correct := sorry
+  models_and := sorry
 
 instance {n} : SententialEntailment n (MODS n) where
 
   entails φ ψ := sorry
 
-  entails_correct := sorry
+  entails_iff := sorry
 
 instance {n} : OfPartialModel n (MODS n) where
 
   ofPartialModel M := ⟨M.vars, [M], by simp⟩
 
-  ofPartialModel_correct := by
-    simp [Formula.models, models, Formula.vars]
+  vars_ofPartialModel := by simp only [Formula.vars, implies_true]
+
+  models_ofPartialModel := by simp only [Formula.models, models, List.mem_singleton, exists_eq_left,
+    Set.setOf_mem_eq, implies_true]
 
 instance {n} : Rename n (MODS n) where
 
@@ -197,21 +201,24 @@ instance {n} : Rename n (MODS n) where
       grind only [PartialModel.mem_vars]
     }
 
-  rename_correct φ V r h1 := by
-    simp [Formula.models, Formula.vars, Set.ext_iff, VarSet.mem_map]
+  vars_rename φ V r h1 := by
+    simp only [Formula.vars, VarSet.mem_map, Set.mem_image, SetLike.mem_coe]
     grind only
+
+  models_rename φ V r h1 := by
+    simp [Formula.models, Set.ext_iff]
 
 instance {n} : ToCNF n (MODS n) where
 
   toCNF := sorry
 
-  toCNF_correct := sorry
+  models_toCNF := sorry
 
 instance {n} : ToDNF n (MODS n) where
 
   toDNF φ := φ.mods.map PartialModel.toCube
 
-  toDNF_correct := by
+  models_toDNF := by
     simp only [Formula.models, Set.ext_iff, DNF.mem_models, List.mem_map, exists_exists_and_eq_and,
       PartialModel.models_toCube, mem_models, implies_true]
 

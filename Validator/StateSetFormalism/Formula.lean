@@ -550,50 +550,44 @@ class Top n R [F : Formula n R] where
 
   top : R
 
-  top_correct : F.models top = Set.univ
+  models_top : F.models top = Set.univ
 
 class Bot n R [F : Formula n R] where
 
   bot : R
 
-  bot_correct : F.models bot = ∅ ∧ F.vars bot = ∅
+  vars_bot : F.vars bot = ∅
 
-/- TODO : remove
-class ModelTesting n R [F : Formula n R] where
-
-  isModel : (φ : R) → PartialModel (F.vars φ) → Bool
-
-  isModel_correct {φ M} : isModel φ M ↔ M.models ⊆ models φ
--/
+  models_bot : F.models bot = ∅
 
 class Consistency n R [F : Formula n R] where
 
   consistent : (φ : R) → Bool
 
-  consistent_correct φ : consistent φ ↔ (F.models φ).Nonempty
+  consistent_iff φ : consistent φ ↔ (F.models φ).Nonempty
 
 class ClausalEntailment n R [F : Formula n R] where
 
   entails : (φ : R) → (γ : Clause n) → Bool
 
-  entails_correct φ γ : entails φ γ ↔ F.models φ ⊆ γ.models
+  entails_iff φ γ : entails φ γ ↔ F.models φ ⊆ γ.models
 
 class Implicant n R [F : Formula n R] where
 
   entails : (δ : Cube n) → (φ : R) → Bool
 
-  entails_correct δ φ : entails δ φ ↔ δ.models  ⊆ F.models φ
+  entails_iff δ φ : entails δ φ ↔ δ.models  ⊆ F.models φ
 
 class SententialEntailment n R [F : Formula n R] where
 
   entails : (φ ψ : R)  → Bool
 
-  entails_correct φ ψ : entails φ ψ ↔ F.models φ ⊆ F.models ψ
+  entails_iff φ ψ : entails φ ψ ↔ F.models φ ⊆ F.models ψ
 
 class BoundedConjuction n R [F : Formula n R] where
   and : R → R → R
 
-  and_correct φ ψ : F.models (and φ ψ) = F.models φ ∩ F.models ψ
+  models_and φ ψ : F.models (and φ ψ) = F.models φ ∩ F.models ψ
 
 namespace BoundedConjuction
 
@@ -606,13 +600,13 @@ def andList {n} {R} [Formula n R] [Top n R] [h : BoundedConjuction n R] : List R
 | [φ] => φ
 | φ :: ψ :: tail => h.and φ (h.andList (ψ :: tail))
 
-lemma andList_correct {n} {R} [F : Formula n R] [Top n R] [h : BoundedConjuction n R] {l} :
+lemma models_andList {n} {R} [F : Formula n R] [Top n R] [h : BoundedConjuction n R] {l} :
   models (h.andList l) = { M | ∀ φ ∈ l, M ∈ F.models φ } :=
   by
     fun_induction andList
-    · simp [Top.top_correct]
+    · simp [Top.models_top]
     · simp
-    · simp_all [and_correct]
+    · simp_all [models_and]
       grind
 
 end BoundedConjuction
@@ -620,7 +614,7 @@ end BoundedConjuction
 class BoundedDisjunction n R [F : Formula n R] where
   or : R → R → R
 
-  or_correct φ ψ : F.models (or φ ψ) = F.models φ ∪ F.models ψ
+  models_or φ ψ : F.models (or φ ψ) = F.models φ ∪ F.models ψ
 
 namespace BoundedDisjunction
 
@@ -633,14 +627,14 @@ def orList {n} {R} [Formula n R] [Bot n R] [h : BoundedDisjunction n R] : List R
 | [φ] => φ
 | φ :: ψ :: tail => h.or φ (h.orList (ψ :: tail))
 
-lemma orList_correct {n} {R} [F : Formula n R] [Bot n R] [h : BoundedDisjunction n R] {l} :
+lemma models_orList {n} {R} [F : Formula n R] [Bot n R] [h : BoundedDisjunction n R] {l} :
   models (h.orList l) = { M | ∃ φ ∈ l, M ∈ F.models φ } :=
   by
     fun_induction orList
-    · simp [Bot.bot_correct]
+    · simp [Bot.models_bot]
     · simp
     · ext M
-      simp_all [or_correct]
+      simp_all [models_or]
 
 end BoundedDisjunction
 
@@ -655,8 +649,11 @@ class OfCube n R [F : Formula n R] where
 class OfPartialModel n R [F : Formula n R] where
   ofPartialModel : PartialModel n → R
 
-  ofPartialModel_correct {M} :
-    F.models (ofPartialModel M) = M.models ∧ F.vars (ofPartialModel M) = M.vars
+  vars_ofPartialModel M : F.vars (ofPartialModel M) = M.vars
+
+  models_ofPartialModel M : F.models (ofPartialModel M) = M.models
+
+
 
 structure Renaming {n} (dom : VarSet n) where
   rename : Fin n → Fin n
@@ -748,35 +745,34 @@ class Rename n R [F : Formula n R] where
   --rename (φ : R) (r : { i : Fin n // i ∈ (F.vars φ).val } → Fin n) (h : StrictMono r) : R
   rename (φ : R) {V : VarSet n} (f : Renaming V) (h1 : F.vars φ ⊆ V) : R
 
-  rename_correct φ V (r : Renaming V) h :
-    (∀ i, i ∈ F.vars (rename φ r h) ↔ i ∈ r.rename '' F.vars φ) ∧
-    F.models (rename φ r h) = (F.models φ).preimage (Model.rename r)
+  vars_rename φ V (r : Renaming V) h : ∀ i, i ∈ F.vars (rename φ r h) ↔ i ∈ r.rename '' F.vars φ
+
+  models_rename φ V (r : Renaming V) h : F.models (rename φ r h) =  Model.rename r ⁻¹' F.models φ
 
 namespace Rename
 
--- TODO : replace rename_correct by this?
 lemma mem_rename_models {n R} [F : Formula n R] [Rename n R] {φ V} {r : Renaming V} {h M} :
   M ∈ F.models (rename φ r h) ↔ M.rename r ∈ F.models φ :=
   by
-    simp only [rename_correct, Set.mem_preimage]
+    simp only [models_rename, Set.mem_preimage]
 
 end Rename
 
 class ToCNF n R [F : Formula n R] where
   toCNF : R → CNF n
 
-  toCNF_correct φ : (toCNF φ).models = F.models φ
+  models_toCNF φ : (toCNF φ).models = F.models φ
 
 namespace ToCNF
 
 def disjunctionToCNF {n} {R} [Formula n R] [ToCNF n R] (l : List R) : CNF n :=
   (l.map toCNF).multiply
 
-lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
+lemma models_disjunctionToCNF {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
   (disjunctionToCNF φs).models = { M | ∃ φ ∈ φs, M ∈ F.models φ } :=
   by
     ext M
-    simp only [disjunctionToCNF, CNF.mem_models, Clause.mem_models, ← toCNF_correct,
+    simp only [disjunctionToCNF, CNF.mem_models, Clause.mem_models, ← models_toCNF,
       Set.mem_setOf_eq]
     induction φs with
     | nil => simp
@@ -793,11 +789,11 @@ lemma disjunctionToCNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
 def negToDNF {n} {R} [Formula n R] [h : ToCNF n R] (φ : R) : DNF n :=
   (h.toCNF φ).map Clause.neg
 
-lemma negToDNF_correct {n} {R} [F : Formula n R] [h : ToCNF n R] {φ} :
+lemma models_negToDNF {n} {R} [F : Formula n R] [h : ToCNF n R] {φ} :
   (negToDNF φ).models = (F.models φ)ᶜ :=
   by
     ext M
-    simp only [negToDNF, DNF.mem_models, List.mem_map, exists_exists_and_eq_and, ← toCNF_correct,
+    simp only [negToDNF, DNF.mem_models, List.mem_map, exists_exists_and_eq_and, ← models_toCNF,
       Set.mem_compl_iff]
     grind only [CNF.mem_models, !Clause.models_neg, Set.mem_compl_iff]
 
@@ -806,18 +802,18 @@ end ToCNF
 class ToDNF n R [F : Formula n R] where
   toDNF : R → DNF n
 
-  toDNF_correct {φ} : (toDNF φ).models = F.models φ
+  models_toDNF φ : (toDNF φ).models = F.models φ
 
 namespace ToDNF
 
 def conjunctionToDNF {n} {R} [Formula n R] [ToDNF n R] (l : List R) : DNF n :=
   (l.map toDNF).multiply
 
-lemma conjunctionToDnF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
+lemma models_conjunctionToDnF {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
   (conjunctionToDNF φs).models = { M | ∀ φ ∈ φs, M ∈ F.models φ } :=
   by
     ext M
-    simp only [conjunctionToDNF, DNF.mem_models, Cube.mem_models, ← toDNF_correct, Set.mem_setOf_eq]
+    simp only [conjunctionToDNF, DNF.mem_models, Cube.mem_models, ← models_toDNF, Set.mem_setOf_eq]
     induction φs with
       | nil => simp
       | cons φ φs ih =>
@@ -828,12 +824,12 @@ lemma conjunctionToDnF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
 def negToCNF {n} {R} [Formula n R] [h : ToDNF n R] (φ : R) : CNF n :=
   (h.toDNF φ).map Cube.neg
 
-lemma negToCNF_correct {n} {R} [F : Formula n R] [h : ToDNF n R] {φ} :
+lemma models_negToCNF {n} {R} [F : Formula n R] [h : ToDNF n R] {φ} :
   (negToCNF φ).models = (F.models φ)ᶜ :=
   by
     ext M
     simp only [negToCNF, CNF.mem_models, List.mem_map, forall_exists_index, and_imp,
-      ← toDNF_correct]
+      ← models_toDNF]
     grind only [Set.mem_compl_iff, DNF.mem_models, !Cube.models_neg]
 
 end Validator.Formula.ToDNF

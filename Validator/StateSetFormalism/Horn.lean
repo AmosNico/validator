@@ -536,22 +536,23 @@ instance {n} : Top n (Horn n) where
 
   top := top
 
-  top_correct := by
+  models_top := by
     simp [Formula.models, models_top]
 
 instance {n} : Bot n (Horn n) where
 
   bot := bot
 
-  bot_correct := by
-    simp [bot, models_eq, Formula.models, Formula.vars]
+  vars_bot := by simp only [Formula.vars, vars_bot]
+
+  models_bot := by simp only [Formula.models, bot, models_eq, ↓reduceIte]
 
 -- Only if this makes ClausalEntailment easier
 instance {n} : Consistency n (Horn n) where
 
   consistent φ := ¬φ.empty
 
-  consistent_correct φ := by
+  consistent_iff φ := by
     simp only [Bool.not_eq_true, Bool.decide_eq_false, Bool.not_eq_eq_eq_not, Bool.not_true,
       Formula.models, models_eq, Set.nonempty_def, Set.mem_ite_empty_left, Set.mem_inter_iff,
       CNF.mem_models, exists_and_left, iff_self_and]
@@ -592,9 +593,9 @@ instance {n} : ClausalEntailment n (Horn n) where
 
   entails φ γ := not (Consistency.consistent n (φ.unit_propagate γ.neg))
 
-  entails_correct φ γ := by
+  entails_iff φ γ := by
     simp only [Bool.not_eq_eq_eq_not, Bool.not_true, ← Bool.bool_iff_false,
-      Consistency.consistent_correct, Formula.models, models_unit_propagate, Clause.models_neg,
+      Consistency.consistent_iff, Formula.models, models_unit_propagate, Clause.models_neg,
       Set.nonempty_def, Set.mem_inter_iff, Set.mem_compl_iff, Clause.mem_models, Set.subset_def]
     grind only
 
@@ -602,8 +603,8 @@ instance {n} : SententialEntailment n (Horn n) where
 
   entails φ ψ := ψ.toCNF.all fun γ ↦ ClausalEntailment.entails φ γ
 
-  entails_correct φ ψ := by
-    simp [ClausalEntailment.entails_correct, Formula.models, Horn.models]
+  entails_iff φ ψ := by
+    simp [ClausalEntailment.entails_iff, Formula.models, Horn.models]
 
 -- TODO : check whether this can be done more efficiently by only propagating
 -- ψ.unit_literals in φ.clauses and vice versa
@@ -630,7 +631,7 @@ instance {n} : BoundedConjuction n (Horn n) where
         simp }
     χ.unit_propagate (φ.unit_literals.toCube ++ ψ.unit_literals.toCube)
 
-  and_correct φ ψ := by
+  models_and φ ψ := by
     ext M
     simp [Formula.models, models_unit_propagate]
     simp [models_eq]
@@ -650,8 +651,9 @@ instance {n} : OfPartialModel n (Horn n) where
       vars_prop := by
         simp [CNF.vars] }
 
-  ofPartialModel_correct := by
-    simp [instFormula, models_eq, CNF.models]
+  vars_ofPartialModel := by simp only [instFormula, implies_true]
+
+  models_ofPartialModel := by simp [instFormula, models_eq, CNF.models]
 
 -- TODO : can this be done more directly?
 instance {n} : Implicant n (Horn n) where
@@ -661,12 +663,12 @@ instance {n} : Implicant n (Horn n) where
     | none => true
     | some M => SententialEntailment.entails n (instOfPartialModel.ofPartialModel M) φ
 
-  entails_correct δ φ := by
+  entails_iff δ φ := by
     split
     case _ h1 =>
       simp_all only [Cube.toPartialModel_eq_none_iff, Set.empty_subset]
     case _ M h1 =>
-      simp only [SententialEntailment.entails_correct, OfPartialModel.ofPartialModel_correct,
+      simp only [SententialEntailment.entails_iff, OfPartialModel.models_ofPartialModel,
         Cube.models_toPartialModel h1]
 
 instance {n} : Rename n (Horn n) where
@@ -718,20 +720,19 @@ instance {n} : Rename n (Horn n) where
           grind
         grind }
 
-  rename_correct φ V r h1 := by
-    simp only [Formula.vars, VarSet.mem_rename, Set.mem_image, SetLike.mem_coe, Formula.models,
-      models_eq]
-    constructor
-    · grind
-    · ext M
-      simp only [PartialModel.models_rename, Set.mem_ite_empty_left, Bool.not_eq_true,
-        Set.mem_inter_iff, Set.mem_preimage, CNF.models_rename]
+  vars_rename φ V r h1 := by
+    simp only [Formula.vars, VarSet.mem_rename, Set.mem_image, SetLike.mem_coe]
+    grind only
+
+  models_rename φ V r h1 := by
+    ext M
+    simp only [Formula.models, models_eq, PartialModel.models_rename, CNF.models_rename,
+      Set.mem_ite_empty_left, Bool.not_eq_true, Set.mem_inter_iff, Set.mem_preimage]
 
 instance {n} : ToCNF n (Horn n) where
 
   toCNF := toCNF
 
-  toCNF_correct φ := by
-    simp only [Formula.models, models]
+  models_toCNF φ := by simp only [Formula.models, models]
 
 end Validator.Horn

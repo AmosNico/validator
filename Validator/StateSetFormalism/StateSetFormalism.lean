@@ -81,12 +81,12 @@ abbrev UnprimedVariables' := UnprimedVariables pt (R.type pt)
 abbrev UnprimedLiterals' := UnprimedLiterals pt (R.type pt)
 
 def mkEmpty : UnprimedVariable' pt R :=
-  ⟨bot (2 * n), by simp only [bot_correct]; exact VarSet.isUnprimed_empty⟩
+  ⟨bot (2 * n), by simp only [vars_bot]; exact VarSet.isUnprimed_empty⟩
 
 @[simp]
 lemma toStates_mkEmpty : (mkEmpty pt R).val.toStates = ∅ :=
   by
-    simp [mkEmpty, Variable.toStates_eq, Variable.models,  bot_correct]
+    simp [mkEmpty, Variable.toStates_eq, Variable.models,  models_bot]
 
 def mkInit : UnprimedVariable' pt R :=
   let M : PartialModel (2 * n) := {
@@ -98,7 +98,7 @@ def mkInit : UnprimedVariable' pt R :=
   ⟨
     ofPartialModel M,
     by
-      grind only [!ofPartialModel_correct, PartialModel.vars, VarSet.mem_union,
+      grind only [!vars_ofPartialModel, PartialModel.vars, VarSet.mem_union,
         VarSet.mem_toUnprimed];
   ⟩
 
@@ -106,7 +106,7 @@ def mkInit : UnprimedVariable' pt R :=
 lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} :=
   by
     ext s
-    simp only [mkInit, Variable.toStates_eq, Variable.models, ofPartialModel_correct,
+    simp only [mkInit, Variable.toStates_eq, Variable.models, models_ofPartialModel,
       PartialModel.models, Set.mem_image, Set.mem_setOf_eq, Set.mem_singleton_iff]
     simp only [VarSet.mem_toUnprimed, Fin.divNat', and_imp, VarSet.mem_compl, Model.unprimedState,
       Fin.toUnprimed]
