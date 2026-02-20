@@ -26,11 +26,11 @@ namespace VarSet
 instance {n} : EmptyCollection (VarSet n) where
   emptyCollection := BitVec.zero n
 
-def insert {n} (V : VarSet n) (i : Fin n) :=
+def insert {n} (i : Fin n) (V : VarSet n) :=
   V ||| BitVec.twoPow n i
 
 def ofList {n} (l : List (Fin n)) : VarSet n :=
-  l.foldl insert ∅
+  l.foldr insert ∅
 
 instance {n} : SetLike (VarSet n) (Fin n) where
   coe V := { i | V[i] }

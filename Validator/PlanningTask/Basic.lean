@@ -1,4 +1,3 @@
-/- TODO : Copyright -/
 import Mathlib.Data.Fintype.Powerset
 import Validator.PlanningTask.Core
 import Validator.Basic
@@ -362,15 +361,11 @@ lemma mem_ofList {n} {l : List (Fin n)} {i} :
   i ∈ (ofList l) ↔ i ∈ l :=
   by
     simp only [ofList]
-    suffices h : ∀ V, i ∈ List.foldl insert V l ↔ i ∈ V ∨ i ∈ l by
-      have := h ∅
-      simp_all only [mem_empty, false_or]
     induction l with
-    | nil => simp only [List.foldl_nil, List.not_mem_nil, or_false, implies_true]
+    | nil => simp only [List.foldr_nil, mem_empty, List.not_mem_nil]
     | cons j l ih =>
-      grind only [List.foldl_cons, List.mem_cons, mem_insert]
+      grind only [List.mem_cons, = List.foldr_cons, mem_insert]
 
--- TODO : remove if not used
 instance {n} : Compl (VarSet n) where
   compl V := ~~~V
 
@@ -386,28 +381,6 @@ instance {n} : SDiff (VarSet n) where
 lemma mem_diff {n} {V V' : VarSet n} {i} :
   i ∈ V \ V' ↔ i ∈ V ∧ i ∉ V' :=
   by simp [instSDiff, mem_iff]
-
-/- TODO : remove
-def Disjoint {n} (V V' : VarSet n) : Prop :=
-  V &&& V' = 0#n
-
-lemma Disjoint_iff {n} {V V' : VarSet n} :
-  V.Disjoint V' ↔ ∀ i, i ∈ V → i ∈ V' → False :=
-  by
-    simp only [Disjoint, SetLike.ext_iff, mem_iff, Fin.getElem_fin, BitVec.getElem_and,
-      BitVec.getElem_zero, imp_false, Bool.not_eq_true]
-    grind
-
-@[simp]
-lemma Disjoint_empty_left {n} {V : VarSet n} : VarSet.Disjoint ∅ V :=
-  by
-    simp only [Disjoint, instEmptyCollection, BitVec.zero_eq, BitVec.zero_and]
-
-@[simp]
-lemma Disjoint_empty_right {n} {V : VarSet n} : V.Disjoint ∅ :=
-  by
-    simp only [Disjoint, instEmptyCollection, BitVec.zero_eq, BitVec.and_zero]
--/
 
 def foldl {α n} (f : α → Fin n → α) (init : α) (V : VarSet n) : α :=
   Fin.foldl n (fun a i ↦ if i ∈ V then f a i else a) init

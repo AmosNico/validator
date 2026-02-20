@@ -1,5 +1,4 @@
 import Validator.StateSetFormalism.Formula
-
 import Bdd.BDD
 
 namespace Validator
@@ -9,6 +8,7 @@ structure BDD n where
   vars : VarSet n
   bdd : _root_.BDD
   nvars_prop : bdd.nvars = n
+  vars_prop : ∀ i : Fin n, Nary.DependsOn bdd.denotation' (nvars_prop ▸ i)  → i ∈ vars
 
 namespace Formula.Model
 
@@ -32,35 +32,117 @@ namespace BDD
 
 private lemma nvars_prop_max {n} {φ ψ : BDD n} : max φ.bdd.nvars ψ.bdd.nvars = n :=
   by simp only [φ.nvars_prop, ψ.nvars_prop, max_self]
+
+def models {n} (φ : BDD n) : Models n :=
+  { M | φ.bdd.denotation (le_of_eq φ.nvars_prop) M.toVector }
+
+private def top_bdd (n : ℕ) : _root_.BDD :=
+  (BDD.const true).lift n.zero_le
+
+private lemma top_bdd_denotation {n} {V : Vector Bool n} {h} :
+  (top_bdd n).denotation h V = true :=
+  by simp only [top_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
+
+private def bot_bdd (n : ℕ) : _root_.BDD :=
+  (BDD.const false).lift n.zero_le
+
+private lemma bot_bdd_denotation {n} {V : Vector Bool n} {h} :
+  (bot_bdd n).denotation h V = false :=
+  by simp only [bot_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
+
+def not {n} (φ : BDD n) : BDD n where
+  vars := φ.vars
+  bdd := φ.bdd.not
+  nvars_prop := by simp only [BDD.not_nvars, φ.nvars_prop]
+  vars_prop := by
+    grind only [φ.vars_prop, !BDD.not_nvars, Nary.DependsOn, Nary.IndependentOf, BDD.not_denotation]
+
+
+@[simp]
+lemma models_not {n} (φ : BDD n) : φ.not.models = φ.modelsᶜ :=
+  by simp only [models, not, BDD.not_denotation, Bool.not_eq_eq_eq_not, Bool.not_true,
+    Set.compl_def, Set.mem_setOf_eq, Bool.not_eq_true]
+
+private def ofLiteral {n} : Literal n → _root_.BDD
+| (i, true) => BDD.var i
+| (i, false) => (BDD.var i).not
+
+private lemma nvars_ofLiteral {n} (l : Literal n) : (ofLiteral l).nvars ≤ n :=
+  by
+    simp [ofLiteral]
+    grind only [!BDD.var_nvars, !BDD.not_nvars]
+
+private lemma ofLiteral_denotation {n} (l : Literal n) {h V} :
+  (ofLiteral l).denotation h V ↔ Model.ofVector V l.1 = l.2 :=
+  by
+    simp only [ofLiteral, Fin.getElem_fin, Model.ofVector]
+    grind only [BDD.var_denotation, BDD.not_denotation]
+
 /-
-def models_aux {n} (φ : BDD n) : Set (Vector Bool n) :=
-  { V | φ.bdd.denotation (by simp [φ.nvars_prop]) V }
+private def ofCube_bdd {n} (δ : Cube n) : _root_.BDD :=
+  δ.foldr (fun l φ ↦ φ.and (ofLiteral l)) (top_bdd n)
 
-def models {n} (φ : BDD n) : Models n :=
-  { fun i ↦ V[i] = true | V ∈ models_aux φ }
+private lemma nvars_ofCube_bdd {n} (δ : Cube n) : (ofCube_bdd δ).nvars = n :=
+  by
+    simp? [ofCube_bdd]
+    induction δ with
+    | nil => simp only [List.foldr_nil, BDD.lift_nvars, top_bdd]
+    | cons l δ ih => simp only [List.foldr_cons, BDD.and_nvars, ih, sup_eq_left, nvars_ofLiteral]
 -/
-def models {n} (φ : BDD n) : Models n :=
-  { M | φ.bdd.denotation (by simp [φ.nvars_prop]) M.toVector }
 
-private lemma models_subset_of_equiv {n} (φ φ' : BDD n) :
-  φ.bdd.SemanticEquiv φ'.bdd  → φ.models = φ'.models :=
-  by
-    simp only [BDD.SemanticEquiv, funext_iff, models, Set.ext_iff, Set.mem_setOf_eq,
-      Bool.coe_iff_coe]
-    grind only [nvars_prop_max]
+def ofCube {n} (δ : Cube n) : BDD n where
+  vars := δ.vars
+  bdd := δ.foldr (fun l φ ↦ φ.and (ofLiteral l)) (top_bdd n)
+  nvars_prop := by
+    induction δ with
+    | nil => simp only [List.foldr_nil, BDD.lift_nvars, top_bdd]
+    | cons l δ ih => simp only [List.foldr_cons, BDD.and_nvars, ih, sup_eq_left, nvars_ofLiteral]
+  vars_prop := by
+    induction δ with
+    | nil => simp [top_bdd]
+    | cons l δ ih =>
+      intro i h1
+      simp_all only [Nary.DependsOn, Nary.IndependentOf, BDD.denotation', -Bool.forall_bool, not_and,
+        Vector.set_set, implies_true, not_true_eq_false, imp_false, not_forall, -Cube.mem_vars,
+        forall_exists_index, List.foldr_cons, BDD.and_denotation, Cube.vars_cons, VarSet.mem_insert]
+      rcases h1 with ⟨b, v, h1⟩
+      specialize ih i b (v.cast (by simp [nvars_ofLiteral]; sorry))
+      sorry
 
-lemma models_eq_iff {n} {φ φ' : BDD n} : φ.models = φ'.models ↔ φ.bdd.SemanticEquiv φ'.bdd :=
+@[simp]
+lemma vars_ofCube {n} (δ : Cube n) : (ofCube δ).vars = δ.vars :=
+  by simp only [ofCube]
+
+@[simp]
+lemma models_ofCube {n} (δ : Cube n) : (ofCube δ).models = δ.models :=
   by
-    constructor
-    · simp only [models, Set.ext_iff, Set.mem_setOf_eq, Bool.coe_iff_coe, BDD.SemanticEquiv]
-      intro h
-      ext V
-      specialize h (Model.ofVector (φ.nvars_prop_max ▸ V))
-      grind only [Model.toVector_ofVector]
-    · intro h1
-      have := models_subset_of_equiv φ φ' h1
-      have := models_subset_of_equiv φ' φ (by grind only [BDD.SemanticEquiv])
-      grind only [= Set.subset_def]
+    simp only [models, ofCube, Set.ext_iff, Set.mem_setOf_eq, Cube.mem_models]
+    induction δ with
+    | nil => simp [top_bdd_denotation]
+    | cons l δ ih =>
+      simp only [List.foldr_cons, BDD.and_denotation, Bool.and_eq_true, ih, Literal.mem_models,
+        ofLiteral_denotation, Model.ofVector_toVector, eq_iff_iff, List.mem_cons, forall_eq_or_imp]
+      grind only
+
+def ofClause {n} (γ : Clause n) : BDD n where
+  vars := γ.vars
+  bdd := γ.foldr (fun l φ ↦ φ.or (ofLiteral l)) (bot_bdd n)
+  nvars_prop := by
+    induction γ with
+    | nil => simp only [List.foldr_nil, BDD.lift_nvars, bot_bdd]
+    | cons l δ ih => simp only [List.foldr_cons, BDD.or_nvars, ih, sup_eq_left, nvars_ofLiteral]
+  vars_prop := sorry
+
+@[simp]
+lemma models_ofClause {n} (γ : Clause n) : (ofClause γ).models = γ.models :=
+  by
+    simp only [models, ofClause, Set.ext_iff, Set.mem_setOf_eq, Clause.mem_models]
+    induction γ with
+    | nil => simp [bot_bdd_denotation]
+    | cons l δ ih =>
+      simp only [List.foldr_cons, BDD.or_denotation, Bool.or_eq_true, ih, Literal.mem_models,
+        ofLiteral_denotation, Model.ofVector_toVector, eq_iff_iff, List.mem_cons, exists_eq_or_imp]
+      grind only
 
 instance {n} : Formula n (BDD n) where
 
@@ -74,27 +156,27 @@ instance {n} : Top n (BDD n) where
 
   top := {
     vars := ∅
-    bdd := (BDD.const true).lift n.zero_le
-    nvars_prop := by simp only [BDD.lift_nvars]
+    bdd := top_bdd n
+    nvars_prop := by simp only [top_bdd, BDD.lift_nvars]
+    vars_prop := by simp [top_bdd]
   }
 
   models_top := by
-    simp only [Formula.models, models, BDD.lift_denotation, BDD.const_denotation,
-      Function.const_apply, Set.setOf_true]
+    simp only [Formula.models, models, top_bdd_denotation, Set.setOf_true]
 
 instance {n} : Bot n (BDD n) where
 
   bot := {
     vars := ∅
-    bdd := (BDD.const false).lift n.zero_le
-    nvars_prop := by simp only [BDD.lift_nvars]
+    bdd := bot_bdd n
+    nvars_prop := by simp only [bot_bdd, BDD.lift_nvars]
+    vars_prop := by simp [bot_bdd]
   }
 
   vars_bot := by simp only [Formula.vars]
 
   models_bot := by
-    simp only [Formula.models, models, BDD.lift_denotation, BDD.const_denotation,
-      Function.const_apply, Bool.false_eq_true, Set.setOf_false]
+    simp only [Formula.models, models, bot_bdd_denotation, Bool.false_eq_true, Set.setOf_false]
 
 instance {n} : Consistency n (BDD n) where
 
@@ -114,24 +196,6 @@ instance {n} : Consistency n (BDD n) where
       use h1.symm ▸ M.toVector
       grind only [Model.toVector_ofVector]
 
-instance {n} : ClausalEntailment n (BDD n) where
-
-  entails := sorry
-
-  entails_iff := sorry
-
-instance {n} : Implicant n (BDD n) where
-
-  entails δ φ := sorry
-
-  entails_iff := sorry
-
-instance {n} : SententialEntailment n (BDD n) where
-
-  entails := sorry
-
-  entails_iff := sorry
-
 instance {n} : BoundedConjuction n (BDD n) where
 
   and φ ψ := {
@@ -139,6 +203,12 @@ instance {n} : BoundedConjuction n (BDD n) where
     bdd := φ.bdd.and ψ.bdd
     nvars_prop := by
       simp only [BDD.and_nvars, φ.nvars_prop, ψ.nvars_prop, max_self]
+    vars_prop := by
+      have := φ.vars_prop
+      have := ψ.vars_prop
+      simp_all
+      grind only [φ.nvars_prop, ψ.nvars_prop]
+
   }
 
   models_and φ ψ := by
@@ -152,26 +222,81 @@ instance {n} : BoundedDisjunction n (BDD n) where
     bdd := φ.bdd.or ψ.bdd
     nvars_prop := by
       simp only [BDD.or_nvars, φ.nvars_prop, ψ.nvars_prop, max_self]
+    vars_prop := by
+      have := φ.vars_prop
+      have := ψ.vars_prop
+      simp_all
+      grind only [φ.nvars_prop, ψ.nvars_prop]
   }
 
   models_or φ ψ := by
     simp only [Formula.models, models, BDD.or_denotation, Bool.or_eq_true, Set.ext_iff,
       Set.mem_setOf_eq, Set.mem_union, implies_true]
 
+instance {n} : SententialEntailment n (BDD n) where
+
+  entails φ ψ := ¬instConsistency.consistent (instBoundedConjuction.and φ ψ.not)
+
+  entails_iff φ ψ := by
+    simp only [BoundedConjuction.models_and, Consistency.consistent_iff, decide_not,
+      Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not]
+    simp only [Set.Nonempty, Formula.models, models_not, Set.mem_inter_iff, Set.mem_compl_iff,
+      not_exists, not_and, not_not]
+    grind only [= Set.subset_def]
+
+instance {n} : ClausalEntailment n (BDD n) where
+
+  entails φ γ := instSententialEntailment.entails φ (ofClause γ)
+
+  entails_iff φ γ := by
+    simp only [SententialEntailment.entails_iff, Formula.models, models_ofClause]
+
+instance {n} : Implicant n (BDD n) where
+
+  entails δ φ := instSententialEntailment.entails (ofCube δ) φ
+
+  entails_iff δ φ := by
+    simp only [SententialEntailment.entails_iff, Formula.models, models_ofCube]
+
 instance {n} : OfPartialModel n (BDD n) where
 
-  ofPartialModel := sorry
+  ofPartialModel M := ofCube (M.toCube)
 
-  vars_ofPartialModel := sorry
+  vars_ofPartialModel M := by
+    simp only [Formula.vars, vars_ofCube, PartialModel.vars_toCube]
 
-  models_ofPartialModel := sorry
+  models_ofPartialModel M := by
+    simp only [Formula.models, models_ofCube, PartialModel.models_toCube]
 
 instance {n} : Rename n (BDD n) where
 
-  rename := sorry
+  rename φ V r h1 := {
+    vars := VarSet.rename r φ.vars
+    bdd := by
+      apply φ.bdd.relabel (φ.nvars_prop ▸ r.rename)
+      rcases φ with ⟨vars, bdd, rfl, h2⟩
+      intro i i' h3
+      have hi := h2 i.val i.prop
+      have hi' := h2 i'.val i'.prop
+      have h4 := r.mono
+      simp only [StrictMonoOn, SetLike.mem_coe] at h4
+      simp only [Formula.vars] at h1
+      specialize h4 (h1 _ hi) (h1 _ hi') (by rw [Fin.lt_def]; grind only)
+      grind only
+    nvars_prop := by
+      simp only [BDD.relabel_nvars, φ.nvars_prop]
+    vars_prop := by
+      sorry
+  }
 
-  vars_rename := sorry
+  vars_rename φ V r h1 := by
+    simp only [Formula.vars, VarSet.mem_rename, Set.mem_image, SetLike.mem_coe]
+    grind only
 
-  models_rename := sorry
+  models_rename φ V r h1 := by
+    rcases φ with ⟨vars, bdd, rfl, h2⟩
+    ext M
+    simp [Formula.models, models, BDD.relabel, Model.toVector]
+    congr
 
 end Validator.BDD

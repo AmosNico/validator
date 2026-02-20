@@ -133,6 +133,11 @@ def vars {n} (δ : Cube n) : VarSet n :=
   VarSet.ofList (δ.map Prod.fst)
 
 @[simp]
+lemma mem_vars {n} (δ : Cube n) i : i ∈ δ.vars ↔ ∃ l ∈ δ, i = l.1 :=
+  by grind only [vars, Literal, VarSet.mem_ofList, List.mem_map]
+
+
+@[simp]
 lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = δ.vars.insert l.1 :=
   by
     rw [SetLike.ext_iff]
@@ -214,17 +219,15 @@ lemma models_mem_empty {n} (φ : CNF n) (h : [] ∈ φ) : φ.models = ∅ :=
     grind only [mem_models, = Set.mem_empty_iff_false, Clause.mem_models, ← List.not_mem_nil]
 
 def vars {n} (φ : CNF n) : VarSet n :=
-  φ.foldl (fun V γ ↦ V ∪ γ.vars) ∅
+  φ.foldr (fun γ V ↦ V ∪ γ.vars) ∅
 
 @[simp]
 lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, i ∈ γ.vars :=
   by
-    suffices h : ∀ V, i ∈ List.foldl (fun V' γ ↦ V' ∪ γ.vars) V φ ↔ i ∈ V ∨ ∃ γ ∈ φ, i ∈ γ.vars by
-      have := h ∅
-      simp_all only [VarSet.mem_empty, false_or, vars]
     induction φ with
-    | nil => simp
-    | cons γ φ ih => grind only [List.foldl_cons, VarSet.mem_union, List.mem_cons]
+    | nil => grind only [vars, List.foldr_nil, VarSet.mem_empty, List.not_mem_nil]
+    | cons γ φ ih =>
+      grind only [vars, Clause.mem_vars, List.foldr_cons, VarSet.mem_union, List.mem_cons]
 
 @[simp]
 lemma vars_cons {n γ} {φ : CNF n} : CNF.vars (γ :: φ) = γ.vars ∪ φ.vars :=
@@ -450,10 +453,16 @@ def toCube {n} (M : PartialModel n) : Cube n :=
   M.foldl (fun δ l ↦ l :: δ) []
 
 @[simp]
-lemma models_toCube {n} {M : PartialModel n} :
-  M.toCube.models = M.models := by
+lemma vars_toCube {n} {M : PartialModel n} : M.toCube.vars = M.vars :=
+  by
+    simp [toCube, foldl_cons, mem_vars, SetLike.ext_iff, Cube.mem_vars]
+    grind only
+
+@[simp]
+lemma models_toCube {n} {M : PartialModel n} : M.toCube.models = M.models :=
+  by
     ext M'
-    simp [toCube, PartialModel.foldl_cons, PartialModel.mem_models]
+    simp [toCube, foldl_cons, mem_models]
 
 end PartialModel
 

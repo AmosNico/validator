@@ -459,7 +459,7 @@ lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.mo
           CNF.mem_models, List.mem_cons, forall_eq_or_imp]
         grind only [models_eq, Clause.mem_models, = List.mem_cons, usr List.eq_or_mem_of_mem_cons]
 
-def insert' {n} (φ : Horn n) (γ : Clause n) : Option (Horn n) :=
+def insert' {n} (γ : Clause n) (φ : Horn n) : Option (Horn n) :=
   if h : γ.IsHorn then φ.insert γ h else none
 
 /--
@@ -467,46 +467,38 @@ Translate the given CNF formula to a Horn-formula.
 Returns `none` if the CNF-formula is not a Horn-formula.
 -/
 def fromCNF {n} (φ : CNF n) : Option (Horn n) :=
-  φ.foldlM insert' top
+  φ.foldrM insert' top
 
 lemma vars_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.vars ⊆ φ.vars :=
   by
-    suffices h1 : ∀ ψ', φ.foldlM insert' ψ' = some ψ → ψ.vars ⊆ φ.vars ∪ ψ'.vars by
-      specialize h1 top
-      simp_all only [vars_top, VarSet.union_empty, fromCNF, implies_true]
-    induction φ with
-    | nil => simp [CNF.vars, VarSet.instHasSubset]
+    simp only [fromCNF]
+    induction φ generalizing ψ with
+    | nil =>
+      simp [CNF.vars]
+      grind only [!vars_top]
     | cons γ φ ih =>
-      intro φ' h2
-      simp_all only [List.foldlM_cons, Option.bind_eq_bind, insert']
-      split at h2
-      next h3 =>
-        specialize ih (φ'.insert γ h3) h2
+      intro h1
+      simp_all only [List.foldrM_cons, Option.bind_eq_bind, insert', ge_iff_le, CNF.vars_cons]
+      split at h1
+      · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h1
+        rcases h1 with ⟨φ', h2, rfl⟩
         intro i hi
-        specialize ih i hi
-        simp only [VarSet.mem_union] at ih
-        rcases ih with h | h
-        · grind only [VarSet.mem_union, CNF.vars_cons]
-        · apply vars_insert at h
-          grind only [VarSet.mem_union, CNF.vars_cons, List.mem_cons]
-      next h2 => grind only [= Option.bind_none]
+        apply vars_insert at hi
+        grind only [VarSet.mem_union, Clause.mem_vars, CNF.mem_vars]
+      · grind only [Option.bind_eq_none_iff]
 
 lemma models_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.models = φ.models :=
   by
-    suffices h1 : ∀ ψ', φ.foldlM insert' ψ' = some ψ → ψ.models = φ.models ∩ ψ'.models by
-      specialize h1 top
-      simp_all only [models_top, Set.inter_univ, fromCNF, implies_true]
-    induction φ with
-    | nil => simp [CNF.models]
+    simp only [fromCNF]
+    induction φ generalizing ψ with
+    | nil =>
+      simp [CNF.models]
+      grind [models_top]
     | cons γ φ ih =>
-      intro φ' h2
-      simp_all only [List.foldlM_cons, Option.bind_eq_bind, insert']
-      split at h2
-      case _ h3 =>
-        specialize ih (φ'.insert γ h3) h2
-        simp_all only [Option.bind_some, models_insert, CNF.models_cons]
-        grind only
-      case _ h2 => grind only [= Option.bind_none]
+      simp only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.models_cons]
+      split
+      · grind only [Option.bind_eq_some_iff, !models_insert]
+      · grind only [Option.bind_eq_none_iff]
 
 instance {n} : Formula n (Horn n) where
 
