@@ -1,30 +1,6 @@
 import Validator.StateSetFormalism.Formula
 import Bdd.BDD
 
-lemma relabel_dependsOn {n} {B : BDD} {f : Fin B.nvars → Fin n} {h1 h2 i} :
-  Nary.DependsOn ((B.relabel f h1).denotation h2) i ↔
-  ∃ j, i = f j ∧ Nary.DependsOn B.denotation' j :=
-  by
-    simp only [Nary.DependsOn, Nary.IndependentOf, BDD.relabel_denotation, BDD.denotation',
-      Fin.getElem_fin, Bool.forall_bool, not_and, not_forall]
-    constructor
-    · intro h3
-      specialize h3 ?_
-      · intro v
-        apply BDD.denotation_eq_of_forall_dependency
-        rintro ⟨j, h4⟩
-        simp_all
-        sorry
-      sorry
-    · rintro ⟨j, rfl, h3⟩ h4
-      simp_all only [Vector.set_set, not_true_eq_false, exists_const, imp_false, not_forall]
-      rcases h3 with ⟨v, h3⟩
-      apply h3
-      apply BDD.denotation_eq_of_forall_dependency
-      --specialize h4 (BDD.relabel_nvars (h := h1) ▸ v)
-      simp_all [Vector.getElem_set]
-      sorry
-
 namespace Validator
 open Formula
 
@@ -214,7 +190,7 @@ instance {n} : Formula n (BDD n) where
     suffices
       φ.bdd.denotation (le_of_eq h3) M.toVector = φ.bdd.denotation (le_of_eq h3) M'.toVector by
       simp_all only [eq_iff_iff, models, Set.mem_setOf_eq]
-    apply BDD.denotation_eq_of_forall_dependency
+    apply Nary.eq_of_forall_dependency_getElem_eq
     rintro ⟨i, h4⟩
     have h5 := φ.vars_prop i h4
     grind only [Model.toVector, = Fin.getElem_fin, = Vector.getElem_ofFn]
@@ -406,7 +382,7 @@ instance {n} : Rename n (BDD n) where
       simp only [BDD.relabel_nvars, φ.nvars_prop]
     vars_prop := by
       rcases φ with ⟨vars, bdd, rfl, h2⟩
-      simp only [relabel_dependsOn]
+      simp only [BDD.relabel_dependsOn]
       rintro i ⟨j, rfl, h3⟩
       specialize h2 j h3
       grind only [VarSet.mem_rename]

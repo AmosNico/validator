@@ -10,7 +10,11 @@ This file contains some general parsing functions and a parser for STRIPS planni
 -/
 
 /-! ## General Parsing Functionality -/
-abbrev Parser := ParserT Error String.Slice Char Id
+/--
+In `Certificate.Parser` we need to parse certificates in a separate location,
+hence we use a monadic transformer for combinatorial parsers on the IO monad.
+-/
+abbrev Parser := ParserT Error String.Slice Char IO
 
 def parseSpaces : Parser Unit :=
   Parser.dropMany (Parser.Char.char ' ')
@@ -164,41 +168,11 @@ private def parseSTRIPS : Parser (Σ n, STRIPS n) :=
     Parser.endOfInput
     return Sigma.mk n (STRIPS.mk atoms actions init goal)
 
-/--
-Try to read the file corresponding to the given path, and parse its content
-into a STRIPS planning task. The file is expected to have the following format:
 
-    begin_atoms: <#atoms>
-    <atom 0>
-    <atom 1>
-    ... (names of all atoms, one on each line)
-    end_atoms
-    begin_init
-    <initital state atom index 0>
-    <initital state atom index 1>
-    ... (indexes of atoms that are true in initial state, one on each line)
-    end_init
-    begin_goal
-    <goal atom index 0>
-    <goal atom index 1>
-    ... (indexes of atoms that are true in goal, one on each line)
-    end_goal
-    begin_actions: <#actions>
-    begin_action
-    <action_name>
-    cost: <action_cost>
-    PRE: <precondition atom index 0>
-    ADD: <added atom index 0>
-    DEL: <deleted atom index 0>
-    ... (more PRE, ADD and DEL in any order, one on each line)
-    end_action
-    ... (more actions)
-    end_actions
--/
 def parse (path : System.FilePath) : IO (Σ n, STRIPS n) :=
   do
     let content ← IO.FS.readFile path
-    match parseSTRIPS.run content with
+    match ← parseSTRIPS.run content with
     | .ok _ res => return res
     | .error _ e =>
       let msg :=

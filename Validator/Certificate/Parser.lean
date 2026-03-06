@@ -29,11 +29,42 @@ def parseConstStateSetExpr {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
     ("g", return StateSetExpr.goal)
   ]
 
+/-- Parse a bdd in the ddmp format. -/
+def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) :=
+  do
+    -- First line contains variable ordering
+
+    -- Find BDD with the correct index
+    Parser.dropUntil dropLine (checkLine (toString idx))
+    -- TODO check format, this is probably to rigourous
+    checkLine ".ver DDDMP-2.0"
+    checkLine ".mode A"
+    checkLine ".varinfo 0"
+    let n_nodes ← readLine ".nnodes " parseNat
+    let n_vars ← readLine ".nvars " parseNat
+    let n_suppvars ← readLine ".nsuppvars " parseNat
+    let ids ← readLine ".ids" parseNat
+    let perm_ids ← readLine ".permids" parseListNat
+    -- currently only support for one root
+    checkLine ".nroots 1"
+    let root ← readLine ".rootids" parseNat
+    --let n_roots ← readLine ".nroots" parseListNat
+    --let root_ids ← readLine ".rootids" parseListNat
+    checkLine ".nodes"
+    -- TODO : parse nodes
+    checkLine ".end"
+    return sorry
+
 def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   do
     let path ← parseWord
     let idx ← parseNat
-    return StateSetExpr.bdd sorry
+    let content ← IO.FS.readFile path
+    match ← (parseBdd' n idx).run content with
+    | .ok _ bdd => return StateSetExpr.bdd sorry
+    | .error _ e =>
+      let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
+      throwUnexpectedWithMessage none msg
 
 def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
   do
@@ -242,7 +273,7 @@ of the premises.
 def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) :=
   do
     let content ← IO.FS.readFile path
-    match (parseCertificate pt).run content with
+    match ← (parseCertificate pt).run content with
     | .ok _ res => return res
     | .error _ e =>
       let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString

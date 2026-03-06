@@ -5,7 +5,7 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "19ba1601a7934cc0918942d75f84ea3ff0af1d47",
+   "rev": "01f858dc99ce820109d790071a0f5a807247d468",
    "name": "bdd",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
