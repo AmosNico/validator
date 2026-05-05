@@ -39,16 +39,14 @@ def readLine {α} (s : String) (p : Parser α) : Parser α :=
 def dropLine : Parser Unit :=
   Parser.dropUntil Parser.Char.eol Parser.anyToken *> pure ()
 
-def parseLine : Parser String :=
-  do
-    let ⟨⟨l⟩, _⟩ ← Parser.takeUntil Parser.Char.eol Parser.anyToken
-    return String.ofList l
+def parseLine : Parser String := do
+  let ⟨⟨l⟩, _⟩ ← Parser.takeUntil Parser.Char.eol Parser.anyToken
+  return String.ofList l
 
-def parseWord : Parser String :=
-  do
-    let stop : Parser Unit := parseSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
-    let ⟨⟨l⟩, _⟩ ← Parser.takeUntil stop Parser.anyToken
-    return String.ofList l
+def parseWord : Parser String := do
+  let stop : Parser Unit := parseSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
+  let ⟨⟨l⟩, _⟩ ← Parser.takeUntil stop Parser.anyToken
+  return String.ofList l
 
 def parseNat : Parser ℕ :=
   Parser.Char.ASCII.parseNat <* parseSpaces
@@ -59,8 +57,8 @@ def parseListNat : Parser (List ℕ) := do
   return l
 
 abbrev push? {α} : Array α → Option α → Array α
-| xs, none => xs
-| xs, some x => xs.push x
+  | xs, none => xs
+  | xs, some x => xs.push x
 
 /--
 For each tuple `(p, p', e)` in the given list, try the parser `p`. If it succeeds,
@@ -99,8 +97,7 @@ def parseCases {α} (ps1 : List (String × Parser α)) (ps2 : List (Parser Unit 
 namespace STRIPS
 
 private def parseAtoms : Parser (Array String) :=
-  Parser.withErrorMessage "error while parsing atoms"
-  do
+  Parser.withErrorMessage "error while parsing atoms" do
     let n ← readLine "begin_atoms:" parseNat
     let atoms ← Parser.take n parseLine
     checkLine "end_atoms"
@@ -108,12 +105,11 @@ private def parseAtoms : Parser (Array String) :=
 
 private def parseVar {n} : Parser (Fin n) :=
   Parser.withErrorMessage
-    s!"expected a reference to an atom, this should be a natural number smaller then {n}"
-  do
-    let i ← parseNat
-    if h : i < n
-    then return Fin.mk i h
-    else Parser.throwUnexpected
+    s!"expected a reference to an atom, this should be a natural number smaller then {n}" do
+      let i ← parseNat
+      if h : i < n
+      then return Fin.mk i h
+      else Parser.throwUnexpected
 
 private def parseVarLn {n} : Parser (Fin n) := parseVar <* parseEol
 
@@ -141,42 +137,38 @@ private partial def parseConditions {n} (cs : Conditions n) : Parser (Conditions
     ("end_action", parseEol *> pure cs)
   ]
 
-private def parseAction n : Parser (Action n) :=
-  do
-    checkLine "begin_action"
-    let name ← parseLine
-    let cost ← readLine "cost:" parseNat
-    let ⟨pre, add, del⟩ ← parseConditions (@Conditions.mk n [] [] [])
-    return Action.mk name (VarSet.ofList pre) (VarSet.ofList add) (VarSet.ofList del) cost
+private def parseAction n : Parser (Action n) := do
+  checkLine "begin_action"
+  let name ← parseLine
+  let cost ← readLine "cost:" parseNat
+  let ⟨pre, add, del⟩ ← parseConditions (@Conditions.mk n [] [] [])
+  return Action.mk name (VarSet.ofList pre) (VarSet.ofList add) (VarSet.ofList del) cost
 
 private def parseActions n : Parser (List (Action n)) :=
-  Parser.withErrorMessage "error while parsing the actions"
-  do
+  Parser.withErrorMessage "error while parsing the actions" do
     let k ← readLine "begin_actions:" parseNat
     let as ← Parser.take k (parseAction n)
     checkLine "end_actions"
     return as.toList
 
-private def parseSTRIPS : Parser (Σ n, STRIPS n) :=
-  do
-    let atoms ← parseAtoms
-    let n := atoms.size
-    let atoms : Vector String n := ⟨atoms, by rfl⟩
-    let init ← parseInit n
-    let goal ← parseGoal n
-    let actions ← parseActions n
-    Parser.endOfInput
-    return Sigma.mk n (STRIPS.mk atoms actions init goal)
+private def parseSTRIPS : Parser (Σ n, STRIPS n) := do
+  let atoms ← parseAtoms
+  let n := atoms.size
+  let atoms : Vector String n := ⟨atoms, by rfl⟩
+  let init ← parseInit n
+  let goal ← parseGoal n
+  let actions ← parseActions n
+  Parser.endOfInput
+  return Sigma.mk n (STRIPS.mk atoms actions init goal)
 
 
-def parse (path : System.FilePath) : IO (Σ n, STRIPS n) :=
-  do
-    let content ← IO.FS.readFile path
-    match ← parseSTRIPS.run content with
-    | .ok _ res => return res
-    | .error _ e =>
-      let msg :=
-        s!"An error occured when parsing the planning problem at \"{path}\":\n" ++ e.toString
-      throw (IO.userError msg)
+def parse (path : System.FilePath) : IO (Σ n, STRIPS n) := do
+  let content ← IO.FS.readFile path
+  match ← parseSTRIPS.run content with
+  | .ok _ res => return res
+  | .error _ e =>
+    let msg :=
+      s!"An error occured when parsing the planning problem at \"{path}\":\n" ++ e.toString
+    throw (IO.userError msg)
 
 end Validator.STRIPS

@@ -20,12 +20,12 @@ def ofVector {n} (V : Vector Bool n) : Model n :=
   fun i ↦ V[i]
 
 @[simp]
-lemma ofVector_toVector {n} (M : Model n) : ofVector M.toVector = M :=
-  by simp [ofVector, toVector, funext_iff]
+lemma ofVector_toVector {n} (M : Model n) : ofVector M.toVector = M := by
+  simp [ofVector, toVector, funext_iff]
 
 @[simp]
-lemma toVector_ofVector {n} (V : Vector Bool n) : (ofVector V).toVector = V :=
-  by simp [ofVector, toVector, Vector.ext_iff]
+lemma toVector_ofVector {n} (V : Vector Bool n) : (ofVector V).toVector = V := by
+  simp [ofVector, toVector]
 
 end Formula.Model
 namespace BDD
@@ -40,15 +40,15 @@ private def top_bdd (n : ℕ) : _root_.BDD :=
   (BDD.const true).lift n.zero_le
 
 private lemma top_bdd_denotation {n n'} {V : Vector Bool n'} {h} :
-  (top_bdd n).denotation h V = true :=
-  by simp only [top_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
+    (top_bdd n).denotation h V = true := by
+  simp only [top_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
 
 private def bot_bdd (n : ℕ) : _root_.BDD :=
   (BDD.const false).lift n.zero_le
 
 private lemma bot_bdd_denotation {n} {V : Vector Bool n} {h} :
-  (bot_bdd n).denotation h V = false :=
-  by simp only [bot_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
+    (bot_bdd n).denotation h V = false := by
+  simp only [bot_bdd, BDD.lift_denotation, BDD.const_denotation, Function.const_apply]
 
 def not {n} (φ : BDD n) : BDD n where
   vars := φ.vars
@@ -58,44 +58,40 @@ def not {n} (φ : BDD n) : BDD n where
     grind only [φ.vars_prop, !BDD.not_nvars, Nary.DependsOn, Nary.IndependentOf, BDD.not_denotation]
 
 @[simp]
-lemma models_not {n} (φ : BDD n) : φ.not.models = φ.modelsᶜ :=
-  by simp only [models, not, BDD.not_denotation, Bool.not_eq_eq_eq_not, Bool.not_true,
-    Set.compl_def, Set.mem_setOf_eq, Bool.not_eq_true]
+lemma models_not {n} (φ : BDD n) : φ.not.models = φ.modelsᶜ := by
+  simp only [models, not, BDD.not_denotation, Bool.not_eq_eq_eq_not, Bool.not_true, Set.compl_def,
+    Set.mem_setOf_eq, Bool.not_eq_true]
 
 private def ofLiteral {n} : Literal n → _root_.BDD
-| (i, true) => BDD.var i
-| (i, false) => (BDD.var i).not
+  | ⟨i, true⟩ => BDD.var i
+  | ⟨i, false⟩ => (BDD.var i).not
 
-private lemma nvars_ofLiteral {n} (l : Literal n) : (ofLiteral l).nvars ≤ n :=
-  by
-    simp [ofLiteral]
-    grind only [!BDD.var_nvars, !BDD.not_nvars]
+private lemma nvars_ofLiteral {n} (l : Literal n) : (ofLiteral l).nvars ≤ n := by
+  simp [ofLiteral]
+  grind only [!BDD.var_nvars, !BDD.not_nvars]
 
 private lemma ofLiteral_denotation {n n'} (l : Literal n) {h} (h' : n' = n) {V : Vector Bool n'} :
-  (ofLiteral l).denotation h V = decide (Model.ofVector (V.cast h') l.1 = l.2) :=
-  by
-    simp only [ofLiteral, Model.ofVector, Fin.getElem_fin, Vector.getElem_cast, eq_iff_iff,
-      Bool.coe_iff_coe]
-    grind only [BDD.var_denotation, BDD.not_denotation]
+    (ofLiteral l).denotation h V = decide (Model.ofVector (V.cast h') l.1 = l.2) := by
+  simp only [ofLiteral, Model.ofVector, Fin.getElem_fin, Vector.getElem_cast, eq_iff_iff,
+    Bool.coe_iff_coe]
+  grind only [BDD.var_denotation, BDD.not_denotation]
 
 private abbrev ofCube_bdd {n} (δ : Cube n) : _root_.BDD :=
   δ.foldr (fun l φ ↦ φ.and (ofLiteral l)) (top_bdd n)
 
-private lemma nvars_ofCube_bdd {n} (δ : Cube n) : (ofCube_bdd δ).nvars = n :=
-  by
-    induction δ with
-    | nil => simp only [List.foldr_nil, BDD.lift_nvars, top_bdd]
-    | cons l δ ih => simp only [List.foldr_cons, BDD.and_nvars, ih, sup_eq_left, nvars_ofLiteral]
+private lemma nvars_ofCube_bdd {n} (δ : Cube n) : (ofCube_bdd δ).nvars = n := by
+  induction δ with
+  | nil => simp only [List.foldr_nil, BDD.lift_nvars, top_bdd]
+  | cons l δ ih => simp only [List.foldr_cons, BDD.and_nvars, ih, sup_eq_left, nvars_ofLiteral]
 
 private lemma denotation_ofCube_bdd {n} (δ : Cube n) {h} v :
-  (ofCube_bdd δ).denotation h v = δ.all fun l ↦ Model.ofVector v l.1 = l.2 :=
-  by
-    induction δ with
-    | nil => simp only [List.foldr_nil, top_bdd_denotation, eq_iff_iff, List.all_nil]
-    | cons l δ ih =>
-      simp only [List.foldr_cons, BDD.and_denotation, eq_iff_iff, List.all_cons]
-      rw [ofLiteral_denotation l rfl]
-      grind only [Model.ofVector, Fin.getElem_fin, Vector.getElem_cast]
+    (ofCube_bdd δ).denotation h v = δ.all fun l ↦ Model.ofVector v l.1 = l.2 := by
+  induction δ with
+  | nil => simp only [List.foldr_nil, top_bdd_denotation, eq_iff_iff, List.all_nil]
+  | cons l δ ih =>
+    simp only [List.foldr_cons, BDD.and_denotation, eq_iff_iff, List.all_cons]
+    rw [ofLiteral_denotation l rfl]
+    grind only [Model.ofVector, Fin.getElem_fin, Vector.getElem_cast]
 
 def ofCube {n} (δ : Cube n) : BDD n where
   vars := δ.vars
@@ -115,40 +111,37 @@ def ofCube {n} (δ : Cube n) : BDD n where
       grind only [= List.all_eq, = Vector.getElem_set]
 
 @[simp]
-lemma vars_ofCube {n} (δ : Cube n) : (ofCube δ).vars = δ.vars :=
-  by simp only [ofCube]
+lemma vars_ofCube {n} (δ : Cube n) : (ofCube δ).vars = δ.vars := by
+  simp only [ofCube]
 
 @[simp]
-lemma models_ofCube {n} (δ : Cube n) : (ofCube δ).models = δ.models :=
-  by
-    simp only [models, ofCube, Set.ext_iff, Set.mem_setOf_eq, Cube.mem_models]
-    induction δ with
-    | nil => simp [top_bdd_denotation]
-    | cons l δ ih =>
-      simp only [List.foldr_cons, BDD.and_denotation, ofLiteral_denotation, Vector.cast_rfl,
-        Model.ofVector_toVector, eq_iff_iff, Bool.and_eq_true, ih, Literal.mem_models,
-        decide_eq_true_eq, List.mem_cons, forall_eq_or_imp]
-      grind only
+lemma models_ofCube {n} (δ : Cube n) : (ofCube δ).models = δ.models := by
+  simp only [models, ofCube, Set.ext_iff, Set.mem_setOf_eq, Cube.mem_models]
+  induction δ with
+  | nil => simp [top_bdd_denotation]
+  | cons l δ ih =>
+    simp only [List.foldr_cons, BDD.and_denotation, ofLiteral_denotation, Vector.cast_rfl,
+      Model.ofVector_toVector, eq_iff_iff, Bool.and_eq_true, ih, Literal.mem_models,
+      decide_eq_true_eq, List.mem_cons, forall_eq_or_imp]
+    grind only
 
 
 private abbrev ofClause_bdd {n} (γ : Clause n) : _root_.BDD :=
   γ.foldr (fun l φ ↦ φ.or (ofLiteral l)) (bot_bdd n)
 
-private lemma nvars_ofClause_bdd {n} (γ : Clause n) : (ofClause_bdd γ).nvars = n :=
-  by
-    induction γ with
-    | nil => simp only [List.foldr_nil, BDD.lift_nvars, bot_bdd]
-    | cons l γ ih => simp only [List.foldr_cons, BDD.or_nvars, ih, sup_eq_left, nvars_ofLiteral]
+private lemma nvars_ofClause_bdd {n} (γ : Clause n) : (ofClause_bdd γ).nvars = n := by
+  induction γ with
+  | nil => simp only [List.foldr_nil, BDD.lift_nvars, bot_bdd]
+  | cons l γ ih => simp only [List.foldr_cons, BDD.or_nvars, ih, sup_eq_left, nvars_ofLiteral]
 
 private lemma denotation_ofClause_bdd {n} (γ : Clause n) {h} v :
-  (ofClause_bdd γ).denotation h v = γ.any fun l ↦ Model.ofVector v l.1 = l.2 :=
-  by
-    induction γ with
-    | nil => simp only [List.foldr_nil, bot_bdd_denotation, eq_iff_iff, List.any_nil]
-    | cons l δ ih =>
-      simp only [List.foldr_cons, BDD.or_denotation, eq_iff_iff, List.any_cons]
-      rw [ofLiteral_denotation l rfl]
-      grind only [Model.ofVector, Fin.getElem_fin, Vector.getElem_cast]
+    (ofClause_bdd γ).denotation h v = γ.any fun l ↦ Model.ofVector v l.1 = l.2 := by
+  induction γ with
+  | nil => simp only [List.foldr_nil, bot_bdd_denotation, eq_iff_iff, List.any_nil]
+  | cons l δ ih =>
+    simp only [List.foldr_cons, BDD.or_denotation, eq_iff_iff, List.any_cons]
+    rw [ofLiteral_denotation l rfl]
+    grind only [Model.ofVector, Fin.getElem_fin, Vector.getElem_cast]
 
 def ofClause {n} (γ : Clause n) : BDD n where
   vars := γ.vars
@@ -168,16 +161,15 @@ def ofClause {n} (γ : Clause n) : BDD n where
       grind only [= Vector.getElem_set, = List.any_eq]
 
 @[simp]
-lemma models_ofClause {n} (γ : Clause n) : (ofClause γ).models = γ.models :=
-  by
-    simp only [models, ofClause, Set.ext_iff, Set.mem_setOf_eq, Clause.mem_models]
-    induction γ with
-    | nil => simp [bot_bdd_denotation]
-    | cons l δ ih =>
-      simp only [List.foldr_cons, BDD.or_denotation, ofLiteral_denotation, Vector.cast_rfl,
-        Model.ofVector_toVector, eq_iff_iff, Bool.or_eq_true, ih, Literal.mem_models,
-        decide_eq_true_eq, List.mem_cons, exists_eq_or_imp]
-      grind only
+lemma models_ofClause {n} (γ : Clause n) : (ofClause γ).models = γ.models := by
+  simp only [models, ofClause, Set.ext_iff, Set.mem_setOf_eq, Clause.mem_models]
+  induction γ with
+  | nil => simp [bot_bdd_denotation]
+  | cons l δ ih =>
+    simp only [List.foldr_cons, BDD.or_denotation, ofLiteral_denotation, Vector.cast_rfl,
+      Model.ofVector_toVector, eq_iff_iff, Bool.or_eq_true, ih, Literal.mem_models,
+      decide_eq_true_eq, List.mem_cons, exists_eq_or_imp]
+    grind only
 
 instance {n} : Formula n (BDD n) where
 

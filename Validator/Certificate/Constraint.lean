@@ -20,37 +20,34 @@ variable {n : ℕ} {pt : STRIPS n}
 open ConstraintType
 
 def elim_exists_0 {prop : Unit → Prop} :
-  (∃ v, prop v) → {v // prop v ∧ ∀ v', prop v' → v' = v} :=
-  by
-    intro h'
-    use ()
-    rcases h' with ⟨⟨⟩, hv⟩
-    simp_all
+    (∃ v, prop v) → {v // prop v ∧ ∀ v', prop v' → v' = v} := by
+  intro h'
+  use ()
+  rcases h' with ⟨⟨⟩, hv⟩
+  simp_all
 
-macro "elim_exists_1" e:term : tactic =>
-  do
-    `(tactic|
-      intro h <;>
-      cases heq : $e with
-      | some S =>
-        cases S
-        all_goals simp_all
-        rename_i S'ᵢ
-        exact ⟨S'ᵢ, by simp_all⟩
-      | none => simp_all)
+macro "elim_exists_1" e:term : tactic => do
+  `(tactic|
+    intro h <;>
+    cases heq : $e with
+    | some S =>
+      cases S
+      all_goals simp_all
+      rename_i S'ᵢ
+      exact ⟨S'ᵢ, by simp_all⟩
+    | none => simp_all)
 
-macro "elim_exists_2" e:term : tactic =>
-  do
-    `(tactic|
-      intro h <;>
-      simp_all <;>
-      cases heq : $e with
-      | some S =>
-        cases S
-        all_goals simp_all
-        rename_i S'ᵢ S''ᵢ
-        exact ⟨(S'ᵢ, S''ᵢ), by simp_all⟩
-      | none => simp_all)
+macro "elim_exists_2" e:term : tactic => do
+  `(tactic|
+    intro h <;>
+    simp_all <;>
+    cases heq : $e with
+    | some S =>
+      cases S
+      all_goals simp_all
+      rename_i S'ᵢ S''ᵢ
+      exact ⟨(S'ᵢ, S''ᵢ), by simp_all⟩
+    | none => simp_all)
 
 abbrev valid {α} (h : Constraint α) : Prop
   := ∃ a, h.prop a
@@ -85,9 +82,9 @@ def seq {α1 α2} (h1 : Constraint α1) (h2 : α1 → Constraint α2) : Constrai
     exact ⟨(v1, v2), by simp_all⟩
 
 @[simp]
-lemma seq.prop_eq {α1 α2} {a a'}
-  (h : Constraint α1) (h' : α1 → Constraint α2) :
-  (h.seq h').prop (a, a') = (h.prop a ∧ (h' a).prop a') := by simp [seq]
+lemma seq.prop_eq {α1 α2} {a a'} (h : Constraint α1) (h' : α1 → Constraint α2) :
+    (h.seq h').prop (a, a') = (h.prop a ∧ (h' a).prop a') := by
+  simp [seq]
 
 def and {α1 α2} (h1 : Constraint α1) (h2 : Constraint α2) : Constraint (α1 × α2) where
 
@@ -107,14 +104,14 @@ def and {α1 α2} (h1 : Constraint α1) (h2 : Constraint α2) : Constraint (α1 
 infixr:70 "∧ᶜ" => and
 
 @[simp]
-lemma and.prop_eq {α1 α2} {a a'}
-  (h : Constraint α1) (h' : Constraint α2) :
-  (h ∧ᶜ h').prop (a, a') = (h.prop a ∧ h'.prop a') := by simp [and]
+lemma and.prop_eq {α1 α2} {a a'} (h : Constraint α1) (h' : Constraint α2) :
+    (h ∧ᶜ h').prop (a, a') = (h.prop a ∧ h'.prop a') := by
+  simp [and]
 
 @[simp]
-lemma and.valid_eq {α1 α2}
-  (h : Constraint α1) (h' : Constraint α2) :
-  (h ∧ᶜ h').valid = (h.valid ∧ h'.valid) := by simp [and]
+lemma and.valid_eq {α1 α2} (h : Constraint α1) (h' : Constraint α2) :
+    (h ∧ᶜ h').valid = (h.valid ∧ h'.valid) := by
+  simp [and]
 
 def eq (h : Constraint ℕ) (T : SetType) (Eᵢ : ℕ) : Constraint Unit where
 
@@ -131,8 +128,8 @@ def eq (h : Constraint ℕ) (T : SetType) (Eᵢ : ℕ) : Constraint Unit where
     message := h.message
 
 @[simp]
-lemma eq.prop_eq {T Eᵢ a} (h : Constraint ℕ) :
-  (h.eq T Eᵢ).prop a = h.prop Eᵢ := by simp [eq]
+lemma eq.prop_eq {T Eᵢ a} (h : Constraint ℕ) : (h.eq T Eᵢ).prop a = h.prop Eᵢ := by
+  simp [eq]
 
 abbrev eqState (h : Constraint ℕ) (Eᵢ : ℕ) :=
   eq h SetType.States Eᵢ
@@ -166,7 +163,8 @@ def leftEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E1ᵢ : ℕ) : Constrain
 
 @[simp]
 lemma leftEq.prop_eq {T E1ᵢ E2ᵢ} (h : Constraint (ℕ × ℕ)) :
-  (h.leftEq T E1ᵢ).prop E2ᵢ = h.prop (E1ᵢ, E2ᵢ) := by simp [leftEq]
+    (h.leftEq T E1ᵢ).prop E2ᵢ = h.prop (E1ᵢ, E2ᵢ) := by
+  simp [leftEq]
 
 abbrev leftEqState (h : Constraint (ℕ × ℕ)) (Eᵢ : ℕ) :=
   Constraint.leftEq h SetType.States Eᵢ
@@ -201,7 +199,8 @@ def rightEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E2ᵢ : ℕ) : Constrai
 
 @[simp]
 lemma rightEq.prop_eq {T} {E1ᵢ E2ᵢ} (h : Constraint (ℕ × ℕ)) :
-  (h.rightEq T E2ᵢ).prop E1ᵢ = h.prop (E1ᵢ, E2ᵢ) := by simp [rightEq]
+    (h.rightEq T E2ᵢ).prop E1ᵢ = h.prop (E1ᵢ, E2ᵢ) := by
+  simp [rightEq]
 
 abbrev rightEqState (h : Constraint (ℕ × ℕ)) (Eᵢ : ℕ) :=
   Constraint.rightEq h SetType.States Eᵢ
@@ -215,7 +214,8 @@ def bothEq (h : Constraint (ℕ × ℕ)) (T1 T2 : SetType) (E1ᵢ E2ᵢ : ℕ) :
 
 @[simp]
 lemma bothEq.prop_eq {T1 T2 Eᵢ E'ᵢ a} (h : Constraint (ℕ × ℕ)) :
-  (h.bothEq T1 T2 Eᵢ E'ᵢ).prop a = h.prop (Eᵢ, E'ᵢ) := by simp [bothEq]
+    (h.bothEq T1 T2 Eᵢ E'ᵢ).prop a = h.prop (Eᵢ, E'ᵢ) := by
+  simp [bothEq]
 
 abbrev eqStates (h : Constraint (ℕ × ℕ)) (E1ᵢ E2ᵢ : ℕ) :=
   Constraint.bothEq h SetType.States SetType.States E1ᵢ E2ᵢ
@@ -231,8 +231,7 @@ def trivial : Constraint Unit where
 
   elim_exists := elim_exists_0
 
-def bounds (T : ConstraintType) (limit Eᵢ : ℕ) :
-  Constraint Unit where
+def bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Constraint Unit where
 
   prop := fun _ ↦ Eᵢ < limit
 
@@ -244,18 +243,17 @@ def bounds (T : ConstraintType) (limit Eᵢ : ℕ) :
   elim_exists := elim_exists_0
 
 @[simp]
-lemma bounds.prop_eq {T limit Eᵢ a} :
-  (bounds T limit Eᵢ).prop a ↔ Eᵢ < limit := by simp [bounds]
+lemma bounds.prop_eq {T limit Eᵢ a} : (bounds T limit Eᵢ).prop a ↔ Eᵢ < limit := by
+  simp [bounds]
 
 @[simp]
-lemma bounds.valid_eq {T} {limit Eᵢ} :
-  (bounds T limit Eᵢ).valid ↔ Eᵢ < limit := by
-    apply Iff.intro
-    · rintro ⟨⟨⟩, h⟩
-      exact h
-    · intro h
-      use ()
-      simp_all
+lemma bounds.valid_eq {T} {limit Eᵢ} : (bounds T limit Eᵢ).valid ↔ Eᵢ < limit := by
+  apply Iff.intro
+  · rintro ⟨⟨⟩, h⟩
+    exact h
+  · intro h
+    use ()
+    simp_all
 
 abbrev actionBounds limit Aᵢ :=
   bounds ActionSetConstraint limit Aᵢ
@@ -283,7 +281,8 @@ def actionBounds' (C : Certificate pt) (Aᵢ : ℕ) :
 
 @[simp]
 lemma actionBounds'.prop_eq {C : Certificate pt} {Aᵢ a} :
-  (actionBounds'  C Aᵢ).prop a ↔ Aᵢ < C.actions.size := by simp [actionBounds']
+    (actionBounds'  C Aᵢ).prop a ↔ Aᵢ < C.actions.size := by
+  simp only [actionBounds', ExceptT.stM_eq]
 
 def stateBounds' (C : Certificate pt) (Sᵢ : ℕ) :
   Constraint Unit where
@@ -299,11 +298,12 @@ def stateBounds' (C : Certificate pt) (Sᵢ : ℕ) :
 
 @[simp]
 lemma stateBounds'.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (stateBounds' C Sᵢ).prop a ↔ Sᵢ < C.states.size := by simp [stateBounds']
+    (stateBounds' C Sᵢ).prop a ↔ Sᵢ < C.states.size := by
+  simp [stateBounds']
 
 abbrev setBounds' (C : Certificate pt) : (S : SetType) →  ℕ → Constraint Unit
-| SetType.Actions, Aᵢ => actionBounds' C Aᵢ
-| SetType.States, Sᵢ =>  stateBounds' C Sᵢ
+  | SetType.Actions, Aᵢ => actionBounds' C Aᵢ
+  | SetType.States, Sᵢ =>  stateBounds' C Sᵢ
 
 
 def isActionAll (C : Certificate pt) (Aᵢ : ℕ) : Constraint Unit where
@@ -322,10 +322,9 @@ def isActionAll (C : Certificate pt) (Aᵢ : ℕ) : Constraint Unit where
 
 @[simp]
 lemma isActionAll.prop_eq {C : Certificate pt} {Aᵢ a} :
-  (isActionAll C Aᵢ).prop a ↔ Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.all :=
-  by
-    simp only [isActionAll, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isActionAll C Aᵢ).prop a ↔ Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.all := by
+  simp only [isActionAll, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isActionUnion (C : Certificate pt) (Aᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
@@ -343,11 +342,10 @@ def isActionUnion (C : Certificate pt) (Aᵢ : ℕ) : Constraint (ℕ × ℕ) wh
 
 @[simp]
 lemma isActionUnion.prop_eq {C : Certificate pt} {Aᵢ A'ᵢ A''ᵢ} :
-  (isActionUnion C Aᵢ).prop (A'ᵢ, A''ᵢ) ↔
-    Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ :=
-  by
-    simp only [isActionUnion, eq_mpr_eq_cast, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isActionUnion C Aᵢ).prop (A'ᵢ, A''ᵢ) ↔
+    Aᵢ < C.actions.size ∧ C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ := by
+  simp only [isActionUnion, eq_mpr_eq_cast, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 open StateSetExpr
 
@@ -367,10 +365,9 @@ def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
 
 @[simp]
 lemma isStateEmpty.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateEmpty C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some empty :=
-  by
-    simp only [isStateEmpty, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateEmpty C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some empty := by
+  simp only [isStateEmpty, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
 
@@ -388,10 +385,9 @@ def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
 
 @[simp]
 lemma isStateInit.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateInit C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some init :=
-  by
-    simp only [isStateInit, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateInit C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some init := by
+  simp only [isStateInit, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
 
@@ -409,10 +405,9 @@ def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
 
 @[simp]
 lemma isStateGoal.prop_eq {C : Certificate pt} {Sᵢ a} :
-  (isStateGoal C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some goal :=
-  by
-    simp only [isStateGoal, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateGoal C Sᵢ).prop a ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some goal := by
+  simp only [isStateGoal, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
 
@@ -430,10 +425,9 @@ def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
 
 @[simp]
 lemma isStateNeg.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ} :
-  (isStateNeg C Sᵢ).prop S'ᵢ ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (neg S'ᵢ) :=
-  by
-    simp only [isStateNeg, eq_mpr_eq_cast, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateNeg C Sᵢ).prop S'ᵢ ↔ Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (neg S'ᵢ) := by
+  simp only [isStateNeg, eq_mpr_eq_cast, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
@@ -451,11 +445,10 @@ def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) whe
 
 @[simp]
 lemma isStateInter.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
-  (isStateInter C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
-  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (inter S'ᵢ S''ᵢ) :=
-  by
-    simp only [isStateInter, eq_mpr_eq_cast, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateInter C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
+    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (inter S'ᵢ S''ᵢ) := by
+  simp only [isStateInter, eq_mpr_eq_cast, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
@@ -473,11 +466,10 @@ def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) whe
 
 @[simp]
 lemma isStateUnion.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ S''ᵢ} :
-  (isStateUnion C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
-    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (union S'ᵢ S''ᵢ) :=
-  by
-    simp only [isStateUnion, eq_mpr_eq_cast, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateUnion C Sᵢ).prop (S'ᵢ, S''ᵢ) ↔
+    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (union S'ᵢ S''ᵢ) := by
+  simp only [isStateUnion, eq_mpr_eq_cast, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
@@ -517,15 +509,14 @@ def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × ℕ) wher
 
 @[simp]
 lemma isStateRegr.prop_eq {C : Certificate pt} {Sᵢ S'ᵢ Aᵢ} :
-  (isStateRegr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
-  Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (regr S'ᵢ Aᵢ) :=
-  by
-    simp only [isStateRegr, eq_mpr_eq_cast, iff_and_self]
-    exact Array.lt_of_getElem?_eq_some
+    (isStateRegr C Sᵢ).prop (S'ᵢ, Aᵢ) ↔
+    Sᵢ < C.states.size ∧ C.states[Sᵢ]? = some (regr S'ᵢ Aᵢ) := by
+  simp only [isStateRegr, eq_mpr_eq_cast, iff_and_self]
+  exact Array.lt_of_getElem?_eq_some
 
 abbrev isUnion (C : Certificate pt) : SetType → ℕ → Constraint (ℕ × ℕ)
-| SetType.Actions => isActionUnion C
-| SetType.States => isStateUnion C
+  | SetType.Actions => isActionUnion C
+  | SetType.States => isStateUnion C
 
 open Knowledge
 
@@ -581,9 +572,9 @@ def isActionSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint (ℕ 
 
 @[simp]
 lemma isActionSubsetKnowledge.prop_eq {C : Certificate pt} {Kᵢ Aᵢ A'ᵢ} :
-  (isActionSubsetKnowledge C Kᵢ).prop (Aᵢ, A'ᵢ) =
-    ∃ K, C.knowledge[Kᵢ]? = actionSubset Aᵢ A'ᵢ K :=
-  by simp [isActionSubsetKnowledge]
+    (isActionSubsetKnowledge C Kᵢ).prop (Aᵢ, A'ᵢ) =
+      ∃ K, C.knowledge[Kᵢ]? = actionSubset Aᵢ A'ᵢ K := by
+  simp [isActionSubsetKnowledge]
 
 def isStateSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint (ℕ × ℕ) where
 
@@ -611,12 +602,12 @@ def isStateSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint (ℕ �
 
 @[simp]
 lemma isStateSubsetKnowledge.prop_eq {C : Certificate pt} {Kᵢ Sᵢ S'ᵢ} :
-  (isStateSubsetKnowledge C Kᵢ).prop (Sᵢ, S'ᵢ) =
-    ∃ K, C.knowledge[Kᵢ]? = stateSubset Sᵢ S'ᵢ K :=
-  by simp [isStateSubsetKnowledge]
+    (isStateSubsetKnowledge C Kᵢ).prop (Sᵢ, S'ᵢ) =
+      ∃ K, C.knowledge[Kᵢ]? = stateSubset Sᵢ S'ᵢ K := by
+  simp [isStateSubsetKnowledge]
 
 abbrev isSubsetKnowledge (C : Certificate pt) : SetType → ℕ → Constraint (ℕ × ℕ)
-| SetType.Actions => isActionSubsetKnowledge C
-| SetType.States => isStateSubsetKnowledge C
+  | SetType.Actions => isActionSubsetKnowledge C
+  | SetType.States => isStateSubsetKnowledge C
 
 end Constraint

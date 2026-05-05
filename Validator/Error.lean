@@ -18,25 +18,26 @@ def positionInfo (s : String.Slice) : ℕ × ℕ × String :=
 
 -- Check whether it makes more sense to use `String.ValidPos`
 inductive Error
-| parseUnexpected : String.Slice → Error
+| parseUnexpected : Parser.Stream.Position String.Slice → Error
 | unvalid : String → Error
-| addMessage : Error → Option String.Slice → String → Error
+| addMessage : Error → Option (Parser.Stream.Position String.Slice) → String → Error
 
 namespace Error
 
+#check Parser.Stream.Position
 instance : Parser.Error Error String.Slice Char where
   unexpected p _ := Error.parseUnexpected p
   addMessage e p msg := Error.addMessage e p msg
 
 def toString : Error → String
 | parseUnexpected pos =>
-    have ⟨n, k, line⟩ := positionInfo pos
+    have ⟨n, k, line⟩ := positionInfo sorry -- pos
     let offset := k + 10 + (ToString.toString n).length
     s!"    line {n}: {line}\n" ++ String.replicate offset ' ' ++ "^\n"
 | unvalid msg => s!"  {msg}\n"
 | addMessage e none msg => s!"  {msg}\n" ++ e.toString
 | addMessage e (some pos) msg =>
-  have ⟨n, k, _⟩ := positionInfo pos
+  have ⟨n, k, _⟩ := positionInfo sorry -- pos
   s!"  {msg} (line {n}, pos {k})\n" ++ e.toString
 
 instance : ToString Error where

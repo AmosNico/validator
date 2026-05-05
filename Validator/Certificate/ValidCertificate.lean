@@ -195,7 +195,7 @@ def constraintCG (Kᵢ K1ᵢ : ℕ) :=
     isStateGoal C SGᵢ
 
 def constraintKnowledge {C : Certificate pt} (hC : C.validSets) (Kᵢ : Fin C.knowledge.size) :
-  Σ α, Constraint α :=
+    Σ α, Constraint α :=
   match C.knowledge[Kᵢ] with
   | dead Sᵢ K =>
     match K with
@@ -247,167 +247,159 @@ structure valid (C : Certificate pt) extends C.validSets where
 namespace valid
 
 lemma actionUnionBounds {C : Certificate pt} (hC : C.valid) (Aᵢ : Fin C.actions.size)
-  {A'ᵢ A''ᵢ} (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
-  A'ᵢ < C.actions.size ∧ A''ᵢ < C.actions.size :=
-  by
-    have h' := hC.validActions Aᵢ
-    rcases Aᵢ with ⟨Aᵢ, hAᵢ⟩
-    simp_all [Certificate.validActionSetExpr]
-    omega
+    {A'ᵢ A''ᵢ} (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
+    A'ᵢ < C.actions.size ∧ A''ᵢ < C.actions.size := by
+  have h' := hC.validActions Aᵢ
+  rcases Aᵢ with ⟨Aᵢ, hAᵢ⟩
+  simp_all [Certificate.validActionSetExpr]
+  omega
 
 lemma stateUnionBounds {C : Certificate pt} (hC : C.valid) (Sᵢ : Fin C.states.size)
-  {S'ᵢ S''ᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ)) :
-  S'ᵢ < C.states.size ∧ S''ᵢ < C.states.size :=
-  by
-    have h' := hC.validStates Sᵢ
-    rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
-    simp_all [Certificate.validStateSetExpr]
-    omega
+    {S'ᵢ S''ᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ)) :
+    S'ᵢ < C.states.size ∧ S''ᵢ < C.states.size := by
+  have h' := hC.validStates Sᵢ
+  rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
+  simp_all [Certificate.validStateSetExpr]
+  omega
 
 lemma stateInterBounds {C : Certificate pt} (hC : C.valid) (Sᵢ : Fin C.states.size)
-  {S'ᵢ S''ᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ)) :
-  S'ᵢ < C.states.size ∧ S''ᵢ < C.states.size :=
-  by
-    have h' := hC.validStates Sᵢ
-    rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
-    simp_all [Certificate.validStateSetExpr]
-    omega
+    {S'ᵢ S''ᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ)) :
+    S'ᵢ < C.states.size ∧ S''ᵢ < C.states.size := by
+  have h' := hC.validStates Sᵢ
+  rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
+  simp_all [Certificate.validStateSetExpr]
+  omega
 
 lemma stateProgrBounds {C : Certificate pt} (hC : C.valid) (Sᵢ : Fin C.states.size)
-  {S'ᵢ Aᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ)) :
-  S'ᵢ < C.states.size ∧ Aᵢ < C.actions.size :=
-  by
-    have h' := hC.validStates Sᵢ
-    rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
-    simp_all [Certificate.validStateSetExpr]
-    omega
+    {S'ᵢ Aᵢ} (h : C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ)) :
+    S'ᵢ < C.states.size ∧ Aᵢ < C.actions.size := by
+  have h' := hC.validStates Sᵢ
+  rcases Sᵢ with ⟨Sᵢ, hSᵢ⟩
+  simp_all [Certificate.validStateSetExpr]
+  omega
 
 lemma deadKnowledgeBound {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size)
-  {Sᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = dead Sᵢ K) :
-  Sᵢ < C.states.size :=
-  by
-    have h' := hC.validKnowledge Kᵢ
-    rcases h with ⟨K, heq⟩
-    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
-      getElem?_pos, Option.some.injEq]
-    rw [heq] at h'
-    simp only at h'
-    cases K with
-    | ED => simp_all [Constraint.valid]
-    | UD => simp [constraintUD] at h'; tauto
-    | SD => simp [constraintSD] at h'; tauto
-    | PG => simp [constraintPG] at h'; tauto
-    | PI => simp [constraintPI] at h'; tauto
-    | RG => simp [constraintRG] at h'; tauto
-    | RI => simp [constraintRI] at h'; tauto
+    {Sᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = dead Sᵢ K) :
+    Sᵢ < C.states.size := by
+  have h' := hC.validKnowledge Kᵢ
+  rcases h with ⟨K, heq⟩
+  simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+    getElem?_pos, Option.some.injEq]
+  rw [heq] at h'
+  simp only at h'
+  cases K with
+  | ED => simp_all [Constraint.valid]
+  | UD => simp [constraintUD] at h'; tauto
+  | SD => simp [constraintSD] at h'; tauto
+  | PG => simp [constraintPG] at h'; tauto
+  | PI => simp [constraintPI] at h'; tauto
+  | RG => simp [constraintRG] at h'; tauto
+  | RI => simp [constraintRI] at h'; tauto
 
 lemma actionSubsetKnowledgeBounds {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size)
-  {Aᵢ A'ᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = actionSubset Aᵢ A'ᵢ K) :
-  Aᵢ < C.actions.size ∧ A'ᵢ < C.actions.size:=
-  by
-    have h' := hC.validKnowledge Kᵢ
-    rcases h with ⟨K, heq⟩
-    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
-      getElem?_pos, Option.some.injEq]
-    rw [heq] at h'
-    simp only at h'
-    cases K with
-    | B5 => simp [constraintB5] at h'; tauto
-    | URA => simp [constraintUR] at h'; tauto
-    | ULA => simp [constraintUL] at h'; tauto
-    | SUA => simp [constraintSU] at h'; tauto
-    | STA => simp [constraintST] at h'; tauto
+    {Aᵢ A'ᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = actionSubset Aᵢ A'ᵢ K) :
+    Aᵢ < C.actions.size ∧ A'ᵢ < C.actions.size:= by
+  have h' := hC.validKnowledge Kᵢ
+  rcases h with ⟨K, heq⟩
+  simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+    getElem?_pos, Option.some.injEq]
+  rw [heq] at h'
+  simp only at h'
+  cases K with
+  | B5 => simp [constraintB5] at h'; tauto
+  | URA => simp [constraintUR] at h'; tauto
+  | ULA => simp [constraintUL] at h'; tauto
+  | SUA => simp [constraintSU] at h'; tauto
+  | STA => simp [constraintST] at h'; tauto
 
 lemma stateSubsetKnowledgeBounds
-  {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size)
-  {Sᵢ S'ᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = stateSubset Sᵢ S'ᵢ K) :
-  Sᵢ < C.states.size ∧ S'ᵢ < C.states.size:=
-  by
-    have h' := hC.validKnowledge Kᵢ
-    rcases h with ⟨K, heq⟩
-    simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
-      getElem?_pos, Option.some.injEq]
-    rw [heq] at h'
-    simp only at h'
-    cases K with
-    | B1 => simp [constraintB1] at h'; tauto
-    | B2 => simp [constraintB2] at h'; tauto
-    | B3 => simp [constraintB3] at h'; tauto
-    | B4 => simp [constraintB4] at h'; tauto
-    | URS => simp [constraintUR] at h'; tauto
-    | ULS => simp [constraintUL] at h'; tauto
-    | IRS => simp [constraintIR] at h'; tauto
-    | ILS => simp [constraintIL] at h'; tauto
-    | DIS => simp [constraintDI] at h'; tauto
-    | SUS => simp [constraintSU] at h'; tauto
-    | SIS => simp [constraintSI] at h'; tauto
-    | STS => simp [constraintST] at h'; tauto
-    | AT => simp [constraintAT] at h'; tauto
-    | AU => simp [constraintAU] at h'; tauto
-    | PT => simp [constraintPT] at h'; tauto
-    | PU => simp [constraintPU] at h'; tauto
-    | PR => simp [constraintPR] at h'; tauto
-    | RP => simp [constraintRP] at h'; tauto
+    {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.size)
+    {Sᵢ S'ᵢ} (h : ∃ K, C.knowledge[Kᵢ]? = stateSubset Sᵢ S'ᵢ K) :
+    Sᵢ < C.states.size ∧ S'ᵢ < C.states.size:= by
+  have h' := hC.validKnowledge Kᵢ
+  rcases h with ⟨K, heq⟩
+  simp_all only [Certificate.validKnowledge, constraintKnowledge, Fin.is_lt,
+    getElem?_pos, Option.some.injEq]
+  rw [heq] at h'
+  simp only at h'
+  cases K with
+  | B1 => simp [constraintB1] at h'; tauto
+  | B2 => simp [constraintB2] at h'; tauto
+  | B3 => simp [constraintB3] at h'; tauto
+  | B4 => simp [constraintB4] at h'; tauto
+  | URS => simp [constraintUR] at h'; tauto
+  | ULS => simp [constraintUL] at h'; tauto
+  | IRS => simp [constraintIR] at h'; tauto
+  | ILS => simp [constraintIL] at h'; tauto
+  | DIS => simp [constraintDI] at h'; tauto
+  | SUS => simp [constraintSU] at h'; tauto
+  | SIS => simp [constraintSI] at h'; tauto
+  | STS => simp [constraintST] at h'; tauto
+  | AT => simp [constraintAT] at h'; tauto
+  | AU => simp [constraintAU] at h'; tauto
+  | PT => simp [constraintPT] at h'; tauto
+  | PU => simp [constraintPU] at h'; tauto
+  | PR => simp [constraintPR] at h'; tauto
+  | RP => simp [constraintRP] at h'; tauto
 
 end valid
 
 -- TODO : improve names
 private def verifyAll_aux {k} (h : (j : Fin k) → Σ α, Constraint α) : (i : Fin (k + 1)) →
-  Result' (∀ j : Fin k, j.val < i → (h j).snd.valid)
-| ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
-| ⟨n + 1, h1⟩ => do
-  let ⟨⟨⟩, h2⟩ ← verifyAll_aux h ⟨n, by omega⟩
-  let ⟨a, h3⟩ ← (h ⟨n, by omega⟩).snd.verify
-  have h : ∀ j : Fin k, j < n + 1 → (h j).snd.valid := by
-    intro j hj
-    simp_all only [Nat.lt_add_one_iff_lt_or_eq]
-    rcases hj with h | ⟨rfl⟩
-    · exact h2 j h
-    · use a
-  return ⟨⟨⟩, h⟩
+    Result' (∀ j : Fin k, j.val < i → (h j).snd.valid)
+  | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
+  | ⟨n + 1, h1⟩ => do
+    let ⟨⟨⟩, h2⟩ ← verifyAll_aux h ⟨n, by omega⟩
+    let ⟨a, h3⟩ ← (h ⟨n, by omega⟩).snd.verify
+    have h : ∀ j : Fin k, j < n + 1 → (h j).snd.valid := by
+      intro j hj
+      simp_all only [Nat.lt_add_one_iff_lt_or_eq]
+      rcases hj with h | ⟨rfl⟩
+      · exact h2 j h
+      · use a
+    return ⟨⟨⟩, h⟩
 
-def verifyAll {k} (h : (j : Fin k) → Σ α, Constraint α) : Result' (∀ j : Fin k, (h j).snd.valid) :=
-  do
-    let ⟨(), h⟩ ← verifyAll_aux h (Fin.last k)
-    return ⟨(), by simp_all⟩
+def verifyAll {k} (h : (j : Fin k) → Σ α, Constraint α) :
+    Result' (∀ j : Fin k, (h j).snd.valid) := do
+  let ⟨(), h⟩ ← verifyAll_aux h (Fin.last k)
+  return ⟨(), by simp_all⟩
 
 private def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → Result' (p j)) :
-  (i : Fin (k + 1)) →  Result' (∀ j : Fin k, j.val < i → p j)
-| ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
-| ⟨n + 1, h1⟩ => do
-  let ⟨⟨⟩, h2⟩ ← verifyAll'_aux verify ⟨n, by omega⟩
-  let ⟨⟨⟩, h3⟩ ← verify ⟨n, by omega⟩
-  have h : ∀ j : Fin k, j < n + 1 → p j := by
-    intro j hj
-    simp_all only [Nat.lt_add_one_iff_lt_or_eq]
-    rcases hj with h | ⟨rfl⟩
-    · exact h2 j h
-    · exact h3
-  return ⟨⟨⟩, h⟩
+    (i : Fin (k + 1)) →  Result' (∀ j : Fin k, j.val < i → p j)
+  | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
+  | ⟨n + 1, h1⟩ => do
+    let ⟨⟨⟩, h2⟩ ← verifyAll'_aux verify ⟨n, by omega⟩
+    let ⟨⟨⟩, h3⟩ ← verify ⟨n, by omega⟩
+    have h : ∀ j : Fin k, j < n + 1 → p j := by
+      intro j hj
+      simp_all only [Nat.lt_add_one_iff_lt_or_eq]
+      rcases hj with h | ⟨rfl⟩
+      · exact h2 j h
+      · exact h3
+    return ⟨⟨⟩, h⟩
 
-def verifyAll' {k} {p : Fin k → Prop} (verify : (i : Fin k) → Result' (p i)) : Result' (∀ i, p i) :=
-  do
-    let ⟨(), h⟩ ← verifyAll'_aux verify (Fin.last k)
-    return ⟨(), by simp_all⟩
+def verifyAll' {k} {p : Fin k → Prop} (verify : (i : Fin k) → Result' (p i)) :
+    Result' (∀ i, p i) := do
+  let ⟨(), h⟩ ← verifyAll'_aux verify (Fin.last k)
+  return ⟨(), by simp_all⟩
 
 abbrev IsUnsolvable : Prop :=
   ∃ Kᵢ : Fin C.knowledge.size, ∃ K, C.knowledge[Kᵢ] = unsolvable K
 
 def verifyIsUnsolvable : optParam (Fin (C.knowledge.size + 1)) (Fin.last C.knowledge.size) →
-  Result' (IsUnsolvable C)
-| 0 => throwUnvalid "Unsolvability NOT proven"
-| ⟨Kᵢ + 1, h⟩ =>
-  match heq : C.knowledge[Kᵢ] with
-  | unsolvable K => return ⟨(), by use ⟨Kᵢ, by omega⟩, K, heq⟩
-  | _ => verifyIsUnsolvable ⟨Kᵢ, by omega⟩
+    Result' (IsUnsolvable C)
+  | 0 => throwUnvalid "Unsolvability NOT proven"
+  | ⟨Kᵢ + 1, h⟩ =>
+    match heq : C.knowledge[Kᵢ] with
+    | unsolvable K => return ⟨(), by use ⟨Kᵢ, by omega⟩, K, heq⟩
+    | _ => verifyIsUnsolvable ⟨Kᵢ, by omega⟩
 
-def verify : Result' (C.valid ∧ IsUnsolvable C) :=
-  do
-    let ⟨(), h1⟩ ← verifyAll' C.verifyActionSetExpr
-    let ⟨(), h2⟩ ← verifyAll' C.verifyStateSetExpr
-    let hC : C.validSets := ⟨h1, h2⟩
-    let ⟨(), h3⟩ ← verifyAll (constraintKnowledge hC)
-    let ⟨(), h4⟩ ← verifyIsUnsolvable C
-    return ⟨(), ⟨hC, h3⟩, h4⟩
+def verify : Result' (C.valid ∧ IsUnsolvable C) := do
+  let ⟨(), h1⟩ ← verifyAll' C.verifyActionSetExpr
+  let ⟨(), h2⟩ ← verifyAll' C.verifyStateSetExpr
+  let hC : C.validSets := ⟨h1, h2⟩
+  let ⟨(), h3⟩ ← verifyAll (constraintKnowledge hC)
+  let ⟨(), h4⟩ ← verifyIsUnsolvable C
+  return ⟨(), ⟨hC, h3⟩, h4⟩
 
 end Validator.Certificate

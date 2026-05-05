@@ -28,43 +28,41 @@ end PartialModel
 namespace Clause
 
 private def isTrivial_aux {n} (acc : Vector (Bool × Bool) n) : Clause n → Vector (Bool × Bool) n
-| [] => acc
-| (i, true) :: ls => isTrivial_aux (acc.set i (true, acc[i].2)) ls
-| (i, false) :: ls => isTrivial_aux (acc.set i (acc[i].1, true)) ls
+  | [] => acc
+  | ⟨i, true⟩ :: ls => isTrivial_aux (acc.set i (true, acc[i].2)) ls
+  | ⟨i, false⟩ :: ls => isTrivial_aux (acc.set i (acc[i].1, true)) ls
 
 lemma getElem_isTrivial_aux {n acc} {γ : Clause n} {b1 b2} {i} :
-  (γ.isTrivial_aux acc)[i.val] = (b1, b2) ↔
-  (b1 = acc[i].1 || (i, true) ∈ γ) ∧ (b2 = acc[i].2 || (i, false) ∈ γ) :=
-  by
-    fun_induction isTrivial_aux
-    case _ acc => grind only [← List.not_mem_nil, usr Fin.isLt, = Fin.getElem_fin]
-    case _ acc j γ ih =>
-      simp_all only [Fin.getElem_fin, Bool.or_eq_true, decide_eq_true_eq, List.mem_cons,
-        Bool.decide_or]
-      constructor
-      · grind only [= Vector.getElem_set]
-      · intro h
-        sorry
-    sorry
+    (γ.isTrivial_aux acc)[i.val] = (b1, b2) ↔
+    (b1 = acc[i].1 || ⟨i, true⟩ ∈ γ) ∧ (b2 = acc[i].2 || ⟨i, false⟩ ∈ γ) := by
+  fun_induction isTrivial_aux
+  case _ acc => grind only [← List.not_mem_nil, usr Fin.isLt, = Fin.getElem_fin]
+  case _ acc j γ ih =>
+    simp_all only [Fin.getElem_fin, Bool.or_eq_true, decide_eq_true_eq, List.mem_cons,
+      Bool.decide_or]
+    constructor
+    · grind only [= Vector.getElem_set]
+    · intro h
+      sorry
+  sorry
 
 def isTrivial {n} (γ : Clause n) : Bool :=
   (true, true) ∈ isTrivial_aux (Vector.replicate n (false, false)) γ
 
-lemma isTrivial_iff' {n} {γ : Clause n} : isTrivial γ ↔ ∃ l ∈ γ, l.negate ∈ γ :=
-  by
-    simp only [isTrivial, Vector.mem_iff_getElem', Fin.getElem_fin, getElem_isTrivial_aux,
-      Vector.getElem_replicate, Bool.true_eq_false, decide_false, Bool.false_or, decide_eq_true_eq]
-    simp only [Literal, Literal.negate, Prod.exists, Bool.exists_bool]
-    grind only
+lemma isTrivial_iff' {n} {γ : Clause n} : isTrivial γ ↔ ∃ l ∈ γ, l.negate ∈ γ := by
+  simp only [isTrivial, Vector.mem_iff_getElem', Fin.getElem_fin, getElem_isTrivial_aux,
+    Vector.getElem_replicate, Bool.true_eq_false, decide_false, Bool.false_or, decide_eq_true_eq]
+  constructor
+  · grind [Literal.negate]
+  · rintro ⟨⟨v, (true | false)⟩, h⟩
+    all_goals grind [Literal.negate]
 
-lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ γ.models = Set.univ :=
-  by
-    sorry
+lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ γ.models = Set.univ := by
+  sorry
 
 lemma mem_models' {n} (γ : Clause n) (M : Model n) :
-  M ∈ γ.models ↔ (∃ l ∈ γ, M ∈ l.models) ∨ γ.isTrivial :=
-  by
-    simp_all only [mem_models, isTrivial_iff, Set.eq_univ_iff_forall, iff_self_or, implies_true]
+    M ∈ γ.models ↔ (∃ l ∈ γ, M ∈ l.models) ∨ γ.isTrivial := by
+  simp_all only [mem_models, isTrivial_iff, Set.eq_univ_iff_forall, iff_self_or, implies_true]
 
 end Formula.Clause
 namespace MODS
@@ -73,9 +71,8 @@ def models {n} (φ : MODS n) : Models n :=
   { M | ∃ M' ∈ φ.mods, M ∈ PartialModel.models M' }
 
 @[simp]
-lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models :=
-  by
-    simp [models]
+lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models := by
+  simp [models]
 
 instance {n} : Formula n (MODS n) where
 
@@ -88,7 +85,7 @@ instance {n} : Formula n (MODS n) where
     rintro h1 ⟨M'', h2, h3⟩
     use M'', h2
     have h4 := φ.prop M'' h2
-    simp [← h4, PartialModel.mem_vars] at h1
+    simp only [← h4, PartialModel.mem_vars] at h1
     grind only
 
 instance {n} : Top n (MODS n) where
@@ -113,54 +110,53 @@ instance {n} : ClausalEntailment n (MODS n) where
 
   entails φ γ := φ.mods.all (fun M ↦ γ.any fun l ↦ l ∈ M) || γ.isTrivial
 
-  entails_iff :=
-    by
-      intro φ γ
-      simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, decide_eq_true_eq,
-        Formula.models, Set.subset_def, mem_models, forall_exists_index, and_imp]
-      constructor
-      · simp only [Clause.mem_models]
-        intro h M M' hM' hM
-        rcases h with h | h
-        · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hM'
-          specialize h φ.mods[i] hM'
-          rcases h with ⟨l, h1, h2⟩
-          use l, h1
-          simp_all only [List.getElem_mem, PartialModel.mem_models]
-        · rw [Clause.isTrivial_iff, Set.eq_univ_iff_forall] at h
-          exact h M
-      · simp only [Clause.mem_models', or_iff_not_imp_right]
-        intro h1 h2 M hM
-        by_contra h3
-        obtain ⟨M', h4, h5⟩ : ∃ M', M' ∈ M.models ∧ M' ∉ γ.models := by
-          let M' := fun i ↦ i ∈ M.pos ∨ (i, false) ∈ γ
-          have hM' : M' ∈ M.models := by
-            simp_all only [PartialModel.mem_models, Literal.mem_models, Bool.false_eq_true,
-              not_false_eq_true, forall_const, PartialModel.mem_iff, Bool.not_eq_true, M']
-            intro l hl
-            rcases hl with ⟨h4, h5⟩ | ⟨h4, h5⟩
-            · simp only [h4, true_or, h5]
-            · simp only [h5, Bool.false_eq_true, iff_false, not_or]
-              constructor
-              · have := M.disjoint
-                grind only [VarSet.inter_eq_empty_iff]
-              · intro h6
-                simp only [not_exists, not_and] at h3
-                specialize h3 _ h6
-                grind only [PartialModel.mem_iff]
-          use M', hM'
-          specialize h1 M' M hM hM' h2
-          simp_all only [Clause.isTrivial_iff', not_exists, not_and, PartialModel.mem_models,
-            Literal.mem_models, Clause.mem_models, not_true_eq_false, M']
-          rcases h1 with ⟨l, h1, h4⟩
-          rcases l with ⟨v, true | false⟩
-          · grind only
-          · simp_all
-            specialize h3 _ h1
-            specialize h2 _ h1
-            grind only [Literal.negate, PartialModel.mem_iff]
-        specialize h1 M' M hM h4 h2
-        grind only [Clause.mem_models]
+  entails_iff := by
+    intro φ γ
+    simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, decide_eq_true_eq,
+      Formula.models, Set.subset_def, mem_models, forall_exists_index, and_imp]
+    constructor
+    · simp only [Clause.mem_models]
+      intro h M M' hM' hM
+      rcases h with h | h
+      · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hM'
+        specialize h φ.mods[i] hM'
+        rcases h with ⟨l, h1, h2⟩
+        use l, h1
+        simp_all only [List.getElem_mem, PartialModel.mem_models]
+      · rw [Clause.isTrivial_iff, Set.eq_univ_iff_forall] at h
+        exact h M
+    · simp only [Clause.mem_models', or_iff_not_imp_right]
+      intro h1 h2 M hM
+      by_contra h3
+      obtain ⟨M', h4, h5⟩ : ∃ M', M' ∈ M.models ∧ M' ∉ γ.models := by
+        let M' := fun i ↦ i ∈ M.pos ∨ ⟨i, false⟩ ∈ γ
+        have hM' : M' ∈ M.models := by
+          simp_all only [PartialModel.mem_models, Literal.mem_models, Bool.false_eq_true,
+            not_false_eq_true, forall_const, PartialModel.mem_iff, Bool.not_eq_true, M']
+          intro l hl
+          rcases hl with ⟨h4, h5⟩ | ⟨h4, h5⟩
+          · simp only [h4, true_or, h5]
+          · simp only [h5, Bool.false_eq_true, iff_false, not_or]
+            constructor
+            · have := M.disjoint
+              grind only [VarSet.inter_eq_empty_iff]
+            · intro h6
+              simp only [not_exists, not_and] at h3
+              specialize h3 _ h6
+              grind only [PartialModel.mem_iff]
+        use M', hM'
+        specialize h1 M' M hM hM' h2
+        simp_all only [Clause.isTrivial_iff', not_exists, not_and, PartialModel.mem_models,
+          Literal.mem_models, Clause.mem_models, not_true_eq_false, M']
+        rcases h1 with ⟨l, h1, h4⟩
+        rcases l with ⟨v, true | false⟩
+        · grind only
+        · simp_all
+          specialize h3 _ h1
+          specialize h2 _ h1
+          grind only [Literal.negate, PartialModel.mem_iff]
+      specialize h1 M' M hM h4 h2
+      grind only [Clause.mem_models]
 
 instance {n} : Implicant n (MODS n) where
 

@@ -30,85 +30,78 @@ def parseConstStateSetExpr {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   ]
 
 /-- Parse a bdd in the ddmp format. -/
-def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) :=
-  do
-    -- First line contains variable ordering
+def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) := do
+  -- First line contains variable ordering
 
-    -- Find BDD with the correct index
-    Parser.dropUntil dropLine (checkLine (toString idx))
-    -- TODO check format, this is probably to rigourous
-    checkLine ".ver DDDMP-2.0"
-    checkLine ".mode A"
-    checkLine ".varinfo 0"
-    let n_nodes ← readLine ".nnodes " parseNat
-    let n_vars ← readLine ".nvars " parseNat
-    let n_suppvars ← readLine ".nsuppvars " parseNat
-    let ids ← readLine ".ids" parseNat
-    let perm_ids ← readLine ".permids" parseListNat
-    -- currently only support for one root
-    checkLine ".nroots 1"
-    let root ← readLine ".rootids" parseNat
-    --let n_roots ← readLine ".nroots" parseListNat
-    --let root_ids ← readLine ".rootids" parseListNat
-    checkLine ".nodes"
-    -- TODO : parse nodes
-    checkLine ".end"
-    return sorry
+  -- Find BDD with the correct index
+  Parser.dropUntil dropLine (checkLine (toString idx))
+  -- TODO check format, this is probably to rigourous
+  checkLine ".ver DDDMP-2.0"
+  checkLine ".mode A"
+  checkLine ".varinfo 0"
+  let n_nodes ← readLine ".nnodes " parseNat
+  let n_vars ← readLine ".nvars " parseNat
+  let n_suppvars ← readLine ".nsuppvars " parseNat
+  let ids ← readLine ".ids" parseNat
+  let perm_ids ← readLine ".permids" parseListNat
+  -- currently only support for one root
+  checkLine ".nroots 1"
+  let root ← readLine ".rootids" parseNat
+  --let n_roots ← readLine ".nroots" parseListNat
+  --let root_ids ← readLine ".rootids" parseListNat
+  checkLine ".nodes"
+  -- TODO : parse nodes
+  checkLine ".end"
+  return sorry
 
-def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
-  do
-    let path ← parseWord
-    let idx ← parseNat
-    let content ← IO.FS.readFile path
-    match ← (parseBdd' n idx).run content with
-    | .ok _ bdd => return StateSetExpr.bdd sorry
-    | .error _ e =>
-      let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
-      throwUnexpectedWithMessage none msg
+def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) := do
+  let path ← parseWord
+  let idx ← parseNat
+  let content ← IO.FS.readFile path
+  match ← (parseBdd' n idx).run content with
+  | .ok _ bdd => return StateSetExpr.bdd sorry
+  | .error _ e =>
+    let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
+    throwUnexpectedWithMessage none msg
 
-def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
-  do
-    let i ← parseNat
-    -- The variables in dimacs format start counting with 1, whereas we start with 0
-    -- Immediately make the variables unprimed.
-    if h : 0 < i && i < n + 1
-    then return ⟨(⟨2 * (i - 1), by grind⟩, true), by grind⟩
-    else Parser.throwUnexpected
+def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } := do
+  let i ← parseNat
+  -- The variables in dimacs format start counting with 1, whereas we start with 0
+  -- Immediately make the variables unprimed.
+  if h : 0 < i && i < n + 1
+  then return ⟨⟨⟨2 * (i - 1), by grind⟩, true⟩, by grind⟩
+  else Parser.throwUnexpected
 
-def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
-  do
-    let i ← checkString "-" *> parseNat
-    if h : 0 < i && i < n + 1
-    then return ⟨(⟨2 * (i - 1), by grind⟩, false), by grind⟩
-    else Parser.throwUnexpected
+def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } := do
+  let i ← checkString "-" *> parseNat
+  if h : 0 < i && i < n + 1
+  then return ⟨⟨⟨2 * (i - 1), by grind⟩, false⟩, by grind⟩
+  else Parser.throwUnexpected
 
 def parseLiteral n : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
   Parser.withErrorMessage "Parsing a literal."
     (parsePosLiteral <|> parseNegLiteral)
 
-def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } :=
-  do
-    let ⟨γ, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
-    return ⟨γ.toList, by simp [VarSet.IsUnprimed]; grind⟩
+def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } := do
+  let ⟨γ, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
+  return ⟨γ.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
 def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
-  Parser.withErrorMessage "Parsing CNF-formula in DIMACS format"
-  do
+  Parser.withErrorMessage "Parsing CNF-formula in DIMACS format" do
     checkString "p" *> checkString "cnf" *> checkString (toString n)
     let nb_clauses ← parseNat
     let as ← take nb_clauses (parseClause n)
     return ⟨as.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
-  do
-    let ⟨φ, h1⟩ ← parseCNF
-    match h : Horn.fromCNF φ with
-    | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
-    | some ψ =>
-      have h2 : ψ.vars.IsUnprimed := by
-        apply Horn.vars_fromCNF at h
-        simp_all only [VarSet.IsUnprimed, VarSet.instHasSubset, implies_true]
-      return StateSetExpr.horn ⟨ψ, h2⟩
+def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) := do
+  let ⟨φ, h1⟩ ← parseCNF
+  match h : Horn.fromCNF φ with
+  | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
+  | some ψ =>
+    have h2 : ψ.vars.IsUnprimed := by
+      apply Horn.vars_fromCNF at h
+      simp_all only [VarSet.IsUnprimed, VarSet.Subset_def, implies_true]
+    return StateSetExpr.horn ⟨ψ, h2⟩
 
 def parseMods {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
   sorry
@@ -126,18 +119,17 @@ def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt)
     ("r", return StateSetExpr.regr (← parseNat) (← parseNat)),
   ]
 
-def parseDeadKnowledge : Parser Knowledge :=
-  do
-    let Sᵢ ← parseNat
-    dead Sᵢ <$> parseCases [
-      ("ed", return ED Sᵢ),
-      ("ud", return UD Sᵢ (← parseNat) (← parseNat)),
-      ("sd", return SD Sᵢ (← parseNat) (← parseNat)),
-      ("pg", return PG Sᵢ (← parseNat) (← parseNat) (← parseNat)),
-      ("pi", return PI Sᵢ (← parseNat) (← parseNat) (← parseNat)),
-      ("rg", return RG Sᵢ (← parseNat) (← parseNat) (← parseNat)),
-      ("ri", return RI Sᵢ (← parseNat) (← parseNat) (← parseNat))
-    ]
+def parseDeadKnowledge : Parser Knowledge := do
+  let Sᵢ ← parseNat
+  dead Sᵢ <$> parseCases [
+    ("ed", return ED Sᵢ),
+    ("ud", return UD Sᵢ (← parseNat) (← parseNat)),
+    ("sd", return SD Sᵢ (← parseNat) (← parseNat)),
+    ("pg", return PG Sᵢ (← parseNat) (← parseNat) (← parseNat)),
+    ("pi", return PI Sᵢ (← parseNat) (← parseNat) (← parseNat)),
+    ("rg", return RG Sᵢ (← parseNat) (← parseNat) (← parseNat)),
+    ("ri", return RI Sᵢ (← parseNat) (← parseNat) (← parseNat))
+  ]
 
 def parseUnsolvableKnowledge : Parser Knowledge :=
   unsolvable <$> parseCases [
@@ -145,35 +137,34 @@ def parseUnsolvableKnowledge : Parser Knowledge :=
     ("cg", return CG (← parseNat))
   ]
 
-def parseSubsetKnowledge : Parser Knowledge :=
-  do
-    let Eᵢ ← parseNat
-    let E'ᵢ ← parseNat
-    parseCases [
-      ("urs", return stateSubset Eᵢ E'ᵢ (URS Eᵢ E'ᵢ)),
-      ("ura", return actionSubset Eᵢ E'ᵢ (URA Eᵢ E'ᵢ)),
-      ("uls", return stateSubset Eᵢ E'ᵢ (ULS Eᵢ E'ᵢ)),
-      ("ula", return actionSubset Eᵢ E'ᵢ (ULA Eᵢ E'ᵢ)),
-      ("irs", return stateSubset Eᵢ E'ᵢ (IRS Eᵢ E'ᵢ)),
-      ("ils", return stateSubset Eᵢ E'ᵢ (ILS Eᵢ E'ᵢ)),
-      ("dis", return stateSubset Eᵢ E'ᵢ (DIS Eᵢ E'ᵢ)),
-      ("sus", return stateSubset Eᵢ E'ᵢ (SUS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("sua", return actionSubset Eᵢ E'ᵢ (SUA Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("sis", return stateSubset Eᵢ E'ᵢ (SIS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("sts", return stateSubset Eᵢ E'ᵢ (STS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("sta", return actionSubset Eᵢ E'ᵢ (STA Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("at", return stateSubset Eᵢ E'ᵢ (AT Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("au", return stateSubset Eᵢ E'ᵢ (AU Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("pt", return stateSubset Eᵢ E'ᵢ (PT Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("pu", return stateSubset Eᵢ E'ᵢ (PU Eᵢ E'ᵢ (← parseNat) (← parseNat))),
-      ("pr", return stateSubset Eᵢ E'ᵢ (PR Eᵢ E'ᵢ (← parseNat))),
-      ("rp", return stateSubset Eᵢ E'ᵢ (RP Eᵢ E'ᵢ (← parseNat))),
-      ("b1", return stateSubset Eᵢ E'ᵢ (B1 Eᵢ E'ᵢ)),
-      ("b2", return stateSubset Eᵢ E'ᵢ (B2 Eᵢ E'ᵢ)),
-      ("b3", return stateSubset Eᵢ E'ᵢ (B3 Eᵢ E'ᵢ)),
-      ("b4", return stateSubset Eᵢ E'ᵢ (B4 Eᵢ E'ᵢ)),
-      ("b5", return actionSubset Eᵢ E'ᵢ (B5 Eᵢ E'ᵢ)),
-    ]
+def parseSubsetKnowledge : Parser Knowledge := do
+  let Eᵢ ← parseNat
+  let E'ᵢ ← parseNat
+  parseCases [
+    ("urs", return stateSubset Eᵢ E'ᵢ (URS Eᵢ E'ᵢ)),
+    ("ura", return actionSubset Eᵢ E'ᵢ (URA Eᵢ E'ᵢ)),
+    ("uls", return stateSubset Eᵢ E'ᵢ (ULS Eᵢ E'ᵢ)),
+    ("ula", return actionSubset Eᵢ E'ᵢ (ULA Eᵢ E'ᵢ)),
+    ("irs", return stateSubset Eᵢ E'ᵢ (IRS Eᵢ E'ᵢ)),
+    ("ils", return stateSubset Eᵢ E'ᵢ (ILS Eᵢ E'ᵢ)),
+    ("dis", return stateSubset Eᵢ E'ᵢ (DIS Eᵢ E'ᵢ)),
+    ("sus", return stateSubset Eᵢ E'ᵢ (SUS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("sua", return actionSubset Eᵢ E'ᵢ (SUA Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("sis", return stateSubset Eᵢ E'ᵢ (SIS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("sts", return stateSubset Eᵢ E'ᵢ (STS Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("sta", return actionSubset Eᵢ E'ᵢ (STA Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("at", return stateSubset Eᵢ E'ᵢ (AT Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("au", return stateSubset Eᵢ E'ᵢ (AU Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("pt", return stateSubset Eᵢ E'ᵢ (PT Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("pu", return stateSubset Eᵢ E'ᵢ (PU Eᵢ E'ᵢ (← parseNat) (← parseNat))),
+    ("pr", return stateSubset Eᵢ E'ᵢ (PR Eᵢ E'ᵢ (← parseNat))),
+    ("rp", return stateSubset Eᵢ E'ᵢ (RP Eᵢ E'ᵢ (← parseNat))),
+    ("b1", return stateSubset Eᵢ E'ᵢ (B1 Eᵢ E'ᵢ)),
+    ("b2", return stateSubset Eᵢ E'ᵢ (B2 Eᵢ E'ᵢ)),
+    ("b3", return stateSubset Eᵢ E'ᵢ (B3 Eᵢ E'ᵢ)),
+    ("b4", return stateSubset Eᵢ E'ᵢ (B4 Eᵢ E'ᵢ)),
+    ("b5", return actionSubset Eᵢ E'ᵢ (B5 Eᵢ E'ᵢ)),
+  ]
 
 def parseKnowledge (idx : ℕ) : Parser Knowledge :=
   readLine (toString idx) <| parseCases [
@@ -183,8 +174,8 @@ def parseKnowledge (idx : ℕ) : Parser Knowledge :=
   ]
 
 partial def parseCertificate {n} (pt : STRIPS n)
-  (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) :
-  Parser (Certificate pt) :=
+    (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) :
+    Parser (Certificate pt) :=
   parseCases [
     ("a", do
       let A ← parseActionSetExpr C.actions.size
@@ -270,13 +261,12 @@ of the premises.
     k <KID> s <SID> <SID> b4                                    (basic statement 4)
     k <KID> s <AID> <AID> b5                                    (basic statement 5)
 -/
-def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) :=
-  do
-    let content ← IO.FS.readFile path
-    match ← (parseCertificate pt).run content with
-    | .ok _ res => return res
-    | .error _ e =>
-      let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString
-      throw (IO.userError msg)
+def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) := do
+  let content ← IO.FS.readFile path
+  match ← (parseCertificate pt).run content with
+  | .ok _ res => return res
+  | .error _ e =>
+    let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString
+    throw (IO.userError msg)
 
 end Validator.Certificate
