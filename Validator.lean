@@ -20,6 +20,6 @@ def main : IO Unit := do
       IO.println "The certificate is valid!"
     | .error e =>
       -- TODO Fix error messages
-      throw (IO.userError e.toString)
+      throw (IO.userError (Std.ToFormat.format e).pretty)
   catch e =>
     IO.println e

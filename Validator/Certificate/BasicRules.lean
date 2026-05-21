@@ -58,7 +58,7 @@ def get_formalism (hC : C.validSets) : List (Fin C.states.size) → StateSetForm
 
 def throwIncompatibleFormalism {α : outParam Type} {p}
     (R R' : StateSetFormalism) (Sᵢ : ℕ) : Result α p :=
-  throwUnvalid s!"The state set expression #{Sᵢ} is expected \
+  throwInvalid s!"The state set expression #{Sᵢ} is expected \
     to be a {R} formula, but it is a {R'} formula"
 
 def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
@@ -120,7 +120,7 @@ def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states
     else
       throwIncompatibleFormalism mods R Sᵢ
   | S =>
-    throwUnvalid s!"Expected the state set #{Sᵢ} to be a constant state set or \
+    throwInvalid s!"Expected the state set #{Sᵢ} to be a constant state set or \
       an atomic {R} formula, but it is {S}."
 
 def get_literal (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
@@ -276,7 +276,7 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
         UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsProgrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
-  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or progression"
+  | _ => throwInvalid s!"The state set #{Sᵢ} is not an intersection or progression"
 
 def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt)
@@ -327,7 +327,7 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
         UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsRegrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
-  | _ => Validator.throwUnvalid s!"The state set #{Sᵢ} is not an intersection or regression"
+  | _ => throwInvalid s!"The state set #{Sᵢ} is not an intersection or regression"
 
 end Certificate.validSets
 
@@ -402,7 +402,7 @@ def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       simp_all [h1.models_toDNF, h2.entails_iff, Variable.models]
     return ⟨(), h'⟩
   else
-    throwUnvalid "" -- TODO
+    throwInvalid "" -- TODO
 
 def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ClausalEntailment (2 * n) R1]
@@ -415,7 +415,7 @@ def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       simp_all [h1.entails_iff, h2.models_toCNF, Variable.models]
     return ⟨(), h'⟩
   else
-    throwUnvalid "" -- TODO
+    throwInvalid "" -- TODO
 
 def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ToDNF (2 * n) R1]
@@ -430,7 +430,7 @@ def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       grind
     return ⟨(), h'⟩
   else
-    throwUnvalid "" -- TODO
+    throwInvalid "" -- TODO
 
 def check_variable_subset_pos_neg_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ClausalEntailment (2 * n) R1]
@@ -452,7 +452,7 @@ def check_variable_subset_neg_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       simp_all [Variable.models]
     return ⟨(), h'⟩
   else
-    throwUnvalid "" -- TODO
+    throwInvalid "" -- TODO
 
 def check_variable_subset_neg_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : Implicant (2 * n) R1]
@@ -628,7 +628,7 @@ lemma checkB3_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
   grind
 
 def throwUnsuportedB4 {α : outParam Type} {p} (R1 R2 : StateSetFormalism) : Result α p :=
-  throwUnvalid s!"The rule B4 is not supported when \
+  throwInvalid s!"The rule B4 is not supported when \
   the left-hand-side is a {R1}-formula and the right-hand-side is a {R2}-formula."
 
 def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
@@ -638,7 +638,7 @@ def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
     subst h
     if h : checkB1 R1 (UnprimedLiterals.single l1) (UnprimedLiterals.single l2) then
       exact return ⟨(), by simp_all [checkB1_correct]⟩
-    else exact throwUnvalid s!"The left hand side is not a subset of the right hand side"
+    else exact throwInvalid s!"The left hand side is not a subset of the right hand side"
   else
     match l1, l2 with
     | (v1, true), (v2, true) =>
@@ -687,7 +687,7 @@ def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
           simp_all only [checkB1_correct]
         return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
       else
-        throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+        throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
   elim_exists := elim_exists_0
 
@@ -721,7 +721,7 @@ def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         simp_all only [checkB2_correct]
       return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
     else
-      throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
   elim_exists := elim_exists_0
 
@@ -754,7 +754,7 @@ def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
         simp_all only [checkB3_correct]
       return ⟨(), by use hS1ᵢ, hS2ᵢ, h2, h4, h6⟩
     else
-      throwUnvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
   elim_exists := elim_exists_0
 
@@ -816,7 +816,7 @@ def constraintB5 {C : Certificate pt} (hC : C.validSets) (A1ᵢ A2ᵢ : ℕ) : C
         use hA1ᵢ, hA2ᵢ
         grind⟩
     else
-      throwUnvalid s!"The action set #{A1ᵢ} is not a subset of #{A2ᵢ}"
+      throwInvalid s!"The action set #{A1ᵢ} is not a subset of #{A2ᵢ}"
 
   elim_exists := elim_exists_0
 

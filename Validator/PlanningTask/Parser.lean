@@ -164,11 +164,11 @@ private def parseSTRIPS : Parser (Σ n, STRIPS n) := do
 
 def parse (path : System.FilePath) : IO (Σ n, STRIPS n) := do
   let content ← IO.FS.readFile path
-  match ← parseSTRIPS.run content with
+  let p := Parser.withErrorMessage
+    s!"An error occured when parsing the STRIPS planning problem at \"{path}\""
+    parseSTRIPS
+  match ←  p.run content with
   | .ok _ res => return res
-  | .error _ e =>
-    let msg :=
-      s!"An error occured when parsing the planning problem at \"{path}\":\n" ++ e.toString
-    throw (IO.userError msg)
+  | .error _ e => throw (IO.userError (e.formatWithContext content).pretty)
 
 end Validator.STRIPS

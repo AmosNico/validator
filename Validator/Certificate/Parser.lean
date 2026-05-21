@@ -263,10 +263,11 @@ of the premises.
 -/
 def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) := do
   let content ← IO.FS.readFile path
-  match ← (parseCertificate pt).run content with
+  let p := Parser.withErrorMessage
+    s!"The certificate at \"{path}\" is not valid:\n"
+    (parseCertificate pt)
+  match ← p.run content with
   | .ok _ res => return res
-  | .error _ e =>
-    let msg := s!"The certificate at \"{path}\" is not valid:\n" ++ e.toString
-    throw (IO.userError msg)
+  | .error _ e => throw (IO.userError (e.formatWithContext content).pretty)
 
 end Validator.Certificate

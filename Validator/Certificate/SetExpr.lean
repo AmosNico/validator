@@ -28,15 +28,15 @@ instance : ToString ConstraintType where
 
 def ConstraintType.throw_out_of_bounds {α : outParam Type} {p}
     (T : ConstraintType) (Eᵢ : ℕ) : Result α p :=
-  throwUnvalid s!"There is no {T} with identifier #{Eᵢ}."
+  throwInvalid s!"There is no {T} with identifier #{Eᵢ}."
 
 def ConstraintType.throw_not_eq {α : outParam Type} {p}
     (T : ConstraintType) (Eᵢ : ℕ) (E'ᵢ : ℕ) : Result α p :=
-  throwUnvalid s!"Expected {T} with identifier #{Eᵢ}, but found #{E'ᵢ}."
+  throwInvalid s!"Expected {T} with identifier #{Eᵢ}, but found #{E'ᵢ}."
 
 def ConstraintType.throw_unexpected {α : outParam Type} {β γ} [ToString β] [ToString γ] {p}
     (T : ConstraintType) (Eᵢ : ℕ) (expected : β) (found : γ) : Result α p :=
-  throwUnvalid s!"The {T} with identifier #{Eᵢ} is expect to be {expected}, but it is {found}."
+  throwInvalid s!"The {T} with identifier #{Eᵢ} is expect to be {expected}, but it is {found}."
 
 def verify_bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Result' (Eᵢ < limit)  :=
   if h : Eᵢ < limit
@@ -56,7 +56,7 @@ def verifyActionsEnum (pt : STRIPS n) (as : List ℕ) : Result' (∀ a ∈ as, a
   if h : ∀ a ∈ as, a < pt.actions'.length then
     return ⟨(), h⟩
   else
-    throwUnvalid s!"Not all given actions ids exist in the planning task.\
+    throwInvalid s!"Not all given actions ids exist in the planning task.\
     The following action ids are out of bound:\n {as.filter (· < pt.actions'.length)}"
 
 namespace Certificate

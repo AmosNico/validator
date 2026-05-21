@@ -388,7 +388,7 @@ abbrev IsUnsolvable : Prop :=
 
 def verifyIsUnsolvable : optParam (Fin (C.knowledge.size + 1)) (Fin.last C.knowledge.size) →
     Result' (IsUnsolvable C)
-  | 0 => throwUnvalid "Unsolvability NOT proven"
+  | 0 => throwInvalid "Unsolvability NOT proven"
   | ⟨Kᵢ + 1, h⟩ =>
     match heq : C.knowledge[Kᵢ] with
     | unsolvable K => return ⟨(), by use ⟨Kᵢ, by omega⟩, K, heq⟩
