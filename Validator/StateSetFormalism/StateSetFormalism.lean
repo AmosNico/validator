@@ -137,6 +137,6 @@ lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goal_states := by
   · intro h
     obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
     use M
-    grind only [Model.unprimedState, usr Set.mem_setOf_eq]
+    simp_all only [Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq, implies_true, and_self]
 
 end Validator.StateSetFormalism

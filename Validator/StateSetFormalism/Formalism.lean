@@ -100,9 +100,8 @@ lemma unprimedState_eq_iff_unprimedVars {n} {M M' : Model (2 * n)} :
   · grind
 
 lemma exists_model_of_state {n} s : ∃ M : Model (2 * n), s = M.unprimedState := by
-  let M : Model (2 * n) := fun i => ⟨i / 2, by omega⟩ ∈ s
-  use M
-  simp [M, Model.unprimedState, Fin.toUnprimed]
+  use fun i => ⟨i / 2, by omega⟩ ∈ s
+  simp [Model.unprimedState, Fin.toUnprimed]
 
 end Formula.Model
 
@@ -617,7 +616,8 @@ lemma union_val [Formalism pt R] {L : UnprimedLiterals pt R} :
     · grind
     · apply Or.inr
       intro M' h4
-      have := mem_models_iff_of_eq_unprimedState h1 h4
+      have h5:= mem_models_iff_of_eq_unprimedState h1 h4
+      simp only [Variable.models] at h5
       grind
   · intro h
     rcases h with h | h

@@ -13,7 +13,7 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.29.0"
+rev = "v4.30.0"
 
 [[require]]
 name = "Parser"
@@ -24,7 +24,7 @@ rev = "update-toolchain-v4.29.0"
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
-rev = "main"
+rev = "38ee6ced442f85a05077871b5dd7181d4cc35a98"
 
 [[lean_lib]]
 name = "Validator"
