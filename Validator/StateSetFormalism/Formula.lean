@@ -1,7 +1,16 @@
-import Mathlib.Data.Fin.Parity
+module
 
-import Validator.PlanningTask.Basic
-set_option backward.isDefEq.respectTransparency false
+public import Mathlib.Data.Set.Operations
+public import Mathlib.Order.Fin.Basic
+
+/-
+Cannot compile inline/specializing declaration `disjunctionToCNF` as it uses `List.multiply` of
+module `Validator.Basic` which must be imported publicly.
+This limitation may be lifted in the future.
+-/
+public import Validator.Basic
+public import Validator.PlanningTask.Basic
+
 /-! # Formulas
 This file provides typeclasses for formulas and different operations these formulas can support.
 Note that this file does not implement any of these operations, but it formalizes what these
@@ -10,6 +19,8 @@ operations should do. More specifically the file contains
   literals, clauses, cubes, CNF-formulas and DNF-formulas, and
 * type classes for formulas and various operations on formulas.
 -/
+
+public section
 
 namespace Validator.Formula
 /-! ## Model -/
@@ -47,6 +58,7 @@ lemma mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.var ↔ l.isPos
   split
   all_goals simp
 
+@[expose]
 def negate {n} (l : Literal n) : Literal n :=
   ⟨l.var, !l.isPos⟩
 
@@ -76,7 +88,11 @@ def models {n} (γ : Clause n) : Models n :=
 
 @[simp]
 lemma mem_models {n} (γ : Clause n) M : M ∈ γ.models ↔ ∃ l ∈ γ, M ∈ l.models := by
-  simp [Clause.models]
+  simp [models]
+
+@[simp]
+lemma models_nil {n} : models ([] : Clause n) = ∅ := by
+  simp only [models, List.not_mem_nil, false_and, exists_false, Set.setOf_false]
 
 @[simp]
 lemma models_append {n} (γ1 γ2 : Clause n) : models (γ1 ++ γ2) = γ1.models ∪ γ2.models := by
@@ -89,6 +105,11 @@ def vars {n} (γ : Clause n) : VarSet n :=
 @[simp]
 lemma mem_vars {n} (γ : Clause n) {i} : i ∈ γ.vars ↔ ∃ l ∈ γ, l.var = i := by
   simp only [vars, VarSet.mem_ofList, List.mem_map]
+
+@[simp]
+lemma vars_cons {n} (γ : Clause n) {l} : Clause.vars (l :: γ) = γ.vars.insert l.var := by
+  rw [SetLike.ext_iff]
+  grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
 
 end Clause
 
@@ -110,6 +131,10 @@ lemma mem_models {n} (δ : Cube n) M : M ∈ δ.models ↔ ∀ l ∈ δ, M ∈ l
 lemma models_append {n} (δ1 δ2 : Cube n) : models (δ1 ++ δ2) = δ1.models ∩ δ2.models := by
   ext M
   grind only [models, List.mem_append, Set.mem_setOf_eq, Set.mem_inter_iff]
+
+@[simp]
+lemma models_nil {n} : models ([] : Cube n) = Set.univ := by
+  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.setOf_true]
 
 @[simp]
 lemma models_cons {n l} (δ : Cube n) : models (l :: δ) = l.models ∩ δ.models := by
@@ -179,6 +204,10 @@ def models {n} (φ : CNF n) : Models n :=
 @[simp]
 lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, M ∈ γ.models := by
   simp [models]
+
+@[simp]
+lemma models_nil {n} : CNF.models ([] : CNF n) = Set.univ := by
+  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.setOf_true]
 
 @[simp]
 lemma models_cons {n} (φ : CNF n) {γ} : CNF.models (γ :: φ) = γ.models ∩ φ.models := by
@@ -267,12 +296,10 @@ instance {n l} {M : PartialModel n} : Decidable (l ∈ M) := by
 def vars {n} (M : PartialModel n) : VarSet n :=
   M.pos ∪ M.neg
 
-lemma mem_vars_iff_mem_pos_or_mem_neg {n i} {M : PartialModel n} :
-    i ∈ M.vars ↔ i ∈ M.pos ∨ i ∈ M.neg := by
-  simp [vars]
+lemma vars_eq {n} (M : PartialModel n) : M.vars = M.pos ∪ M.neg := (rfl)
 
 lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.var = i := by
-  simp only [mem_vars_iff_mem_pos_or_mem_neg, mem_iff]
+  simp only [vars_eq, VarSet.mem_union, mem_iff]
   constructor
   · rintro (h | h)
     · use ⟨i, true⟩; grind only
@@ -282,6 +309,10 @@ lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.var 
 /-- All models corresponding to to partial model `M`. -/
 def models {n} (M : PartialModel n) : Models n :=
   { M' | (∀ i ∈ M.pos, M' i) ∧ (∀ i ∈ M.neg, ¬ M' i) }
+
+lemma mem_models' {n} (M : PartialModel n) {M'} :
+    M' ∈ M.models ↔ (∀ i ∈ M.pos, M' i) ∧ (∀ i ∈ M.neg, ¬ M' i) := by
+  simp [models]
 
 lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M, M' ∈ l.models := by
   simp only [models, Set.mem_setOf_eq, Literal.models]
@@ -318,7 +349,7 @@ def empty {n} : PartialModel n :=
 
 @[simp]
 lemma vars_empty {n} : (@empty n).vars = ∅ := by
-  simp [empty, SetLike.ext_iff, mem_vars_iff_mem_pos_or_mem_neg]
+  simp only [empty, vars_eq, VarSet.union_empty]
 
 @[simp]
 lemma models_empty {n} : (@empty n).models = Set.univ := by
@@ -610,8 +641,6 @@ class OfPartialModel n R [F : Formula n R] where
 
   models_ofPartialModel M : F.models (ofPartialModel M) = M.models
 
-
-
 structure Renaming {n} (dom : VarSet n) where
   rename : Fin n → Fin n
   mono : StrictMonoOn rename dom
@@ -623,18 +652,22 @@ lemma Renaming.ne {n} {dom : VarSet n} {r : Renaming dom} :
   exact Set.InjOn.ne (StrictMonoOn.injOn r.mono) hi hj
 
 -- TODO : the name is a bit misleading, since it does the inverse of the other rename functions
+@[expose]
 def Model.rename {n} {dom : VarSet n} (r : Renaming dom) (M : Model n) : Model n :=
   fun i ↦ M (r.rename i)
 
+@[expose]
 def Literal.rename {n} {dom : VarSet n} (r : Renaming dom) (l : Literal n) : Literal n :=
   ⟨r.rename l.var, l.isPos⟩
 
+@[expose]
 def Clause.rename {n} {dom : VarSet n} (r : Renaming dom) (γ : Clause n) : Clause n :=
   γ.map (Literal.rename r)
 
 def Cube.rename {n} {dom : VarSet n} (r : Renaming dom) (δ : Cube n) : Cube n :=
   δ.map (Literal.rename r)
 
+@[expose]
 def CNF.rename {n} {dom : VarSet n} (r : Renaming dom) (φ : CNF n) : CNF n :=
   φ.map (Clause.rename r)
 
@@ -680,8 +713,7 @@ def PartialModel.rename {n} {dom : VarSet n} (r : Renaming dom) (M : PartialMode
 @[simp]
 lemma PartialModel.mem_vars_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1 i} :
     i ∈ (M.rename r h1).vars ↔ ∃ j ∈ M.vars, i = r.rename j := by
-  simp only [rename, mem_vars_iff_mem_pos_or_mem_neg, VarSet.mem_rename]
-  grind only
+  grind only [rename, vars_eq, VarSet.mem_union, VarSet.mem_rename]
 
 @[simp]
 lemma PartialModel.models_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1} :

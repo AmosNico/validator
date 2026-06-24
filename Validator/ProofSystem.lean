@@ -1,6 +1,8 @@
+module
+
 import Validator.Basic
 import Validator.InductiveCertificate
-import Validator.StateSetFormalism.Formalism
+public import Validator.StateSetFormalism.Formalism
 
 namespace Validator.ProofSystem
 open Formalism
@@ -17,11 +19,11 @@ which was originally introduced in [ERH2017]. More specifically this file contai
 -/
 
 /-- A state `s` is dead iff it is not part of any plan for `pt`. -/
-abbrev DeadState {n} (pt : STRIPS n) (s : State n) : Prop :=
+public abbrev DeadState {n} (pt : STRIPS n) (s : State n) : Prop :=
   ∀ plan : Plan pt pt.init, s ∉ plan.path
 
 /-- Alternative definiton of dead states. -/
-lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
+public lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
     DeadState pt s ↔ ¬ Reachable pt pt.init s ∨ UnsolvableState pt s := by
   simp only [DeadState, not_nonempty_iff, UnsolvableState]
   constructor
@@ -39,14 +41,14 @@ lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
     · exact h.false (Plan.mk s' π₂ hgoal)
 
 /-- A set of states is dead iff all its members are dead. -/
-abbrev Dead {n} (pt : STRIPS n) (S : States n) : Prop :=
+public abbrev Dead {n} (pt : STRIPS n) (S : States n) : Prop :=
   ∀ s ∈ S, DeadState pt s
 
 /-! ## Proof System -/
 /--
 A derivation (or proof tree) in the proof system deriving the statement `conclusion`.
 -/
-inductive Derivation {n} (pt : STRIPS n) : (conclusion : Prop) → Type 1
+public inductive Derivation {n} (pt : STRIPS n) : (conclusion : Prop) → Type 1
   /-- Basic statement 1 -/
   | B1 R [Formalism pt R] {S S'} :
     IsLiteralInter pt R S →
@@ -169,7 +171,7 @@ inductive Derivation {n} (pt : STRIPS n) : (conclusion : Prop) → Type 1
 
 /-! ## Soundness of the Proof System -/
 
-private lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
+lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
     (h1 : pt.progression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₂, s ∈ S := by
   induction π₂ with
@@ -185,7 +187,7 @@ private lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs1
     | inr hs' =>
       have hs2 : s2 ∈ pt.progression S pt.actions :=
-        mem_progression_of_successor hs1 ha succ
+        STRIPS.mem_progression_of_successor hs1 ha succ
       have : s2 ∉ S' := by
         by_contra h
         have h' : DeadState pt s2 := h2 s2 h
@@ -199,7 +201,7 @@ private lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
         simp_all
       exact ih hs2 (Path.snoc a s1 ha π₁ succ) hgoal s' hs'
 
-lemma progression_goal {n} {pt : STRIPS n} {S S'}
+public lemma progression_goal {n} {pt : STRIPS n} {S S'}
     (h1 : pt.progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : Dead pt (S ∩ pt.goal_states)) :
@@ -213,7 +215,7 @@ lemma progression_goal {n} {pt : STRIPS n} {S S'}
   apply h3 s' hs' (Plan.mk s' π hgoal)
   exact Path.last_mem π
 
-lemma progression_initial {n} {pt : STRIPS n} {S S'}
+public lemma progression_initial {n} {pt : STRIPS n} {S S'}
     (h1 : pt.progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ S) :
@@ -226,7 +228,7 @@ lemma progression_initial {n} {pt : STRIPS n} {S S'}
   exact hs s_in_S
 
 -- Unable to use regular induction on π₁ (I assume because pt.init is not a variable)
-private lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
+lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
     (h1 : pt.regression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₁, s ∈ S := by
   cases heq : π₁ using Path.snocCases with
@@ -242,7 +244,7 @@ private lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs1
     | inr hs' =>
       have hs0 : s0 ∈ pt.regression S pt.actions :=
-        mem_regression_of_successor hs1 ha succ
+        STRIPS.mem_regression_of_successor hs1 ha succ
       have : s0 ∉ S' := by
         by_contra h
         have h' : DeadState pt s0 := h2 s0 h
@@ -257,7 +259,7 @@ private lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs'
 termination_by π₁.length
 
-lemma regression_goal {n} {pt : STRIPS n} {S S'}
+public lemma regression_goal {n} {pt : STRIPS n} {S S'}
     (h1 : pt.regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : Dead pt (Sᶜ ∩ pt.goal_states)) :
@@ -272,7 +274,7 @@ lemma regression_goal {n} {pt : STRIPS n} {S S'}
   simp only [Set.mem_compl_iff] at hs
   exact hs s_in_S
 
-lemma regression_initial {n} {pt : STRIPS n} {S S'}
+public lemma regression_initial {n} {pt : STRIPS n} {S S'}
     (h1 : pt.regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ Sᶜ) :
@@ -290,7 +292,8 @@ namespace Derivation
 The proof system is sound, i.e. given a derivation in the proof system,
 the conclusion of this derivation holds.
 -/
-theorem soundness {n} {pt : STRIPS n} {conclusion} : (d : Derivation pt conclusion) → conclusion
+public theorem soundness {n} {pt : STRIPS n} {conclusion} :
+    (d : Derivation pt conclusion) → conclusion
   | B1 _ _ _ h => h
   | B2 _ _ _ h => h
   | B3 _ _ _ h => h
@@ -364,29 +367,29 @@ theorem soundness {n} {pt : STRIPS n} {conclusion} : (d : Derivation pt conclusi
     · exact d2.soundness
   | AT S S' A A' d1 d2 => by
     apply subset_trans
-    · apply progression_monotone_actions
+    · apply STRIPS.progression_monotone_actions
       exact d2.soundness
     · exact d1.soundness
   | AU S S' A A' d1 d2 => by
-    rw[progression_union_actions]
+    rw[STRIPS.progression_union_actions]
     apply Set.union_subset
     · exact d1.soundness
     · exact d2.soundness
   | PT S S' S'' A d1 d2 => by
     apply subset_trans
-    · apply progression_monotone_states
+    · apply STRIPS.progression_monotone_states
       exact d2.soundness
     · exact d1.soundness
   | PU S S' S'' A d1 d2 => by
-    rw[progression_union_states]
+    rw[STRIPS.progression_union_states]
     apply Set.union_subset
     · exact d1.soundness
     · exact d2.soundness
   | PR S S' A d1 => by
-    apply sub_progression_iff_sub_regression.1
+    apply STRIPS.sub_progression_iff_sub_regression.1
     exact d1.soundness
   | RP S S' A d1 => by
-    apply sub_progression_iff_sub_regression.2
+    apply STRIPS.sub_progression_iff_sub_regression.2
     exact d1.soundness
 
 /-! ## Completeness of the Proof System -/
@@ -427,7 +430,7 @@ def fromInductiveCertificate {n} {pt : STRIPS n} {S} :
 The proof system is complete, i.e. if the planning task `pt` is unsolvable,
 then there exists a derivation in the proof system showing that `pt` is unsolvable.
 -/
-theorem completeness {n} {pt : STRIPS n} :
+public theorem completeness {n} {pt : STRIPS n} :
     Unsolvable pt → Nonempty (Derivation pt (Unsolvable pt)) := by
   intro h
   constructor

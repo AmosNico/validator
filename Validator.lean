@@ -1,9 +1,12 @@
+module
+
+import Validator.PlanningTask.Parser
 import Validator.Certificate.Parser
 import Validator.Certificate.ToDerivation
 
 open Validator
 
-def main : IO Unit := do
+public def main : IO Unit := do
   try
     let path <- IO.currentDir
     let pt_path := path / "test" / "success-task.txt"

@@ -1,12 +1,14 @@
-import Validator.PlanningTask.Parser
-import Validator.Certificate.Certificate
+module
 
-open Validator Parser Knowledge
-  DeadKnowledge UnsolvableKnowledge ActionSubsetKnowledge StateSubsetKnowledge
+import Validator.PlanningTask.Parser
+public import Validator.Certificate.Certificate
 
 /-! # Parser for Certificates
 This file contains a parser for parsing certificates for the proof system.
 -/
+
+open Validator Parser Knowledge
+  DeadKnowledge UnsolvableKnowledge ActionSubsetKnowledge StateSubsetKnowledge
 
 namespace Validator.Certificate
 
@@ -98,7 +100,7 @@ def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) := do
   match h : Horn.fromCNF φ with
   | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
   | some ψ =>
-    have h2 : ψ.vars.IsUnprimed := by
+    have h2 : (Formula.vars ψ).IsUnprimed := by
       apply Horn.vars_fromCNF at h
       simp_all only [VarSet.IsUnprimed, VarSet.Subset_def, implies_true]
     return StateSetExpr.horn ⟨ψ, h2⟩
@@ -261,7 +263,7 @@ of the premises.
     k <KID> s <SID> <SID> b4                                    (basic statement 4)
     k <KID> s <AID> <AID> b5                                    (basic statement 5)
 -/
-def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) := do
+public def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) := do
   let content ← IO.FS.readFile path
   let p := Parser.withErrorMessage
     s!"The certificate at \"{path}\" is not valid:\n"

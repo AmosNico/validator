@@ -1,7 +1,9 @@
-/- TODO : Copyright -/
+module
 
+public import Mathlib.Data.SetLike.Basic
 import Mathlib.Data.Finset.Dedup
-import Mathlib.Data.List.Sort
+
+public section
 
 namespace Validator
 
@@ -107,9 +109,15 @@ namespace STRIPS
 def actions {n} (pt : STRIPS n) : Actions n :=
   List.toFinset pt.actions'
 
+@[simp]
+lemma mem_action' {n} {pt : STRIPS n} {a} : a ∈ pt.actions' ↔ a ∈ pt.actions := by
+  simp only [actions, List.coe_toFinset, Set.mem_setOf_eq]
+
+@[expose]
 def init {n} (pt : STRIPS n) : State n :=
   SetLike.coe pt.init'
 
+@[expose]
 def GoalState {n} (pt : STRIPS n) (s : State n) : Prop :=
   SetLike.coe pt.goal' ⊆ s
 
@@ -148,3 +156,5 @@ abbrev Unsolvable {n} (pt : STRIPS n) :=
   UnsolvableState pt pt.init
 
 end Validator
+
+end

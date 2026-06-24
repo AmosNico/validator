@@ -18,13 +18,13 @@ rev = "v4.30.0"
 [[require]]
 name = "Parser"
 git = "https://github.com/fgdorais/lean4-parser"
-rev = "update-toolchain-v4.29.0"
+rev = "054bbbeab6d1918fb538ef66c6d148e9afda87e8"
 
 [[require]]
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
-rev = "38ee6ced442f85a05077871b5dd7181d4cc35a98"
+rev = "aa0ed30adb49d7d1b22b8ddd4301f360f19cd7b6"
 
 [[lean_lib]]
 name = "Validator"

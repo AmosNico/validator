@@ -1,12 +1,14 @@
-import Validator.StateSetFormalism.Formula
+module
+
+public import Validator.StateSetFormalism.Formula
 
 namespace Validator
 open Formula
 
-structure MODS n where
-  vars : VarSet n
-  mods : List (PartialModel n)
-  prop : ∀ M ∈ mods, M.vars = vars
+public structure MODS n where
+  private vars : VarSet n
+  private mods : List (PartialModel n)
+  private prop : ∀ M ∈ mods, M.vars = vars
   deriving DecidableEq, Repr
 
 namespace Formula.PartialModel
@@ -27,7 +29,7 @@ end PartialModel
 
 namespace Clause
 
-private def isTrivial_aux {n} (acc : Vector (Bool × Bool) n) : Clause n → Vector (Bool × Bool) n
+def isTrivial_aux {n} (acc : Vector (Bool × Bool) n) : Clause n → Vector (Bool × Bool) n
   | [] => acc
   | ⟨i, true⟩ :: ls => isTrivial_aux (acc.set i (true, acc[i].2)) ls
   | ⟨i, false⟩ :: ls => isTrivial_aux (acc.set i (acc[i].1, true)) ls
@@ -74,7 +76,8 @@ def models {n} (φ : MODS n) : Models n :=
 lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models := by
   simp [models]
 
-instance {n} : Formula n (MODS n) where
+@[no_expose]
+public instance {n} : Formula n (MODS n) where
 
   vars φ := φ.vars
 
@@ -88,7 +91,8 @@ instance {n} : Formula n (MODS n) where
     simp only [← h4, PartialModel.mem_vars] at h1
     grind only
 
-instance {n} : Top n (MODS n) where
+@[no_expose]
+public instance {n} : Top n (MODS n) where
 
   top := ⟨∅, [PartialModel.empty], by simp⟩
 
@@ -96,7 +100,8 @@ instance {n} : Top n (MODS n) where
     simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
       or_false, exists_eq_left, PartialModel.models_empty, Set.mem_univ, implies_true]
 
-instance {n} : Bot n (MODS n) where
+@[no_expose]
+public instance {n} : Bot n (MODS n) where
 
   bot := ⟨∅, [], by simp⟩
 
@@ -106,7 +111,8 @@ instance {n} : Bot n (MODS n) where
     simp only [Formula.models, Set.eq_empty_iff_forall_notMem, mem_models, List.not_mem_nil,
       false_and, exists_false, not_false_eq_true, implies_true]
 
-instance {n} : ClausalEntailment n (MODS n) where
+@[no_expose]
+public instance {n} : ClausalEntailment n (MODS n) where
 
   entails φ γ := φ.mods.all (fun M ↦ γ.any fun l ↦ l ∈ M) || γ.isTrivial
 
@@ -115,12 +121,12 @@ instance {n} : ClausalEntailment n (MODS n) where
     simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, decide_eq_true_eq,
       Formula.models, Set.subset_def, mem_models, forall_exists_index, and_imp]
     constructor
-    · simp only [Clause.mem_models]
-      intro h M M' hM' hM
+    · intro h M M' hM' hM
       rcases h with h | h
       · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hM'
         specialize h φ.mods[i] hM'
         rcases h with ⟨l, h1, h2⟩
+        rw [Clause.mem_models]
         use l, h1
         simp_all only [List.getElem_mem, PartialModel.mem_models]
       · rw [Clause.isTrivial_iff, Set.eq_univ_iff_forall] at h
@@ -158,25 +164,29 @@ instance {n} : ClausalEntailment n (MODS n) where
       specialize h1 M' M hM h4 h2
       grind only [Clause.mem_models]
 
-instance {n} : Implicant n (MODS n) where
+@[no_expose]
+public instance {n} : Implicant n (MODS n) where
 
   entails δ φ := sorry
 
   entails_iff := sorry
 
-instance {n} : BoundedConjuction n (MODS n) where
+@[no_expose]
+public instance {n} : BoundedConjuction n (MODS n) where
 
   and φ ψ := sorry
 
   models_and := sorry
 
-instance {n} : SententialEntailment n (MODS n) where
+@[no_expose]
+public instance {n} : SententialEntailment n (MODS n) where
 
   entails φ ψ := sorry
 
   entails_iff := sorry
 
-instance {n} : OfPartialModel n (MODS n) where
+@[no_expose]
+public instance {n} : OfPartialModel n (MODS n) where
 
   ofPartialModel M := ⟨M.vars, [M], by simp⟩
 
@@ -185,7 +195,8 @@ instance {n} : OfPartialModel n (MODS n) where
   models_ofPartialModel := by simp only [Formula.models, models, List.mem_singleton, exists_eq_left,
     Set.setOf_mem_eq, implies_true]
 
-instance {n} : Rename n (MODS n) where
+@[no_expose]
+public instance {n} : Rename n (MODS n) where
 
   rename φ V r h1 := {
     vars :=  φ.vars.map r.rename
@@ -204,13 +215,15 @@ instance {n} : Rename n (MODS n) where
   models_rename φ V r h1 := by
     simp [Formula.models, Set.ext_iff]
 
-instance {n} : ToCNF n (MODS n) where
+@[no_expose]
+public instance {n} : ToCNF n (MODS n) where
 
   toCNF := sorry
 
   models_toCNF := sorry
 
-instance {n} : ToDNF n (MODS n) where
+@[no_expose]
+public instance {n} : ToDNF n (MODS n) where
 
   toDNF φ := φ.mods.map PartialModel.toCube
 

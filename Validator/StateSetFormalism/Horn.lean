@@ -1,9 +1,12 @@
-import Validator.StateSetFormalism.Formula
+module
+
+public import Validator.StateSetFormalism.Formula
 
 namespace Validator.Formula.Clause
 
-abbrev IsHorn {n} (γ : Clause n) : Prop :=
+public def IsHorn {n} (γ : Clause n) : Prop :=
   γ.countP Literal.isPos ≤ 1
+  deriving Decidable
 
 -- M.models ∩ γ.models = M.models ∩ γ'.models
 def propagate_assignment {n} (M : PartialModel n) : Clause n → Option (Clause n)
@@ -21,8 +24,7 @@ lemma propagate_assignment_eq_none {n M} {γ : Clause n} :
     γ.propagate_assignment M = none → M.models ⊆ γ.models  := by
   fun_induction propagate_assignment
   case _ =>
-    simp only [reduceCtorEq, models, List.not_mem_nil, false_and, exists_false, Set.setOf_false,
-      Set.subset_empty_iff, IsEmpty.forall_iff]
+    simp only [reduceCtorEq, models_nil, Set.subset_empty_iff, IsEmpty.forall_iff]
   case _ l γ h1 =>
     simp_all [Set.subset_def, mem_models, PartialModel.mem_models]
   case _ l γ h1 h2 h3 =>
@@ -37,7 +39,8 @@ lemma propagate_assignment_eq_none {n M} {γ : Clause n} :
 lemma IsHorn_propagate_assignment {n} {γ γ' : Clause n} {M} :
     γ.propagate_assignment M = some γ' → γ.IsHorn → γ'.IsHorn := by
   intro h1
-  suffices h: γ'.countP Literal.isPos ≤ γ.countP Literal.isPos by grind only
+  suffices h : γ'.countP Literal.isPos ≤ γ.countP Literal.isPos by
+    grind only [Clause.IsHorn]
   fun_induction propagate_assignment generalizing γ'
   case _ => grind only
   case _ l γ h1 => simp only [reduceCtorEq] at h1
@@ -142,23 +145,23 @@ end Formula.CNF
 open Formula
 
 -- Enforce that unit_literals does not contain a literal and its negation?
-structure Horn n where
+public structure Horn n where
 
-  vars : VarSet n
+  private vars : VarSet n
 
-  empty : Bool
+  private empty : Bool
 
-  unit_literals : PartialModel n
+  private unit_literals : PartialModel n
 
-  clauses : CNF n
+  private clauses : CNF n
 
-  horn_prop : ∀ γ ∈ clauses, γ.IsHorn
+  private horn_prop : ∀ γ ∈ clauses, γ.IsHorn
 
-  clauses_prop : ∀ γ ∈ clauses, 2 ≤ γ.length
+  private clauses_prop : ∀ γ ∈ clauses, 2 ≤ γ.length
 
-  subset_vars : ∀ i ∈ unit_literals.vars ∪ clauses.vars, i ∈ vars
+  private subset_vars : ∀ i ∈ unit_literals.vars ∪ clauses.vars, i ∈ vars
 
-  vars_prop : unit_literals.vars ∩ clauses.vars = ∅
+  private vars_prop : unit_literals.vars ∩ clauses.vars = ∅
 
   deriving DecidableEq, Repr
 
@@ -176,7 +179,7 @@ lemma models_eq {n} {φ : Horn n} :
     φ.models = if φ.empty then ∅ else φ.unit_literals.models ∩ φ.clauses.models := by
   simp only [models, toCNF]
   split
-  · simp [CNF.models]
+  · simp
   · simp only [CNF.models_append, PartialModel.models_toCNF]
 
 @[simps]
@@ -187,12 +190,12 @@ def top {n} : Horn n where
   clauses := []
   horn_prop := by simp
   clauses_prop := by simp
-  subset_vars := by simp [CNF.vars]
+  subset_vars := by simp [CNF.mem_vars]
   vars_prop := by simp only [PartialModel.vars_empty, VarSet.empty_inter]
 
 @[simp]
 lemma models_top {n} : (@top n).models = Set.univ := by
-  simp [Set.ext_iff, top, models_eq]
+  simp [top, models_eq]
 
 @[simps]
 def bot {n} : Horn n where
@@ -202,7 +205,7 @@ def bot {n} : Horn n where
   clauses := []
   horn_prop := by simp
   clauses_prop := by simp
-  subset_vars := by simp [CNF.vars]
+  subset_vars := by simp [CNF.mem_vars]
   vars_prop := by simp only [PartialModel.vars_empty, VarSet.empty_inter]
 
 @[simp]
@@ -273,31 +276,24 @@ lemma vars_unit_propagate {n} {φ : Horn n} {δ} : (φ.unit_propagate δ).vars �
   | case3 φ l todo M hM res δ' φ' ih =>
     intro i hi
     specialize ih i hi
-    simp only [VarSet.mem_insert, Cube.vars, List.partition_eq_filter_filter, List.map_append,
-      List.map_flatten, VarSet.mem_ofList, List.mem_append, List.mem_flatten, List.mem_map,
-      List.mem_filter, CNF.mem_propagate_literal, ne_eq, decide_not, decide_eq_true_eq, existsAndEq,
-      and_true, exists_exists_and_eq_and, Bool.not_eq_eq_eq_not, Bool.not_true,
+    simp only [VarSet.mem_insert, List.partition_eq_filter_filter, Cube.mem_vars, List.mem_append,
+      List.mem_flatten, List.mem_filter, CNF.mem_propagate_literal, ne_eq, decide_not,
+      decide_eq_true_eq, existsAndEq, and_true, Bool.not_eq_eq_eq_not, Bool.not_true,
       decide_eq_false_iff_not, δ', res, φ'] at ih
-    simp only [Cube.vars, List.map_cons, VarSet.mem_ofList, List.mem_cons, List.mem_map]
-    rcases ih with h | ⟨γ, h1, l', h2, rfl⟩ | h
-    · grind only
-    · rcases h1 with ⟨⟨h1, h3⟩, h4⟩
-      apply Or.inl
-      apply φ.subset_vars
-      grind only [VarSet.mem_union, CNF.mem_vars, Clause.mem_vars]
-    · grind only
+    simp only [Cube.vars_cons, VarSet.mem_insert, Cube.mem_vars]
+    grind only [VarSet.mem_union, CNF.mem_vars, Clause.mem_vars, φ.subset_vars]
 
 lemma models_unit_propagate {n} {φ : Horn n} {δ} :
     (φ.unit_propagate δ).models = φ.models ∩ δ.models := by
   fun_induction unit_propagate with
-  | case1 φ => simp [Cube.models]
+  | case1 φ => simp [Cube.models_nil]
   | case2 φ l todo h =>
     simp only [PartialModel.insert_eq_none_iff] at h
     ext M
-    simp only [bot, models_eq, ↓reduceIte, Set.mem_empty_iff_false, Cube.models, List.mem_cons,
-      forall_eq_or_imp, Set.mem_inter_iff, Set.mem_ite_empty_left, Bool.not_eq_true,
-      PartialModel.mem_models, CNF.mem_models, Set.mem_setOf_eq, false_iff, not_and, not_forall,
-      and_imp, Clause.mem_models]
+    simp only [bot, models_eq, ↓reduceIte, Set.mem_empty_iff_false, Set.mem_inter_iff,
+      Set.mem_ite_empty_left, Bool.not_eq_true, PartialModel.mem_models, CNF.mem_models,
+      Clause.mem_models, Cube.mem_models, List.mem_cons, forall_eq_or_imp, false_iff, not_and,
+      not_forall, and_imp]
     intro h1 h2 h3 h4
     specialize h2 l.negate h
     simp [h4] at h2
@@ -393,7 +389,7 @@ lemma vars_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).vars ⊆ φ.vars
     next h2 l h3 =>
       intro i hi
       apply vars_unit_propagate at hi
-      simp only [Cube.vars, VarSet.mem_union, VarSet.mem_ofList, List.mem_map] at hi
+      simp only [VarSet.mem_union, Cube.mem_vars] at hi
       apply Clause.mem_propagate_assignment at h3
       rcases hi with hi | ⟨l', hl', rfl⟩
       · exact Or.inl hi
@@ -406,7 +402,7 @@ lemma vars_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).vars ⊆ φ.vars
 lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.models ∩ γ.models := by
   unfold insert
   split
-  · simp_all [ge_iff_le, bot, models_eq, ↓reduceIte, Set.empty_inter]
+  · simp_all only [bot, models_eq, ↓reduceIte, Set.empty_inter]
   · split
     case _ h2 h3 =>
       grind only [models_eq, = Set.subset_def, = Set.mem_inter_iff,
@@ -432,45 +428,8 @@ lemma models_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).models = φ.mo
 def insert' {n} (γ : Clause n) (φ : Horn n) : Option (Horn n) :=
   if h : γ.IsHorn then φ.insert γ h else none
 
-/--
-Translate the given CNF formula to a Horn-formula.
-Returns `none` if the CNF-formula is not a Horn-formula.
--/
-def fromCNF {n} (φ : CNF n) : Option (Horn n) :=
-  φ.foldrM insert' top
-
-lemma vars_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.vars ⊆ φ.vars := by
-  simp only [fromCNF]
-  induction φ generalizing ψ with
-  | nil =>
-    simp [CNF.vars]
-    grind only [!top_vars, VarSet.mem_empty]
-  | cons γ φ ih =>
-    intro h1
-    simp_all only [List.foldrM_cons, Option.bind_eq_bind, insert', ge_iff_le, CNF.vars_cons]
-    split at h1
-    · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h1
-      rcases h1 with ⟨φ', h2, rfl⟩
-      intro i hi
-      apply vars_insert at hi
-      simp only [VarSet.mem_union, VarSet.Subset_def] at *
-      grind only
-    · grind only [Option.bind_eq_none_iff]
-
-lemma models_fromCNF {n} {φ : CNF n} {ψ} : Horn.fromCNF φ = some ψ → ψ.models = φ.models := by
-  simp only [fromCNF]
-  induction φ generalizing ψ with
-  | nil =>
-    simp [CNF.models]
-    grind [models_top]
-  | cons γ φ ih =>
-    simp only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.models_cons]
-    split
-    · grind only [Option.bind_eq_some_iff, !models_insert]
-    · grind only [Option.bind_eq_none_iff]
-
-@[simps]
-instance {n} : Formula n (Horn n) where
+@[no_expose]
+public instance {n} : Formula n (Horn n) where
 
   vars φ := φ.vars
 
@@ -488,20 +447,22 @@ instance {n} : Formula n (Horn n) where
       · grind
       · simp_all only [eq_iff_iff, Bool.not_eq_true, List.mem_append, PartialModel.mem_toCNF,
           PartialModel.mem_def, VarSet.mem_union,
-          PartialModel.mem_vars_iff_mem_pos_or_mem_neg, CNF.mem_vars, Clause.mem_vars]
+          PartialModel.vars_eq, CNF.mem_vars, Clause.mem_vars]
         grind only [= List.mem_cons, ← List.not_mem_nil]
     specialize h1 l.1 h3
     simp_all only [Literal.mem_models, eq_iff_iff]
     use l, h2
 
-instance {n} : Top n (Horn n) where
+@[no_expose]
+public instance {n} : Top n (Horn n) where
 
   top := top
 
   models_top := by
     simp [Formula.models, models_top]
 
-instance {n} : Bot n (Horn n) where
+@[no_expose]
+public instance {n} : Bot n (Horn n) where
 
   bot := bot
 
@@ -510,7 +471,8 @@ instance {n} : Bot n (Horn n) where
   models_bot := by simp only [Formula.models, bot, models_eq, ↓reduceIte]
 
 -- Only if this makes ClausalEntailment easier
-instance {n} : Consistency n (Horn n) where
+@[no_expose]
+public instance {n} : Consistency n (Horn n) where
 
   consistent φ := ¬φ.empty
 
@@ -539,19 +501,20 @@ instance {n} : Consistency n (Horn n) where
           rcases l1 with ⟨v, true | false⟩
           · use v
             simp
-          · simp at h
+          · simp [Clause.IsHorn] at h
             use l2.1
             simp [← h.1]
+      simp only [PartialModel.mem_def, Clause.mem_models]
       use ⟨i, false⟩
-      simp only [h2, PartialModel.mem_def, Literal.mem_models, Bool.false_eq_true,
-        iff_false, true_and]
+      simp only [h2, Literal.mem_models, Bool.false_eq_true, iff_false, true_and]
       intro h3
       have h4 := VarSet.inter_eq_empty_iff.1 φ.vars_prop i
-      simp only [PartialModel.mem_vars_iff_mem_pos_or_mem_neg, h3, true_or, CNF.mem_vars,
+      simp only [PartialModel.vars_eq, VarSet.mem_union, h3, true_or, CNF.mem_vars,
         Clause.mem_vars, not_exists, not_and, forall_const] at h4
       exact h4 γ hγ ⟨i, false⟩ h2 rfl
 
-instance {n} : ClausalEntailment n (Horn n) where
+@[no_expose]
+public instance {n} : ClausalEntailment n (Horn n) where
 
   entails φ γ := not (Consistency.consistent n (φ.unit_propagate γ.neg))
 
@@ -561,7 +524,8 @@ instance {n} : ClausalEntailment n (Horn n) where
       Set.nonempty_def, Set.mem_inter_iff, Set.mem_compl_iff, Clause.mem_models, Set.subset_def]
     grind only
 
-instance {n} : SententialEntailment n (Horn n) where
+@[no_expose]
+public instance {n} : SententialEntailment n (Horn n) where
 
   entails φ ψ := ψ.toCNF.all fun γ ↦ ClausalEntailment.entails φ γ
 
@@ -570,7 +534,8 @@ instance {n} : SententialEntailment n (Horn n) where
 
 -- TODO : check whether this can be done more efficiently by only propagating
 -- ψ.unit_literals in φ.clauses and vice versa
-instance {n} : BoundedConjuction n (Horn n) where
+@[no_expose]
+public instance {n} : BoundedConjuction n (Horn n) where
   and φ ψ :=
     let χ : Horn n := {
       vars := φ.vars ∪ ψ.vars
@@ -599,7 +564,8 @@ instance {n} : BoundedConjuction n (Horn n) where
     simp [models_eq]
     grind
 
-instance {n} : OfPartialModel n (Horn n) where
+@[no_expose]
+public instance {n} : OfPartialModel n (Horn n) where
 
   ofPartialModel M := {
       vars := M.vars
@@ -610,15 +576,15 @@ instance {n} : OfPartialModel n (Horn n) where
       clauses_prop := by simp
       subset_vars := by
         grind only [VarSet.mem_union, CNF.mem_vars, List.not_mem_nil, Clause.mem_vars]
-      vars_prop := by
-        simp [CNF.vars] }
+      vars_prop := by simp }
 
-  vars_ofPartialModel := by simp only [vars_def, implies_true]
+  vars_ofPartialModel := by simp only [implies_true, Formula.vars]
 
-  models_ofPartialModel := by simp [models_eq, CNF.models]
+  models_ofPartialModel := by simp [models_eq, Formula.models]
 
 -- TODO : can this be done more directly?
-instance {n} : Implicant n (Horn n) where
+@[no_expose]
+public instance {n} : Implicant n (Horn n) where
 
   entails δ φ :=
     match δ.toPartialModel with
@@ -633,7 +599,8 @@ instance {n} : Implicant n (Horn n) where
       simp only [SententialEntailment.entails_iff, OfPartialModel.models_ofPartialModel,
         Cube.models_toPartialModel h1]
 
-instance {n} : Rename n (Horn n) where
+@[no_expose]
+public instance {n} : Rename n (Horn n) where
 
   rename φ V r h1 := {
       vars := VarSet.rename r φ.vars
@@ -649,10 +616,9 @@ instance {n} : Rename n (Horn n) where
       horn_prop := by
         have h : ∀ γ : Clause n, (γ.rename r).IsHorn ↔ γ.IsHorn := by
             intro γ
-            unfold Clause.rename Literal.rename
-            simp
+            simp only [Clause.IsHorn, Clause.rename, List.countP_map]
             rfl
-        simp only [CNF.rename, List.mem_map, ge_iff_le, forall_exists_index, and_imp,
+        simp only [CNF.rename, List.mem_map, forall_exists_index, and_imp,
           forall_apply_eq_imp_iff₂, h]
         exact φ.horn_prop
       clauses_prop := by
@@ -675,10 +641,10 @@ instance {n} : Rename n (Horn n) where
         intro i' i hi rfl j hj
         apply Renaming.ne
         · apply h1
-          simp [Formula.vars]
+          simp only [Formula.vars]
           grind
         · apply h1
-          simp [Formula.vars]
+          simp only [Formula.vars]
           grind
         grind }
 
@@ -691,10 +657,51 @@ instance {n} : Rename n (Horn n) where
     simp only [Formula.models, models_eq, PartialModel.models_rename, CNF.models_rename,
       Set.mem_ite_empty_left, Bool.not_eq_true, Set.mem_inter_iff, Set.mem_preimage]
 
-instance {n} : ToCNF n (Horn n) where
+@[no_expose]
+public instance {n} : ToCNF n (Horn n) where
 
   toCNF := toCNF
 
   models_toCNF φ := by simp only [Formula.models, models]
+
+/--
+Translate the given CNF formula to a Horn-formula.
+Returns `none` if the CNF-formula is not a Horn-formula.
+-/
+public def fromCNF {n} (φ : CNF n) : Option (Horn n) :=
+  φ.foldrM insert' top
+
+public lemma vars_fromCNF {n} {φ : CNF n} {ψ} :
+    Horn.fromCNF φ = some ψ → Formula.vars ψ ⊆ φ.vars := by
+  simp only [fromCNF, Formula.vars]
+  induction φ generalizing ψ with
+  | nil =>
+    simp
+    grind only [!top_vars, VarSet.mem_empty]
+  | cons γ φ ih =>
+    intro h1
+    simp_all only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.vars_cons]
+    split at h1
+    · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h1
+      rcases h1 with ⟨φ', h2, rfl⟩
+      intro i hi
+      apply vars_insert at hi
+      simp only [VarSet.mem_union, VarSet.Subset_def] at *
+      grind only
+    · grind only [Option.bind_eq_none_iff]
+
+public lemma models_fromCNF {n} {φ : CNF n} {ψ} :
+    Horn.fromCNF φ = some ψ → Formula.models ψ = φ.models := by
+  simp only [fromCNF, Formula.models]
+  induction φ generalizing ψ with
+  | nil =>
+    simp
+    grind [models_top]
+  | cons γ φ ih =>
+    simp only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.models_cons]
+    split
+    · grind only [Option.bind_eq_some_iff, !models_insert]
+    · grind only [Option.bind_eq_none_iff]
+
 
 end Validator.Horn

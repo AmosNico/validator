@@ -1,7 +1,16 @@
+module
+
+public import Mathlib.Algebra.Group.Nat.Even
+import Mathlib.Algebra.Ring.Parity
+public import Mathlib.Order.Monotone.Defs
+
 import Batteries.Data.BitVec.Lemmas
-import Validator.StateSetFormalism.Formula
+public import Validator.StateSetFormalism.Formula
+
 
 open Validator.Formula (Model Models Renaming OfPartialModel)
+
+public section
 
 /-!
 All variables `i` have a primed and an unprimed version,
@@ -9,9 +18,11 @@ represented by `2 * i + 1` and `2 * i` respectively.
 -/
 
 -- TODO : check if this makes sense with namespaces
+@[expose]
 def Fin.toUnprimed {n} : Fin n → Fin (2 * n) :=
   fun i ↦ ⟨2 * i.val, by omega⟩
 
+@[expose]
 def Fin.divNat' {n m} (i : Fin (m * n)) : Fin n :=
   ⟨i / m, Nat.div_lt_of_lt_mul <| i.is_lt⟩
 
@@ -64,6 +75,7 @@ end VarSet
 
 namespace Formula.Model
 
+@[expose]
 def unprimedState {n} (M : Model (2 * n)) : State n :=
   { i | M i.toUnprimed }
 
@@ -87,7 +99,7 @@ lemma toPrimed_eq {n} (V : VarSet n) (M : Model (2 * n)) : M.toPrimed V =
     else if i.divNat' ∈  V then
       M ⟨i + 1, by grind⟩
     else
-      M i := rfl
+      M i := (rfl)
 
 lemma unprimedState_eq_iff_unprimedVars {n} {M M' : Model (2 * n)} :
     M.unprimedState = M'.unprimedState ↔ ∀ i ∈ (VarSet.unprimedVars n), M i = M' i := by
@@ -143,12 +155,14 @@ abbrev Variable (pt : STRIPS n) (R : Type) [Formalism pt R] := R
 
 namespace Variable
 
+@[expose]
 def models [Formalism pt R] : Variable pt R → Models (2 * n) :=
   Formula.models
 
 abbrev vars [Formalism pt R] : Variable pt R → VarSet (2 * n) :=
   Formula.vars
 
+@[expose]
 def toStates [Formalism pt R] : Variable pt R → States n :=
   Formalism.toStates pt
 
@@ -177,7 +191,7 @@ def ofVarSet R [Formalism pt R] [h : OfPartialModel (2 * n) R]
       ⟨∅, V.toUnprimed, by simp⟩
   let x : Variable pt R := h.ofPartialModel M
   have hx : x.vars.IsUnprimed := by
-    simp only [h.vars_ofPartialModel, x, PartialModel.vars, M]
+    simp only [h.vars_ofPartialModel, x, PartialModel.vars_eq, M]
     split
     all_goals
       simp only [VarSet.IsUnprimed, VarSet.mem_union, VarSet.mem_empty, or_false, false_or]
@@ -187,7 +201,7 @@ def ofVarSet R [Formalism pt R] [h : OfPartialModel (2 * n) R]
 @[simp]
 lemma mem_vars_ofVarSet [Formalism pt R] [h : OfPartialModel (2 * n) R] {V pos i} :
     i ∈ (ofVarSet (h := h) R V pos).val.vars ↔ Even i.val ∧ i.divNat' ∈ V := by
-  simp [ofVarSet, OfPartialModel.vars_ofPartialModel, PartialModel.vars]
+  simp [ofVarSet, OfPartialModel.vars_ofPartialModel, PartialModel.vars_eq]
   split
   all_goals simp [VarSet.mem_toUnprimed]
 
@@ -195,7 +209,7 @@ lemma mem_vars_ofVarSet [Formalism pt R] [h : OfPartialModel (2 * n) R] {V pos i
 lemma mem_models_ofVarSet [Formalism pt R] [h : OfPartialModel (2 * n) R] {V : VarSet n} {pos M} :
     M ∈ (ofVarSet (h := h) R V pos).val.models ↔ (∀ i ∈ V, i ∈ M.unprimedState ↔ pos):= by
   simp only [Variable.models, ofVarSet, OfPartialModel.models_ofPartialModel,
-    PartialModel.models, Set.mem_setOf_eq]
+    PartialModel.mem_models']
   split
   all_goals
     simp_all [Model.unprimedState, VarSet.mem_toUnprimed, Fin.divNat', Fin.toUnprimed]
@@ -259,52 +273,66 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
 
 end UnprimedVariable
 
-abbrev Literal (pt : STRIPS n) R [Formalism pt R] := Variable pt R × Bool
+inductive Literal (pt : STRIPS n) R [Formalism pt R]
+  | pos : Variable pt R → Literal pt R
+  | neg : Variable pt R → Literal pt R
 
-def Literal.models [Formalism pt R] : Literal pt R → Models (2 * n)
-  | (X, true) => X.models
-  | (X, false) => X.modelsᶜ
+namespace Literal
 
-def Literal.toStates [Formalism pt R] : Literal pt R → States n
-  | (X, true) => X.toStates
-  | (X, false) => X.toStatesᶜ
+def models [Formalism pt R] : Literal pt R → Models (2 * n)
+  | pos X => X.models
+  | neg X => X.modelsᶜ
 
-abbrev UnprimedLiteral (pt : STRIPS n) R [Formalism pt R] := UnprimedVariable pt R × Bool
+@[expose]
+def toStates [Formalism pt R] : Literal pt R → States n
+  | pos X => X.toStates
+  | neg X => X.toStatesᶜ
+
+@[simp]
+lemma models_pos [Formalism pt R] {x : Variable pt R} : (pos x).models = x.models := (rfl)
+
+@[simp]
+lemma models_neg [Formalism pt R] {x : Variable pt R} : (neg x).models = x.modelsᶜ := (rfl)
+
+@[simp]
+lemma toStates_pos [Formalism pt R] {X : Variable pt R} : (pos X).toStates = X.toStates := (rfl)
+
+@[simp]
+lemma toStates_neg [Formalism pt R] {X : Variable pt R} : (neg X).toStates = X.toStatesᶜ := (rfl)
+
+end Literal
+
+inductive UnprimedLiteral (pt : STRIPS n) R [Formalism pt R]
+  | pos : UnprimedVariable pt R → UnprimedLiteral pt R
+  | neg : UnprimedVariable pt R → UnprimedLiteral pt R
+
 
 namespace UnprimedLiteral
 
-def val [Formalism pt R] : UnprimedLiteral pt R → Literal pt R :=
-  fun (x, b) ↦ (x, b)
-
-def pos [Formalism pt R] (x : UnprimedVariable pt R) : UnprimedLiteral pt R :=
-  (x, true)
-
-@[simp]
-lemma models_pos [Formalism pt R] {x : UnprimedVariable pt R} :
-    (pos x).val.models = x.val.models := by
-  simp [pos, val, Literal.models]
-
-def neg [Formalism pt R] (x : UnprimedVariable pt R) : UnprimedLiteral pt R :=
-  (x, false)
+@[expose]
+def val [Formalism pt R] : UnprimedLiteral pt R → Literal pt R
+  | pos x => .pos x.val
+  | neg x => .neg x.val
 
 @[simp]
-lemma models_neg [Formalism pt R] {x : UnprimedVariable pt R} :
-    (neg x).val.models = x.val.modelsᶜ := by
-  simp [neg, val, Literal.models]
+lemma val_pos [Formalism pt R] {x : UnprimedVariable pt R} : (pos x).val = .pos x.val := (rfl)
+
+@[simp]
+lemma val_neg [Formalism pt R] {x : UnprimedVariable pt R} : (neg x).val = .neg x.val := (rfl)
 
 lemma toStates_eq [Formalism pt R] : {l : UnprimedLiteral pt R} →
     l.val.toStates = l.val.models.image Model.unprimedState
-  | (X, true) => by
-    simp [Literal.toStates, Variable.toStates_eq, Literal.models, UnprimedLiteral.val]
-  | (X, false) => by
-    simp only [Literal.toStates, val, Variable.toStates_eq, Literal.models]
+  | pos x => by
+    simp only [Literal.toStates, val_pos, Variable.toStates_eq, Literal.models]
+  | neg x => by
+    simp only [Literal.toStates, val_neg, Variable.toStates_eq, Literal.models]
     ext s
     simp only [Set.mem_compl_iff, Set.mem_image, not_exists, not_and]
     constructor
     · have ⟨M, h⟩ := Model.exists_model_of_state s
       grind
     · rintro ⟨M, h1, rfl⟩ M' h2 h3
-      rw [UnprimedVariable.mem_models_iff_of_eq_unprimedState X.prop h3] at h2
+      rw [UnprimedVariable.mem_models_iff_of_eq_unprimedState x.prop h3] at h2
       contradiction
 
 lemma subset_states_iff_subset_models {R1 R2} [Formalism pt R1] [Formalism pt R2]
@@ -317,11 +345,11 @@ lemma subset_states_iff_subset_models {R1 R2} [Formalism pt R1] [Formalism pt R2
   constructor
   · rintro ⟨M', h1, h2⟩
     match l2 with
-    | (x2, true) =>
-      simp only [Literal.models, val] at h1 ⊢
+    | pos x2 =>
+      simp only [Literal.models] at h1 ⊢
       exact UnprimedVariable.mem_models_of_eq_toState h2 h1
-    | (x2, false) =>
-      simp only [Literal.models, val, Set.mem_compl_iff] at h1 ⊢
+    | neg x2 =>
+      simp only [Literal.models] at h1 ⊢
       intro h3
       apply h1
       exact UnprimedVariable.mem_models_of_eq_toState h2.symm h3
@@ -380,6 +408,7 @@ abbrev UnprimedVariables (pt : STRIPS n) R [Formalism pt R] := List (UnprimedVar
 
 namespace UnprimedVariables
 
+@[expose]
 def val [Formalism pt R] :
   UnprimedVariables pt R → Variables pt R := fun X ↦ X
 
@@ -568,8 +597,8 @@ def val [Formalism pt R] :
 abbrev empty [Formalism pt R] :  UnprimedLiterals pt R := ([], [])
 
 def single [Formalism pt R] : UnprimedLiteral pt R → UnprimedLiterals pt R
-  | (X, true) => ([X], [])
-  | (X, false) => ([], [X])
+  | .pos x => ([x], [])
+  | .neg x => ([], [x])
 
 @[simp]
 lemma union_single [Formalism pt R] {l : UnprimedLiteral pt R} :
@@ -578,7 +607,7 @@ lemma union_single [Formalism pt R] {l : UnprimedLiteral pt R} :
   split
   all_goals
     ext s
-    simp [UnprimedLiterals.val, Literal.models, UnprimedLiteral.val]
+    simp [UnprimedLiterals.val, Literal.models]
     grind
 
 @[simp]
@@ -588,7 +617,7 @@ lemma inter_single [Formalism pt R] {l : UnprimedLiteral pt R} :
   split
   all_goals
     ext s
-    simp [UnprimedLiterals.val, Literal.models, UnprimedLiteral.val]
+    simp [UnprimedLiterals.val, Literal.models]
     grind
 
 @[simps]

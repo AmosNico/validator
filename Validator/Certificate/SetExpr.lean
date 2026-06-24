@@ -1,40 +1,40 @@
-import Validator.Error
-import Validator.Certificate.Certificate
+module
+
+public import Validator.Error
+public import Validator.Certificate.Certificate
 
 namespace Validator
 
 variable {n : ℕ} {pt : STRIPS n}
 
-inductive SetType
+public inductive SetType
   | Actions
   | States
 
-inductive ConstraintType
+public inductive ConstraintType
   | ActionSetConstraint
   | StateSetConstraint
   | KnowledgeConstraint
 
-open ConstraintType
-
-abbrev SetType.toConstraintType : SetType → ConstraintType
-  | Actions => ActionSetConstraint
-  | States => StateSetConstraint
+public def SetType.toConstraintType : SetType → ConstraintType
+  | Actions => .ActionSetConstraint
+  | States => .StateSetConstraint
 
 instance : ToString ConstraintType where
   toString
-  | ActionSetConstraint => "action set"
-  | StateSetConstraint => "state set"
-  | KnowledgeConstraint => "knowledge"
+  | .ActionSetConstraint => "action set"
+  | .StateSetConstraint => "state set"
+  | .KnowledgeConstraint => "knowledge"
 
-def ConstraintType.throw_out_of_bounds {α : outParam Type} {p}
+public def ConstraintType.throw_out_of_bounds {α : outParam Type} {p}
     (T : ConstraintType) (Eᵢ : ℕ) : Result α p :=
   throwInvalid s!"There is no {T} with identifier #{Eᵢ}."
 
-def ConstraintType.throw_not_eq {α : outParam Type} {p}
+public def ConstraintType.throw_not_eq {α : outParam Type} {p}
     (T : ConstraintType) (Eᵢ : ℕ) (E'ᵢ : ℕ) : Result α p :=
   throwInvalid s!"Expected {T} with identifier #{Eᵢ}, but found #{E'ᵢ}."
 
-def ConstraintType.throw_unexpected {α : outParam Type} {β γ} [ToString β] [ToString γ] {p}
+public def ConstraintType.throw_unexpected {α : outParam Type} {β γ} [ToString β] [ToString γ] {p}
     (T : ConstraintType) (Eᵢ : ℕ) (expected : β) (found : γ) : Result α p :=
   throwInvalid s!"The {T} with identifier #{Eᵢ} is expect to be {expected}, but it is {found}."
 
@@ -43,9 +43,9 @@ def verify_bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Result' (Eᵢ < limi
   then return ⟨(), h⟩
   else T.throw_out_of_bounds Eᵢ
 
-def verify_action_bounds := verify_bounds ActionSetConstraint
+def verify_action_bounds := verify_bounds .ActionSetConstraint
 
-def verify_state_bounds := verify_bounds StateSetConstraint
+def verify_state_bounds := verify_bounds .StateSetConstraint
 
 def verify_and {p1 p2} (res1 : Result' p1) (res2 : Result' p2) : Result' (p1 ∧ p2) := do
   let ⟨(), h1⟩ ← res1
@@ -61,13 +61,15 @@ def verifyActionsEnum (pt : STRIPS n) (as : List ℕ) : Result' (∀ a ∈ as, a
 
 namespace Certificate
 
-def validActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) : Prop :=
+@[expose]
+public def validActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) : Prop :=
   match C.actions[Aᵢ] with
   | ActionSetExpr.enum as => ∀ a ∈ as, a < pt.actions'.length
   | ActionSetExpr.union A'ᵢ A''ᵢ => A'ᵢ < Aᵢ ∧ A''ᵢ < Aᵢ
   | ActionSetExpr.all => True
 
-def validStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) : Prop :=
+@[expose]
+public def validStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) : Prop :=
   match C.states[Sᵢ] with
   | StateSetExpr.empty => True
   | StateSetExpr.init => True
@@ -81,7 +83,7 @@ def validStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) : Prop :=
   | StateSetExpr.progr S'ᵢ Aᵢ => S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size
   | StateSetExpr.regr S'ᵢ Aᵢ => S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size
 
-def verifyActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) :
+public def verifyActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) :
     Result' (C.validActionSetExpr Aᵢ) := by
   unfold validActionSetExpr
   cases C.actions[Aᵢ] with
@@ -90,7 +92,7 @@ def verifyActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) :
       exact verify_and (verify_action_bounds Aᵢ A'ᵢ) (verify_action_bounds Aᵢ A''ᵢ)
   | all => exact pure ⟨(), True.intro⟩
 
-def verifyStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) :
+public def verifyStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) :
     Result' (C.validStateSetExpr Sᵢ) := by
   unfold validStateSetExpr
   cases C.states[Sᵢ] with
@@ -112,18 +114,23 @@ def verifyStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) :
   validActions : ∀ Aᵢ, (⟨actions, states, knowledge⟩ : Certificate pt).validActionSetExpr  Aᵢ
   validStates : ∀ Sᵢ, (⟨actions, states, knowledge⟩ : Certificate pt).validStateSetExpr  Sᵢ-/
 
-structure validSets (C : Certificate pt) : Prop where
+public structure validSets (C : Certificate pt) : Prop where
   validActions : ∀ Aᵢ, C.validActionSetExpr Aᵢ
   validStates : ∀ Sᵢ, C.validStateSetExpr Sᵢ
 
 namespace validSets
 
-abbrev ActionIds (pt : STRIPS n) := List (Fin pt.actions'.length)
+public abbrev ActionIds (pt : STRIPS n) := List (Fin pt.actions'.length)
 
-abbrev ActionIds.toActions (A : ActionIds pt) : Actions n :=
+public def ActionIds.toActions (A : ActionIds pt) : Actions n :=
   (A.map (pt.actions'[·])).toFinset
 
-def getActions' {C : Certificate pt} (hC : C.validSets)
+@[simp]
+public lemma ActionIds.mem_toActions (A : ActionIds pt) {a} :
+    a ∈ A.toActions ↔ ∃ i ∈ A, pt.actions'[i] = a := by
+  simp only [toActions, List.coe_toFinset, List.mem_map, Set.mem_setOf_eq]
+
+public def getActionIds {C : Certificate pt} (hC : C.validSets)
     (Aᵢ : Fin C.actions.size) : ActionIds pt :=
   match heq : C.actions[Aᵢ] with
   | ActionSetExpr.enum as => by
@@ -134,11 +141,15 @@ def getActions' {C : Certificate pt} (hC : C.validSets)
     have h' := hC.validActions Aᵢ
     have : A'ᵢ < Aᵢ ∧ A''ᵢ < Aᵢ := by
       simp_all [Certificate.validActionSetExpr]
-    hC.getActions' ⟨A'ᵢ, by omega⟩ ∪ hC.getActions' ⟨A''ᵢ, by omega⟩
+    hC.getActionIds ⟨A'ᵢ, by omega⟩ ∪ hC.getActionIds ⟨A''ᵢ, by omega⟩
   | ActionSetExpr.all => List.finRange pt.actions'.length
 
-def getActions {C : Certificate pt} (hC : C.validSets) (Aᵢ : Fin C.actions.size) : Actions n :=
-  (getActions' hC Aᵢ).toActions
+public def getActions {C : Certificate pt} (hC : C.validSets) (Aᵢ : Fin C.actions.size) :
+    Actions n :=
+  (getActionIds hC Aᵢ).toActions
+
+public lemma getActions_eq {C : Certificate pt} {hC : C.validSets} {Aᵢ} :
+    getActions hC Aᵢ = (getActionIds hC Aᵢ).toActions := (rfl)
 
 /-def getActions (C : Certificate pt) (h : C.validSets) (Aᵢ : Fin C.actions.size) : Actions n :=
   match heq : C.actions[Aᵢ] with
@@ -157,24 +168,23 @@ def getActions {C : Certificate pt} (hC : C.validSets) (Aᵢ : Fin C.actions.siz
     C.getActions h ⟨A'ᵢ, by omega⟩ ∪ C.getActions h ⟨A''ᵢ, by omega⟩
   | ActionSetExpr.all => pt.actions-/
 
-lemma getActionsAll {C : Certificate pt} {hC : C.validSets} Aᵢ
+public lemma getActionsAll {C : Certificate pt} {hC : C.validSets} Aᵢ
     (h : C.actions[Aᵢ]? = ActionSetExpr.all) : hC.getActions Aᵢ = pt.actions := by
-  unfold getActions getActions'
+  unfold getActions getActionIds
   split
-  all_goals simp_all
-  simp [STRIPS.actions]
+  all_goals simp_all [ActionIds.toActions]
 
-lemma getActionsUnion {C : Certificate pt} {hC : C.validSets} (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size)
-    (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
+public lemma getActionsUnion {C : Certificate pt} {hC : C.validSets}
+    (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size) (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
     hC.getActions Aᵢ = hC.getActions A'ᵢ ∪ hC.getActions A''ᵢ := by
   simp only [getActions, ActionIds.toActions, List.map_toFinset, Finset.coe_image,
     List.coe_toFinset]
-  rw [getActions']
+  rw [getActionIds]
   split
   all_goals simp_all [← Set.image_union]
   grind
 
-def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.states.size) : States n :=
+public def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.states.size) : States n :=
   have h := hC.validStates Sᵢ
   match heq : C.states[Sᵢ] with
   | StateSetExpr.empty => ∅
@@ -204,70 +214,70 @@ def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.states.size)
       simp_all [Certificate.validStateSetExpr]
     pt.regression (hC.getStates ⟨S'ᵢ, by omega⟩) (hC.getActions ⟨Aᵢ, h'.2⟩)
 
-lemma getStatesEmpty {C : Certificate pt} (hC : C.validSets) Sᵢ
+public lemma getStatesEmpty {C : Certificate pt} (hC : C.validSets) Sᵢ
     (h : C.states[Sᵢ]? = some StateSetExpr.empty) : hC.getStates Sᵢ = ∅ := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesInit {C : Certificate pt} (hC : C.validSets) Sᵢ
+public lemma getStatesInit {C : Certificate pt} (hC : C.validSets) Sᵢ
     (h : C.states[Sᵢ]? = some StateSetExpr.init) : hC.getStates Sᵢ = {pt.init} := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesGoal {C : Certificate pt} (hC : C.validSets) Sᵢ
+public lemma getStatesGoal {C : Certificate pt} (hC : C.validSets) Sᵢ
     (h : C.states[Sᵢ]? = some StateSetExpr.goal) : hC.getStates Sᵢ = pt.goal_states := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesBdd {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
+public lemma getStatesBdd {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
     (h : C.states[Sᵢ]? = some (StateSetExpr.bdd φ)) : hC.getStates Sᵢ = φ.val.toStates := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesHorn {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
+public lemma getStatesHorn {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
     (h : C.states[Sᵢ]? = some (StateSetExpr.horn φ)) : hC.getStates Sᵢ = φ.val.toStates := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesMods {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
+public lemma getStatesMods {C : Certificate pt} (hC : C.validSets) Sᵢ {φ}
     (h : C.states[Sᵢ]? = some (StateSetExpr.mods φ)) : hC.getStates Sᵢ = φ.val.toStates := by
   unfold getStates
   split
   all_goals simp_all
 
-lemma getStatesNeg {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
+public lemma getStatesNeg {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
     (h : C.states[Sᵢ]? = some (StateSetExpr.neg S'ᵢ)) : hC.getStates Sᵢ = (hC.getStates S'ᵢ)ᶜ := by
   rw[getStates]
   split
   all_goals simp_all
 
-lemma getStatesInter {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ S''ᵢ : Fin C.states.size)
-    (h : C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ)) :
+public lemma getStatesInter {C : Certificate pt} (hC : C.validSets)
+    (Sᵢ S'ᵢ S''ᵢ : Fin C.states.size) (h : C.states[Sᵢ]? = some (StateSetExpr.inter S'ᵢ S''ᵢ)) :
     hC.getStates Sᵢ = hC.getStates S'ᵢ ∩ hC.getStates S''ᵢ := by
   rw [getStates]
   split
   all_goals simp_all
 
-lemma getStatesUnion {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ S''ᵢ : Fin C.states.size)
-    (h : C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ)) :
+public lemma getStatesUnion {C : Certificate pt} (hC : C.validSets)
+    (Sᵢ S'ᵢ S''ᵢ : Fin C.states.size) (h : C.states[Sᵢ]? = some (StateSetExpr.union S'ᵢ S''ᵢ)) :
     hC.getStates Sᵢ = hC.getStates S'ᵢ ∪ hC.getStates S''ᵢ := by
   rw [getStates]
   split
   all_goals simp_all
 
-lemma getStatesProg {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
+public lemma getStatesProg {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
     (Aᵢ : Fin C.actions.size) (h : C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ)) :
     hC.getStates Sᵢ = pt.progression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
   rw [getStates]
   split
   all_goals simp_all
 
-lemma getStatesRegr {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
+public lemma getStatesRegr {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
     (Aᵢ : Fin C.actions.size) (h : C.states[Sᵢ]? = some (StateSetExpr.regr S'ᵢ Aᵢ)) :
     hC.getStates Sᵢ = pt.regression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
   rw [getStates]

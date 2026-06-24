@@ -1,5 +1,8 @@
-/- TODO : copyright -/
-import Validator.PlanningTask.Basic
+module
+
+public import Validator.PlanningTask.Basic
+
+public section
 
 namespace Validator
 
@@ -47,7 +50,7 @@ theorem soundness' {n} {pt : STRIPS n} {s S} :
     refine ih ?_ h3
     show s2 ∈ S
     apply h2
-    exact mem_progression_of_successor hs ha h
+    exact STRIPS.mem_progression_of_successor hs ha h
 
 /--
 Inductive certificates are sound, i.e. if an inductive certificate exists,
@@ -70,6 +73,7 @@ theorem completeness' {n} {pt : STRIPS n} {s} :
     apply h1
     exact Plan.mk s' π h3
   · intro s' h
+    simp only [STRIPS.mem_progression, Set.mem_setOf_eq] at h
     rcases h with ⟨a, ha, s'', h2, h3⟩
     obtain π : Path pt s s'' := Classical.choice h2
     constructor
@@ -84,3 +88,5 @@ theorem completeness {n} {pt : STRIPS n} : Unsolvable pt → ∃ S, InductiveCer
   completeness'
 
 end Validator.InductiveCertificate
+
+end

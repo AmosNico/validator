@@ -1,6 +1,11 @@
+module
+
+public import Validator.PlanningTask.Core
+import all Validator.PlanningTask.Core
 import Mathlib.Data.Fintype.Powerset
-import Validator.PlanningTask.Core
 import Validator.Basic
+
+public section
 
 namespace Validator
 
@@ -189,9 +194,10 @@ lemma reachable_self {n pt} : ∀ s : State n, Reachable pt s s := by
 
 namespace STRIPS
 
-/-! ### states and goal_states -/
+/-! ### goal_states -/
 
 /-- The set of all goal states of the given planning problem. -/
+@[expose]
 def goal_states {n} (pt : STRIPS n) : States n :=
   { s | pt.GoalState s }
 
@@ -202,6 +208,7 @@ def progression' {n} (_ : STRIPS n) (S : States n) (a : Action n) : States n :=
   { s | ∃ s' ∈ S, Successor a s' s }
 
 /-- The progression of a set of states `S` by a set of actions `A`. -/
+@[expose]
 def progression {n} (pt : STRIPS n) (S : States n) (A : Actions n) : States n :=
   { s | ∃ a ∈ A, s ∈ progression' pt S a }
 
@@ -210,14 +217,17 @@ def regression' {n} (_ : STRIPS n) (S : States n) (a : Action n) : States n :=
   { s | ∃ s' ∈ S, Successor a s s' }
 
 /-- The regression of a set of states `S` by a set of actions `A`. -/
+@[expose]
 def regression {n} (pt : STRIPS n) (S : States n) (A : Actions n) : States n :=
   { s | ∃ a ∈ A, s ∈ regression' pt S a }
 
-end STRIPS
+lemma mem_progression' {n} {pt : STRIPS n} {a S} :
+    ∀ s : State n, s ∈ pt.progression' S a ↔ ∃ s' ∈ S, Successor a s' s := by
+  simp only [STRIPS.progression', Set.mem_setOf_eq, implies_true]
 
 lemma mem_progression {n} {pt : STRIPS n} {A S} :
     ∀ s : State n, s ∈ pt.progression S A ↔ ∃ a ∈ A, ∃ s' ∈ S, Successor a s' s := by
-  simp [STRIPS.progression, STRIPS.progression']
+  simp [STRIPS.progression, mem_progression']
 
 lemma mem_progression_of_successor {n} {pt : STRIPS n} {S s s' A a}
     (hs : s ∈ S) (ha : a ∈ A) (h : Successor a s s') : s' ∈ pt.progression S A := by
@@ -252,9 +262,13 @@ lemma progression_monotone_actions {n} {pt : STRIPS n} {S} : Monotone (pt.progre
   obtain ⟨a, ha, s', hs', succ⟩ := hs
   use a, hA ha, s'
 
+lemma mem_regression' {n} {pt : STRIPS n} {a S} :
+    ∀ s : State n, s ∈ pt.regression' S a ↔ ∃ s' ∈ S, Successor a s s' := by
+  simp only [STRIPS.regression', Set.mem_setOf_eq, implies_true]
+
 lemma mem_regression {n} {pt : STRIPS n} {S A} :
     ∀ s : State n, s ∈ pt.regression S A ↔ ∃ a ∈ A, ∃ s' ∈ S, Successor a s s' := by
-  simp [STRIPS.regression, STRIPS.regression']
+  simp [STRIPS.regression, STRIPS.mem_regression']
 
 lemma mem_regression_of_successor {n} {pt : STRIPS n} {S s s' A a}
     (hs : s ∈ S) (ha : a ∈ A) (h : Successor a s' s) : s' ∈ pt.regression S A := by
@@ -281,6 +295,8 @@ lemma sub_progression_iff_sub_regression {n} {pt : STRIPS n} {S S' A} :
       use a, ha, s'
     have : s ∈ Sᶜ := h1 hs_regr
     simp_all
+
+end STRIPS
 
 -- TODO : documentation
 /-! ## VarSet -/

@@ -1,9 +1,11 @@
-import Mathlib.Data.Finset.Union
+module
+
+public import Mathlib.Data.Finset.Union
 import Mathlib.Data.Finset.BooleanAlgebra
 import Mathlib.Data.List.Sort
 
 --@[simp 50]
-lemma Array.lt_of_getElem?_eq_some {α a} {xs : Array α} {i : ℕ}
+public lemma Array.lt_of_getElem?_eq_some {α a} {xs : Array α} {i : ℕ}
     (h : xs[i]? = some a) : i < xs.size := by
   apply Array.getElem_of_getElem? at h
   rcases h
@@ -115,15 +117,15 @@ lemma List.mem_biInter {α β} [Fintype β] [DecidableEq β] {l : List α} {f : 
   by simp [List.biInter]
 -/
 @[simp]
-lemma Fintype.elems_eq_univ {α} [h : Fintype α] : h.elems = Finset.univ := by
+public lemma Fintype.elems_eq_univ {α} [h : Fintype α] : h.elems = Finset.univ := by
   ext a
   simp [Fintype.complete]
 
-def Vector.elems {α} [h : Fintype α] [DecidableEq α] : (n : ℕ) → Finset (Vector α n)
+public def Vector.elems {α} [h : Fintype α] [DecidableEq α] : (n : ℕ) → Finset (Vector α n)
   | 0 => {#v[]}
   | n + 1 => Finset.biUnion (elems n) fun v ↦ h.elems.image v.push
 
-instance {α} [Fintype α] [DecidableEq α] {n} : Fintype (Vector α n) where
+public instance {α} [Fintype α] [DecidableEq α] {n} : Fintype (Vector α n) where
   elems := Vector.elems n
   complete := by
     induction n with
@@ -135,7 +137,7 @@ instance {α} [Fintype α] [DecidableEq α] {n} : Fintype (Vector α n) where
       use v, ih v, a
 
 /-- Variant of `Vector.mem_iff_getElem` using `Fin`. -/
-lemma Vector.mem_iff_getElem' {α n} {a : α} {xs : Vector α n} :
+public lemma Vector.mem_iff_getElem' {α n} {a : α} {xs : Vector α n} :
     a ∈ xs ↔ ∃ i : Fin n, xs[i] = a := by
   simp only [mem_iff_getElem, Fin.getElem_fin]
   constructor
@@ -169,15 +171,15 @@ def List.multiply {α β} (f : α → β → β) (init : β) : List (List α) �
 | (a :: as) :: ass => (ass.multiply f init).map (f a ·) ++ multiply f init (as :: ass)
 -/
 
-def List.multiply {α} : List (List (List α)) → List (List α) :=
+public def List.multiply {α} : List (List (List α)) → List (List α) :=
   List.mulr (· ++ ·) []
 
 @[simp]
-lemma List.multiply_nil {α} : multiply (α := α) [] = [[]] := by
+public lemma List.multiply_nil {α} : multiply (α := α) [] = [[]] := by
   simp [multiply, mulr]
 
 @[simp]
-lemma List.multiply_cons {α} {asss} {ass : List (List α)} :
+public lemma List.multiply_cons {α} {asss} {ass : List (List α)} :
     multiply (ass :: asss) = ass.flatMap (fun as ↦ (multiply asss).map (as ++ ·)) := by
   simp [multiply, mulr, productWith, List.product.eq_1, List.map_flatMap]
   congr
@@ -226,19 +228,19 @@ lemma List.mem_multiply {α} {asss as} :
 -/
 
 
-lemma List.map_toFinset {α β} [DecidableEq α] [DecidableEq β] {f : α → β} {xs : List α} :
+public lemma List.map_toFinset {α β} [DecidableEq α] [DecidableEq β] {f : α → β} {xs : List α} :
     (xs.map f).toFinset = xs.toFinset.image f := by
   ext b
   simp
 
-lemma List.length_flatten_short {α} (ass : List (List α)) (h : ∀ as ∈ ass, as.length < 2) :
+public lemma List.length_flatten_short {α} (ass : List (List α)) (h : ∀ as ∈ ass, as.length < 2) :
     ass.flatten.length ≤ ass.length := by
   induction ass with
   | nil => simp
   | cons as ass ih => grind
 
 @[simp]
-lemma Set.inter_compl_subset_union_compl {α} {s1 s2 s3 s4 : Set α} :
+public lemma Set.inter_compl_subset_union_compl {α} {s1 s2 s3 s4 : Set α} :
     s1 ∩ s2ᶜ ⊆ s3 ∪ s4ᶜ ↔ s1 ∩ s4 ⊆ s3 ∪ s2 := by
   simp [Set.subset_def]
   grind
