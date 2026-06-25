@@ -568,7 +568,7 @@ lemma checkB2'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     simp [checkB2', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
   simp only [Fin.getElem_fin, STRIPS.mem_progression', UnprimedVariables.mem_inter, Successor,
-    Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_diff]
+    Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
     UnprimedVariables.mem_inter, mem_preVariables, forall_eq, mem_toStates_preVariable,
@@ -608,7 +608,7 @@ lemma checkB3'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     simp [checkB3', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
   simp only [Fin.getElem_fin, STRIPS.mem_regression', UnprimedVariables.mem_inter, Successor,
-    Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_diff]
+    Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
     UnprimedVariables.mem_inter, mem_effectVariables, forall_eq_or_imp, mem_toStates_addVariable,
