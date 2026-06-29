@@ -19,7 +19,7 @@ rev = "v4.31.0"
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
-rev = "828e70d89d3053cf3cdb43ceb4632ecabebcd72d"
+rev = "b09490af5fd2ad64fd015b74d329c077bf3afe38"
 
 [[require]]
 name = "strips"

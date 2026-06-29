@@ -106,38 +106,64 @@ def parseConstStateSetExpr {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) 
     ("g", return StateSetExpr.goal)
   ]
 
+/-
 /-- Parse a bdd in the ddmp format. -/
 def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) := do
   -- First line contains variable ordering
 
   -- Find BDD with the correct index
   Parser.dropUntil dropLine (checkLine (toString idx))
-  -- TODO check format, this is probably to rigourous
-  checkLine ".ver DDDMP-2.0"
-  checkLine ".mode A"
-  checkLine ".varinfo 0"
-  let n_nodes ← readLine ".nnodes " parseNat
-  let n_vars ← readLine ".nvars " parseNat
-  let n_suppvars ← readLine ".nsuppvars " parseNat
-  let ids ← readLine ".ids" parseNat
-  let perm_ids ← readLine ".permids" parseListNat
-  -- currently only support for one root
-  checkLine ".nroots 1"
-  let root ← readLine ".rootids" parseNat
-  --let n_roots ← readLine ".nroots" parseListNat
-  --let root_ids ← readLine ".rootids" parseListNat
-  checkLine ".nodes"
-  -- TODO : parse nodes
-  checkLine ".end"
-  return sorry
+  return parseBdd
+-/
+/--
+The certificates allow for storing multiple BDDs in one file, and the name of the file is not known
+in advance. To avoid that the same file is read multiple times, the file is read the first time
+it is mentioned, and all BDDs in the file are stored. A `BddManager` keeps track of all Bdds read
+so far.
+-/
+structure BddManager {n} (pt : PlanningTask n) where
+  dir : System.FilePath
+  bdds : Std.HashMap System.FilePath (Array (StateSetExpr pt))
 
-def parseBdd {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
+def BddManager.init {n} {pt : PlanningTask n} (dir : String) : BddManager pt :=
+  ⟨dir, ∅⟩
+
+def parseBdd' {n} {pt : PlanningTask n} (h : IO.FS.Handle) : Parser (StateSetExpr pt) := do
   let path ← parseWord
   let idx ← parseNat
-  let content ← IO.FS.readFile path
-  match ← (parseBdd' n idx).run content with
-  | .ok _ _ bdd => return StateSetExpr.bdd sorry
-  | .error _ _ e =>
+  try
+    let ⟨ψ, h1⟩ ← BDD.parseBDD h
+    return StateSetExpr.bdd ⟨ψ, h1⟩
+  catch _ =>
+    let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
+    throwUnexpectedWithMessage none msg
+
+def BddManager.parseBddFile {n} {pt : PlanningTask n} (M : BddManager pt) (path : System.FilePath) :
+    IO (BddManager pt) := do
+  let h ← IO.FS.Handle.mk (M.dir / path) .read
+
+  -- TODO
+  sorry
+
+def BddManager.getBDD {n} (pt : PlanningTask n) (M : BddManager pt)
+    (path : System.FilePath) (id : ℕ) : IO (BddManager pt × StateSetExpr pt) :=
+  match M.bdds[path]? with
+  | some bdds => do
+    let some B := bdds[id]? | throw sorry
+    return (M, B)
+  | none => do
+    let M ← M.parseBddFile path
+    let some bdds := M.bdds[path]? | unreachable!
+    let some B := bdds[id]? | sorry
+    return (M, B)
+
+def parseBdd {n} {pt : PlanningTask n} (M : BddManager pt) :
+    Parser (BddManager pt × StateSetExpr pt) := do
+  let path ← parseWord
+  let idx ← parseNat
+  try
+    M.getBDD pt path idx
+  catch _ =>
     let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
     throwUnexpectedWithMessage none msg
 
@@ -250,22 +276,21 @@ def parseKnowledge (idx : ℕ) : Parser Knowledge :=
     ("s", parseSubsetKnowledge)
   ]
 
-partial def parseCertificate {n} (pt : PlanningTask n)
-    (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) :
-    Parser (Certificate pt) :=
+partial def parseCertificate {n} (pt : PlanningTask n) (M : BddManager pt)
+    (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) : Parser (Certificate pt) :=
   parseCases [
     ("a", do
       let A ← parseActionSetExpr C.actions.size
-      parseCertificate pt {C with actions := C.actions.push A}),
+      parseCertificate pt M {C with actions := C.actions.push A}),
     ("e", do
       let S ← parseStateSetExpr pt C.states.size
-      parseCertificate pt {C with states := C.states.push S}),
+      parseCertificate pt M {C with states := C.states.push S}),
     ("k", do
       let K ← parseKnowledge C.knowledge.size
-      parseCertificate pt {C with knowledge := C.knowledge.push K}),
-    ("#", dropLine *> parseCertificate pt C)
+      parseCertificate pt M {C with knowledge := C.knowledge.push K}),
+    ("#", dropLine *> parseCertificate pt M C)
   ] [
-    (parseEol, parseCertificate pt C),
+    (parseEol, parseCertificate pt M C),
     (Parser.endOfInput, return C)
   ]
 
@@ -340,9 +365,11 @@ of the premises.
 -/
 public def parse {n} (pt : PlanningTask n) (path : System.FilePath) : IO (Certificate pt) := do
   let content ← IO.FS.readFile path
+  let some dir := path.parent | sorry
+  let M := BddManager.mk dir ∅
   let p := Parser.withErrorMessage
     s!"The certificate at \"{path}\" is not valid:\n"
-    (parseCertificate pt)
+    (parseCertificate pt M)
   match ← p.run content with
   | .ok _ _ res => return res
   | .error _ _ e => throw (IO.userError (e.formatWithContext content).pretty)
