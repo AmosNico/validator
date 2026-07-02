@@ -392,6 +392,6 @@ public def parse {n} (pt : PlanningTask n) (path : System.FilePath) : IO (Certif
     (parseCertificate pt)
   match ← (p.run content).run M with
   | (.ok _ _ res, _) => return res
-  | (.error _ _ e, _) => throw (IO.userError (e.formatWithContext content).pretty)
+  | (.error _ _ e, _) => throw (IO.userError (Std.ToFormat.format e).pretty)
 
 end Validator.Certificate
