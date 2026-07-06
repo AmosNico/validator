@@ -9,7 +9,7 @@ This limitation may be lifted in the future.
 public import Bdd.BDD
 
 namespace Validator
-open Formula
+open Formula STRIPS
 
 public structure BDD n where
   private vars : VarSet n

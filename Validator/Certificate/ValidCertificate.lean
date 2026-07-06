@@ -2,9 +2,11 @@ module
 
 public import Validator.Certificate.BasicRules
 
+open STRIPS
+
 namespace Validator.Certificate
 
-variable {n : ℕ} {pt : STRIPS n} (C : Certificate pt)
+variable {n : ℕ} {pt : PlanningTask n} (C : Certificate pt)
 open Validator Constraint ConstraintType Knowledge
 open DeadKnowledge ActionSubsetKnowledge StateSubsetKnowledge UnsolvableKnowledge
 

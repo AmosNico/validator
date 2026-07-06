@@ -3,9 +3,11 @@ module
 public import Validator.Error
 public import Validator.Certificate.Certificate
 
+open STRIPS
+
 namespace Validator
 
-variable {n : ℕ} {pt : STRIPS n}
+variable {n : ℕ} {pt : PlanningTask n}
 
 public inductive SetType
   | Actions
@@ -52,7 +54,7 @@ def verify_and {p1 p2} (res1 : Result' p1) (res2 : Result' p2) : Result' (p1 ∧
   let ⟨(), h2⟩ ← res2
   return ⟨(), And.intro h1 h2⟩
 
-def verifyActionsEnum (pt : STRIPS n) (as : List ℕ) : Result' (∀ a ∈ as, a < pt.actions'.length) :=
+def verifyActionsEnum (pt : PlanningTask n) (as : List ℕ) : Result' (∀ a ∈ as, a < pt.actions'.length) :=
   if h : ∀ a ∈ as, a < pt.actions'.length then
     return ⟨(), h⟩
   else
@@ -110,7 +112,7 @@ public def verifyStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) :
   | regr S'ᵢ Aᵢ =>
     exact verify_and (verify_state_bounds Sᵢ S'ᵢ) (verify_action_bounds C.actions.size Aᵢ)
 
-/-structure SemiValidCertificate (pt : STRIPS n) extends Certificate pt where
+/-structure SemiValidCertificate (pt : PlanningTask n) extends Certificate pt where
   validActions : ∀ Aᵢ, (⟨actions, states, knowledge⟩ : Certificate pt).validActionSetExpr  Aᵢ
   validStates : ∀ Sᵢ, (⟨actions, states, knowledge⟩ : Certificate pt).validStateSetExpr  Sᵢ-/
 
@@ -120,7 +122,7 @@ public structure validSets (C : Certificate pt) : Prop where
 
 namespace validSets
 
-public abbrev ActionIds (pt : STRIPS n) := List (Fin pt.actions'.length)
+public abbrev ActionIds (pt : PlanningTask n) := List (Fin pt.actions'.length)
 
 public def ActionIds.toActions (A : ActionIds pt) : Actions n :=
   (A.map (pt.actions'[·])).toFinset
@@ -172,7 +174,7 @@ public lemma getActionsAll {C : Certificate pt} {hC : C.validSets} Aᵢ
     (h : C.actions[Aᵢ]? = ActionSetExpr.all) : hC.getActions Aᵢ = pt.actions := by
   unfold getActions getActionIds
   split
-  all_goals simp_all [ActionIds.toActions]
+  all_goals simp_all [ActionIds.toActions, PlanningTask.mem_actions']
 
 public lemma getActionsUnion {C : Certificate pt} {hC : C.validSets}
     (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size) (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :

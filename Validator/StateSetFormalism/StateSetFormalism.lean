@@ -6,7 +6,7 @@ public import Validator.StateSetFormalism.Horn
 public import Validator.StateSetFormalism.Mods
 
 namespace Validator
-open Formula
+open Formula STRIPS
 open Formalism (UnprimedVariable)
 
 public inductive StateSetFormalism
@@ -23,59 +23,61 @@ public instance : ToString StateSetFormalism where
   | horn => "Horn"
   | mods => "MODS"
 
-public abbrev type {n} (_ : STRIPS n) : StateSetFormalism → Type
+public abbrev type {n} (_ : PlanningTask n) : StateSetFormalism → Type
   | bdd => BDD (2 * n)
   | horn => Horn (2 * n)
   | mods => MODS (2 * n)
 
-public instance BDD.instFormalism {n} {pt : STRIPS n} : Formalism pt (BDD (2 * n)) where
+public instance BDD.instFormalism {n} {pt : PlanningTask n} : Formalism pt (BDD (2 * n)) where
 
-public instance Horn.instFormalism {n} {pt : STRIPS n} : Formalism pt (Horn (2 * n)) where
+public instance Horn.instFormalism {n} {pt : PlanningTask n} : Formalism pt (Horn (2 * n)) where
 
-public instance MODS.instFormalism {n} {pt : STRIPS n} : Formalism pt (MODS (2 * n)) where
+public instance MODS.instFormalism {n} {pt : PlanningTask n} : Formalism pt (MODS (2 * n)) where
 
-public instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formalism pt (R.type pt)
+public instance {n} {pt : PlanningTask n} : {R : StateSetFormalism} → Formalism pt (R.type pt)
   | bdd => BDD.instFormalism
   | horn => Horn.instFormalism
   | mods => MODS.instFormalism
 
-public instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Bot (2 * n) (R.type pt)
+public instance {n} {pt : PlanningTask n} :
+    {R : StateSetFormalism} → Formula.Bot (2 * n) (R.type pt)
   | bdd => BDD.instBot
   | horn => Horn.instBot
   | mods => MODS.instBot
 
-public instance {n} {pt : STRIPS n} :
+public instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.ClausalEntailment (2 * n) (R.type pt)
   | bdd => BDD.instClausalEntailment
   | horn => Horn.instClausalEntailment
   | mods => MODS.instClausalEntailment
 
-public instance {n} {pt : STRIPS n} :
+public instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.Implicant (2 * n) (R.type pt)
   | bdd => BDD.instImplicant
   | horn => Horn.instImplicant
   | mods => MODS.instImplicant
 
 -- TODO : remove?
-instance {n} {pt : STRIPS n} :
+instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.SententialEntailment (2 * n) (R.type pt)
   | bdd => BDD.instSententialEntailment
   | horn => Horn.instSententialEntailment
   | mods => MODS.instSententialEntailment
 
-public instance {n} {pt : STRIPS n} :
+public instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.OfPartialModel (2 * n) (R.type pt)
   | bdd => BDD.instOfPartialModel
   | horn => Horn.instOfPartialModel
   | mods => MODS.instOfPartialModel
 
-public instance {n} {pt : STRIPS n} : {R : StateSetFormalism} → Formula.Rename (2 * n) (R.type pt)
+public instance {n} {pt : PlanningTask n} :
+    {R : StateSetFormalism} → Formula.Rename (2 * n) (R.type pt)
   | bdd => BDD.instRename
   | horn => Horn.instRename
   | mods => MODS.instRename
 
 open Formalism Formula.Bot Formula.OfPartialModel
-variable {n} (pt : STRIPS n) (R : StateSetFormalism)
+variable {n} (pt : PlanningTask n) (R : StateSetFormalism)
 
 public abbrev UnprimedVariable' := UnprimedVariable pt (R.type pt)
 public abbrev UnprimedLiteral' := UnprimedLiteral pt (R.type pt)
@@ -111,7 +113,7 @@ public lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} := by
     PartialModel.mem_models', Set.mem_image, Set.mem_singleton_iff]
   simp only [VarSet.mem_toUnprimed, Fin.divNat', VarSet.mem_compl,
     Model.unprimedState, Fin.toUnprimed]
-  simp only [STRIPS.init]
+  simp only [PlanningTask.mem_init']
   constructor
   · rintro ⟨M, ⟨h1, h2⟩, rfl⟩
     ext i
@@ -122,8 +124,8 @@ public lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} := by
   · intro rfl
     obtain ⟨M, h⟩ := Model.exists_model_of_state pt.init
     use M
-    simp [STRIPS.init, Model.unprimedState, Fin.toUnprimed, Set.ext_iff] at h
-    simp only [Set.ext_iff, Set.mem_setOf_eq, SetLike.mem_coe]
+    simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq] at h
+    simp only [Set.ext_iff, Set.mem_setOf_eq]
     grind only [= Nat.even_iff]
 
 public def mkGoal : UnprimedVariable' pt R :=
@@ -134,8 +136,7 @@ public lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goal_states := by
   ext s
   simp only [mkGoal, Variable.toStates_eq, Set.mem_image, UnprimedVariable.mem_models_ofVarSet,
     iff_true, Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq]
-  simp only [STRIPS.goal_states, STRIPS.GoalState, Set.subset_def, SetLike.mem_coe,
-    Set.mem_setOf_eq]
+  simp only [PlanningTask.mem_goal_states, PlanningTask.GoalState, Set.subset_def, SetLike.mem_coe]
   constructor
   · grind only [usr Set.mem_setOf_eq]
   · intro h

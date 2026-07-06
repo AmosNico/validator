@@ -5,7 +5,7 @@ import Validator.InductiveCertificate
 public import Validator.StateSetFormalism.Formalism
 
 namespace Validator.ProofSystem
-open Formalism
+open Formalism STRIPS PlanningTask
 
 /-! # Proof System for Certifying Unsolvability
 
@@ -19,11 +19,11 @@ which was originally introduced in [ERH2017]. More specifically this file contai
 -/
 
 /-- A state `s` is dead iff it is not part of any plan for `pt`. -/
-public abbrev DeadState {n} (pt : STRIPS n) (s : State n) : Prop :=
+public abbrev DeadState {n} (pt : PlanningTask n) (s : State n) : Prop :=
   ∀ plan : Plan pt pt.init, s ∉ plan.path
 
 /-- Alternative definiton of dead states. -/
-public lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
+public lemma dead_state_iff {n} (pt : PlanningTask n) (s : State n) :
     DeadState pt s ↔ ¬ Reachable pt pt.init s ∨ UnsolvableState pt s := by
   simp only [DeadState, not_nonempty_iff, UnsolvableState]
   constructor
@@ -41,14 +41,14 @@ public lemma dead_state_iff {n} (pt : STRIPS n) (s : State n) :
     · exact h.false (Plan.mk s' π₂ hgoal)
 
 /-- A set of states is dead iff all its members are dead. -/
-public abbrev Dead {n} (pt : STRIPS n) (S : States n) : Prop :=
+public abbrev Dead {n} (pt : PlanningTask n) (S : States n) : Prop :=
   ∀ s ∈ S, DeadState pt s
 
 /-! ## Proof System -/
 /--
 A derivation (or proof tree) in the proof system deriving the statement `conclusion`.
 -/
-public inductive Derivation {n} (pt : STRIPS n) : (conclusion : Prop) → Type 1
+public inductive Derivation {n} (pt : PlanningTask n) : (conclusion : Prop) → Type 1
   /-- Basic statement 1 -/
   | B1 R [Formalism pt R] {S S'} :
     IsLiteralInter pt R S →
@@ -171,7 +171,7 @@ public inductive Derivation {n} (pt : STRIPS n) : (conclusion : Prop) → Type 1
 
 /-! ## Soundness of the Proof System -/
 
-lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
+lemma progression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
     (h1 : pt.progression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₂, s ∈ S := by
   induction π₂ with
@@ -187,7 +187,7 @@ lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs1
     | inr hs' =>
       have hs2 : s2 ∈ pt.progression S pt.actions :=
-        STRIPS.mem_progression_of_successor hs1 ha succ
+        mem_progression_of_successor hs1 ha succ
       have : s2 ∉ S' := by
         by_contra h
         have h' : DeadState pt s2 := h2 s2 h
@@ -201,7 +201,7 @@ lemma progression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
         simp_all
       exact ih hs2 (Path.snoc a s1 ha π₁ succ) hgoal s' hs'
 
-public lemma progression_goal {n} {pt : STRIPS n} {S S'}
+public lemma progression_goal {n} {pt : PlanningTask n} {S S'}
     (h1 : pt.progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : Dead pt (S ∩ pt.goal_states)) :
@@ -211,11 +211,12 @@ public lemma progression_goal {n} {pt : STRIPS n} {S S'}
   have s'_in_π₂ : s' ∈ π₂ := Path.last_mem π₂
   have s'_in_S : s' ∈ S :=
     progression_aux hs π₁ π₂ hgoal h1 h2 s' s'_in_π₂
-  have hs' : s' ∈ S ∩ pt.goal_states := by simp_all [STRIPS.goal_states]
+  have hs' : s' ∈ S ∩ pt.goal_states := by
+    simp_all only [Set.mem_inter_iff, mem_goal_states, and_self]
   apply h3 s' hs' (Plan.mk s' π hgoal)
   exact Path.last_mem π
 
-public lemma progression_initial {n} {pt : STRIPS n} {S S'}
+public lemma progression_initial {n} {pt : PlanningTask n} {S S'}
     (h1 : pt.progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ S) :
@@ -228,7 +229,7 @@ public lemma progression_initial {n} {pt : STRIPS n} {S S'}
   exact hs s_in_S
 
 -- Unable to use regular induction on π₁ (I assume because pt.init is not a variable)
-lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
+lemma regression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
     (h1 : pt.regression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₁, s ∈ S := by
   cases heq : π₁ using Path.snocCases with
@@ -244,7 +245,7 @@ lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs1
     | inr hs' =>
       have hs0 : s0 ∈ pt.regression S pt.actions :=
-        STRIPS.mem_regression_of_successor hs1 ha succ
+        mem_regression_of_successor hs1 ha succ
       have : s0 ∉ S' := by
         by_contra h
         have h' : DeadState pt s0 := h2 s0 h
@@ -259,7 +260,7 @@ lemma regression_aux {n} {pt : STRIPS n} {S S'} {s1 s2}
       exact hs'
 termination_by π₁.length
 
-public lemma regression_goal {n} {pt : STRIPS n} {S S'}
+public lemma regression_goal {n} {pt : PlanningTask n} {S S'}
     (h1 : pt.regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : Dead pt (Sᶜ ∩ pt.goal_states)) :
@@ -268,13 +269,13 @@ public lemma regression_goal {n} {pt : STRIPS n} {S S'}
   obtain ⟨π₁, π₂⟩ := Path.split π s_in_π
   have hs' : s' ∈ S := by
     by_contra h
-    exact h3 s' (by simp_all [STRIPS.goal_states]) (Plan.mk s' π hgoal) (Path.last_mem π)
+    exact h3 s' (by simp_all [mem_goal_states]) (Plan.mk s' π hgoal) (Path.last_mem π)
   have s_in_S : s ∈ S :=
     regression_aux hs' π (Path.empty s') hgoal h1 h2 s s_in_π
   simp only [Set.mem_compl_iff] at hs
   exact hs s_in_S
 
-public lemma regression_initial {n} {pt : STRIPS n} {S S'}
+public lemma regression_initial {n} {pt : PlanningTask n} {S S'}
     (h1 : pt.regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ Sᶜ) :
@@ -292,7 +293,7 @@ namespace Derivation
 The proof system is sound, i.e. given a derivation in the proof system,
 the conclusion of this derivation holds.
 -/
-public theorem soundness {n} {pt : STRIPS n} {conclusion} :
+public theorem soundness {n} {pt : PlanningTask n} {conclusion} :
     (d : Derivation pt conclusion) → conclusion
   | B1 _ _ _ h => h
   | B2 _ _ _ h => h
@@ -345,7 +346,7 @@ public theorem soundness {n} {pt : STRIPS n} {conclusion} :
     constructor
     intro plan
     have h : DeadState pt plan.last :=
-      d.soundness plan.last (by simp_all [plan.goal, STRIPS.goal_states])
+      d.soundness plan.last (by simp_all [plan.goal, mem_goal_states])
     apply h plan
     exact Path.last_mem plan.path
   | UR E E' => by simp
@@ -367,29 +368,29 @@ public theorem soundness {n} {pt : STRIPS n} {conclusion} :
     · exact d2.soundness
   | AT S S' A A' d1 d2 => by
     apply subset_trans
-    · apply STRIPS.progression_monotone_actions
+    · apply progression_monotone_actions
       exact d2.soundness
     · exact d1.soundness
   | AU S S' A A' d1 d2 => by
-    rw[STRIPS.progression_union_actions]
+    rw[progression_union_actions]
     apply Set.union_subset
     · exact d1.soundness
     · exact d2.soundness
   | PT S S' S'' A d1 d2 => by
     apply subset_trans
-    · apply STRIPS.progression_monotone_states
+    · apply progression_monotone_states
       exact d2.soundness
     · exact d1.soundness
   | PU S S' S'' A d1 d2 => by
-    rw[STRIPS.progression_union_states]
+    rw[progression_union_states]
     apply Set.union_subset
     · exact d1.soundness
     · exact d2.soundness
   | PR S S' A d1 => by
-    apply STRIPS.sub_progression_iff_sub_regression.1
+    apply sub_progression_iff_sub_regression.1
     exact d1.soundness
   | RP S S' A d1 => by
-    apply STRIPS.sub_progression_iff_sub_regression.2
+    apply sub_progression_iff_sub_regression.2
     exact d1.soundness
 
 /-! ## Completeness of the Proof System -/
@@ -399,7 +400,7 @@ open IsLiteral IsVariable in
 Given an `InductiveCertificate` for a planning task `pt`,
 construct a `Derivation` in the proof system showing that `pt` is unsolvable.
 -/
-def fromInductiveCertificate {n} {pt : STRIPS n} {S} :
+def fromInductiveCertificate {n} {pt : PlanningTask n} {S} :
     InductiveCertificate pt S → Derivation pt (Unsolvable pt)
   | ⟨h1,h2,h3⟩ => by
     apply CI
@@ -419,8 +420,8 @@ def fromInductiveCertificate {n} {pt : STRIPS n} {S} :
                 (IsLiteralInter.single <| pos <| explicit S)
                 (IsLiteralInter.single <| pos <| goal)
             · exact IsLiteralUnion.single <| pos <| empty
-            · simp only [STRIPS.goal_states, Set.subset_empty_iff, Set.eq_empty_iff_forall_notMem,
-                Set.mem_inter_iff, Set.mem_setOf_eq, not_and]
+            · simp only [Set.subset_empty_iff, Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff,
+                mem_goal_states, not_and]
               exact h2
       · apply B1 (States n)
         · exact IsLiteralInter.single <| pos <| init
@@ -430,7 +431,7 @@ def fromInductiveCertificate {n} {pt : STRIPS n} {S} :
 The proof system is complete, i.e. if the planning task `pt` is unsolvable,
 then there exists a derivation in the proof system showing that `pt` is unsolvable.
 -/
-public theorem completeness {n} {pt : STRIPS n} :
+public theorem completeness {n} {pt : PlanningTask n} :
     Unsolvable pt → Nonempty (Derivation pt (Unsolvable pt)) := by
   intro h
   constructor

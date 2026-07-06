@@ -9,7 +9,7 @@ module `Validator.Basic` which must be imported publicly.
 This limitation may be lifted in the future.
 -/
 public import Validator.Basic
-public import Validator.PlanningTask.Basic
+public import Strips.PlanningTask
 
 /-! # Formulas
 This file provides typeclasses for formulas and different operations these formulas can support.
@@ -22,7 +22,10 @@ operations should do. More specifically the file contains
 
 public section
 
+open STRIPS (VarSet)
+
 namespace Validator.Formula
+
 /-! ## Model -/
 
 /--

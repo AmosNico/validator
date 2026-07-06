@@ -7,6 +7,7 @@ Implementation of the certificates used when validating certificates
 -/
 
 namespace Validator
+open STRIPS
 open Formalism (UnprimedVariable)
 
 public inductive ActionSetExpr : Type
@@ -24,7 +25,7 @@ def ActionSetExpr.toSting : ActionSetExpr → String
 public instance : ToString ActionSetExpr where
   toString := ActionSetExpr.toSting
 
-public inductive StateSetExpr {n} (pt : STRIPS n) : Type
+public inductive StateSetExpr {n} (pt : PlanningTask n) : Type
   | empty : StateSetExpr pt
   | init : StateSetExpr pt
   | goal : StateSetExpr pt
@@ -37,7 +38,7 @@ public inductive StateSetExpr {n} (pt : STRIPS n) : Type
   | progr : ℕ → ℕ → StateSetExpr pt
   | regr : ℕ → ℕ → StateSetExpr pt
 
-def StateSetExpr.toString {n} {pt : STRIPS n} : StateSetExpr pt → String
+def StateSetExpr.toString {n} {pt : PlanningTask n} : StateSetExpr pt → String
   | empty => "the constant empty set"
   | init => "the constant set containing the initial state"
   | goal => "the constant goal set"
@@ -51,7 +52,7 @@ def StateSetExpr.toString {n} {pt : STRIPS n} : StateSetExpr pt → String
   | regr Sᵢ Aᵢ => s!"the regression of the state set #{Sᵢ} with the action set #{Aᵢ}"
 
 @[no_expose]
-public instance {n} {pt : STRIPS n} : ToString (StateSetExpr pt) where
+public instance {n} {pt : PlanningTask n} : ToString (StateSetExpr pt) where
   toString := StateSetExpr.toString
 
 public inductive DeadKnowledge : ℕ → Type
@@ -141,14 +142,14 @@ public inductive Knowledge
 public instance : ToString Knowledge where
   toString _ := "TODO"
 
-public structure Certificate {n} (pt : STRIPS n) where
+public structure Certificate {n} (pt : PlanningTask n) where
   actions : Array ActionSetExpr
   states : Array (StateSetExpr pt)
   knowledge : Array Knowledge
 
 -- TODO : improve
 @[no_expose]
-public instance {n} {pt : STRIPS n} : ToString (Certificate pt) where
+public instance {n} {pt : PlanningTask n} : ToString (Certificate pt) where
   toString C := s!"Actions:\n{C.actions}\nStates:\n{C.states}\nKnowledge:\n{C.knowledge}\n"
 
 end Validator

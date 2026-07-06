@@ -1,16 +1,91 @@
 module
 
-import Validator.PlanningTask.Parser
+import Validator.Error
 public import Validator.Certificate.Certificate
 
 /-! # Parser for Certificates
 This file contains a parser for parsing certificates for the proof system.
 -/
 
-open Validator Parser Knowledge
+open Parser STRIPS Validator Knowledge
   DeadKnowledge UnsolvableKnowledge ActionSubsetKnowledge StateSubsetKnowledge
 
 namespace Validator.Certificate
+
+abbrev Parser := ParserT Error String.Slice Char IO
+
+def parseSpaces : Parser Unit :=
+  Parser.dropMany (Parser.Char.char ' ')
+
+def parseSpaces1 : Parser Unit :=
+  Parser.dropMany1 (Parser.Char.char ' ')
+
+-- TODO : check whether allowing semicoloms makes sense
+def parseEol : Parser Unit :=
+  parseSpaces <* Parser.optional (Parser.Char.char ';') <* Parser.Char.eol
+
+def checkString (s : String) : Parser Unit :=
+  Parser.Char.chars s *> parseSpaces
+
+def checkLine (s : String) : Parser Unit :=
+  Parser.Char.chars s *> parseEol
+
+-- TODO : rename
+def readLine {α} (s : String) (p : Parser α) : Parser α :=
+  checkString s *> p <* parseEol
+
+def dropLine : Parser Unit :=
+  Parser.dropUntil Parser.Char.eol Parser.anyToken *> pure ()
+
+
+def parseWord : Parser String := do
+  let stop : Parser Unit := parseSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
+  let ⟨⟨l⟩, _⟩ ← Parser.takeUntil stop Parser.anyToken
+  return String.ofList l
+
+def parseNat : Parser ℕ :=
+  Parser.Char.ASCII.parseNat <* parseSpaces
+
+def parseListNat : Parser (List ℕ) := do
+  let n ← parseNat
+  let ⟨l⟩ ← Parser.take n parseNat
+  return l
+
+def push? {α} : Array α → Option α → Array α
+  | xs, none => xs
+  | xs, some x => xs.push x
+
+/--
+For each tuple `(p, p', e)` in the given list, try the parser `p`. If it succeeds,
+run the parser `p'`, otherwise proceed with the next tuple in the list. The optional
+error messages `e` are combined into one error message if none of the parsers `p` succeed.
+-/
+-- Based on `Parser.first`
+def parseCases' {α} (ps : List (Parser Unit × Parser α × Option String)) :
+  Parser α :=
+  go ps #[]
+where
+  go : List (Parser Unit × Parser α × Option String) → Array String → Parser α
+    | [], ⟨e⟩, s, pos =>
+      Parser.throwUnexpectedWithMessage none s!"expected one of the following : {e}" s pos
+    | (p, p', descr) :: ps, e, s, pos =>
+      p s pos >>= fun
+      | .ok s pos () => p' s pos
+      | .error s _ _ => go ps (push? e descr) s pos
+
+/--
+For each of the pairs `(s, p)` in `ps1`, try to parse the string `s`. If it succeeds,
+run the parser `p`, otherwise proceed with the next pair in the list. If none of parsers for
+`s` is successfull, continue with the list `ps2`. For each pair `(p, p')` in this list, try the
+parser `p`, and if it succeed, run `p'` and return its result. If it fails continue with the next
+pair. If all pairs fail, combine the strings in `ps1` into one error message.
+-/
+def parseCases {α}
+    (ps1 : List (String × Parser α)) (ps2 : List (Parser Unit × Parser α) := []) :
+  Parser α :=
+  let ps1' := ps1.map fun ⟨s, p⟩ ↦ ⟨checkString s, p, s⟩
+  let ps2' := ps2.map fun ⟨p, p'⟩ ↦ ⟨p, p', none⟩
+  parseCases' (ps1' ++ ps2')
 
 instance {α p} : Coe (Result α p) (Parser { a : α // p a }) where
   coe
@@ -24,7 +99,7 @@ def parseActionSetExpr (idx : ℕ) : Parser ActionSetExpr :=
     ("a", return ActionSetExpr.all)
   ]
 
-def parseConstStateSetExpr {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
+def parseConstStateSetExpr {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) :=
   parseCases [
     ("e", return StateSetExpr.empty),
     ("i", return StateSetExpr.init),
@@ -56,13 +131,13 @@ def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) := do
   checkLine ".end"
   return sorry
 
-def parseBdd {n} (pt : STRIPS n) : Parser (StateSetExpr pt) := do
+def parseBdd {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
   let path ← parseWord
   let idx ← parseNat
   let content ← IO.FS.readFile path
   match ← (parseBdd' n idx).run content with
-  | .ok _ bdd => return StateSetExpr.bdd sorry
-  | .error _ e =>
+  | .ok _ _ bdd => return StateSetExpr.bdd sorry
+  | .error _ _ e =>
     let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
     throwUnexpectedWithMessage none msg
 
@@ -95,20 +170,20 @@ def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
     let as ← take nb_clauses (parseClause n)
     return ⟨as.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseHorn {n} (pt : STRIPS n) : Parser (StateSetExpr pt) := do
+def parseHorn {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
   let ⟨φ, h1⟩ ← parseCNF
   match h : Horn.fromCNF φ with
   | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
   | some ψ =>
     have h2 : (Formula.vars ψ).IsUnprimed := by
       apply Horn.vars_fromCNF at h
-      simp_all only [VarSet.IsUnprimed, VarSet.Subset_def, implies_true]
+      simp_all only [VarSet.IsUnprimed, VarSet.subset_def, implies_true]
     return StateSetExpr.horn ⟨ψ, h2⟩
 
-def parseMods {n} (pt : STRIPS n) : Parser (StateSetExpr pt) :=
+def parseMods {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) :=
   sorry
 
-def parseStateSetExpr {n} (pt : STRIPS n) (idx : ℕ) : Parser (StateSetExpr pt) :=
+def parseStateSetExpr {n} (pt : PlanningTask n) (idx : ℕ) : Parser (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
     ("b", parseBdd pt),
@@ -175,7 +250,7 @@ def parseKnowledge (idx : ℕ) : Parser Knowledge :=
     ("s", parseSubsetKnowledge)
   ]
 
-partial def parseCertificate {n} (pt : STRIPS n)
+partial def parseCertificate {n} (pt : PlanningTask n)
     (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) :
     Parser (Certificate pt) :=
   parseCases [
@@ -263,13 +338,13 @@ of the premises.
     k <KID> s <SID> <SID> b4                                    (basic statement 4)
     k <KID> s <AID> <AID> b5                                    (basic statement 5)
 -/
-public def parse {n} (pt : STRIPS n) (path : System.FilePath) : IO (Certificate pt) := do
+public def parse {n} (pt : PlanningTask n) (path : System.FilePath) : IO (Certificate pt) := do
   let content ← IO.FS.readFile path
   let p := Parser.withErrorMessage
     s!"The certificate at \"{path}\" is not valid:\n"
     (parseCertificate pt)
   match ← p.run content with
-  | .ok _ res => return res
-  | .error _ e => throw (IO.userError (e.formatWithContext content).pretty)
+  | .ok _ _ res => return res
+  | .error _ _ e => throw (IO.userError (e.formatWithContext content).pretty)
 
 end Validator.Certificate

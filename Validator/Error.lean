@@ -33,8 +33,8 @@ public inductive Error
 namespace Error
 
 public instance : Parser.Error Error String.Slice Char where
-  unexpected p _ := Error.parseUnexpected p
-  addMessage e p msg := Error.addMessage e p msg
+  unexpected _ p _ := Error.parseUnexpected p
+  addMessage e _ p msg := Error.addMessage e p msg
 
 /--
 Format the given error. The second argument is the context where the error occured.

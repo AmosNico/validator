@@ -2,6 +2,8 @@ module
 
 public import Validator.StateSetFormalism.Formula
 
+open STRIPS (VarSet)
+
 namespace Validator.Formula.Clause
 
 public def IsHorn {n} (γ : Clause n) : Prop :=
@@ -269,7 +271,7 @@ decreasing_by
   · simp [← List.length_eq_length_filter_add, φ.clauses.length_propagate_literal]
 
 lemma vars_unit_propagate {n} {φ : Horn n} {δ} : (φ.unit_propagate δ).vars ⊆ φ.vars ∪ δ.vars := by
-  simp only [VarSet.Subset_def, VarSet.mem_union]
+  simp only [VarSet.subset_def, VarSet.mem_union]
   fun_induction unit_propagate with
   | case1 φ => grind only
   | case2 φ l todo h => grind only [!bot_vars, VarSet.mem_empty]
@@ -380,7 +382,7 @@ def insert {n} (φ : Horn n) (γ : Clause n) (h : γ.IsHorn) : Horn n :=
 
 lemma vars_insert {n} {φ : Horn n} {γ h1} : (φ.insert γ h1).vars ⊆ φ.vars ∪ γ.vars := by
   unfold insert
-  simp only [VarSet.Subset_def, VarSet.mem_union, Clause.mem_vars]
+  simp only [VarSet.subset_def, VarSet.mem_union, Clause.mem_vars]
   split
   · simp only [bot_vars, VarSet.mem_empty, IsEmpty.forall_iff, implies_true]
   · split
@@ -686,7 +688,7 @@ public lemma vars_fromCNF {n} {φ : CNF n} {ψ} :
       rcases h1 with ⟨φ', h2, rfl⟩
       intro i hi
       apply vars_insert at hi
-      simp only [VarSet.mem_union, VarSet.Subset_def] at *
+      simp only [VarSet.mem_union, VarSet.subset_def] at *
       grind only
     · grind only [Option.bind_eq_none_iff]
 

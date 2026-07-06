@@ -4,11 +4,12 @@ public import Mathlib.Algebra.Group.Nat.Even
 import Mathlib.Algebra.Ring.Parity
 public import Mathlib.Order.Monotone.Defs
 
-import Batteries.Data.BitVec.Lemmas
+
 public import Validator.StateSetFormalism.Formula
 
 
 open Validator.Formula (Model Models Renaming OfPartialModel)
+open STRIPS
 
 public section
 
@@ -32,7 +33,7 @@ lemma Fin.toUnprimedStrictMono {n} : StrictMono (@toUnprimed n) := by
 def Fin.toPrimed {n} (i : Fin (2 * n)) (h : Even i.val) : Fin (2 * n) :=
   ⟨i.val + 1, by grind⟩
 
-namespace Validator.VarSet
+namespace STRIPS.VarSet
 
 abbrev IsUnprimed {n} (V : VarSet (2 * n)) : Prop :=
   ∀ i ∈ V, Even i.val
@@ -44,14 +45,14 @@ lemma isUnprimed_empty {n} : (∅ : VarSet (2 * n)).IsUnprimed := by
 @[simp]
 lemma isUnprimed_union {n} {V V' : VarSet (2 * n)} :
     (V ∪ V').IsUnprimed ↔ V.IsUnprimed ∧ V'.IsUnprimed := by
-  grind [VarSet.union_def, mem_iff]
+  grind only [mem_union]
 
 def toUnprimed {n} (V : VarSet n) : VarSet (2 * n) :=
-  BitVec.ofFnLE fun i ↦ Even i.val ∧ i.divNat' ∈ V
+  VarSet.ofFn fun i ↦ Even i.val ∧ i.divNat' ∈ V
 
 lemma mem_toUnprimed {n} {V : VarSet n} {i} :
     i ∈ V.toUnprimed ↔ Even i.val ∧ i.divNat' ∈ V := by
-  simp [toUnprimed, mem_iff, BitVec.getElem_ofFnLE]
+  simp only [toUnprimed, Bool.decide_and, mem_ofFn, Bool.and_eq_true, decide_eq_true_eq]
 
 @[simp]
 lemma toUnprimed_mem_toUnprimed_iff {n} {V : VarSet n} {i : Fin n} :
@@ -63,17 +64,17 @@ lemma isUnprimed_toUnprimed {n} {V : VarSet n} : IsUnprimed (toUnprimed V) := by
   grind
 
 def unprimedVars n : VarSet (2 * n) :=
-  BitVec.ofFnLE fun i ↦ Even i.val
+  VarSet.ofFn fun i ↦ Even i.val
 
 lemma mem_unprimedVars {n i} : i ∈ (unprimedVars n) ↔ Even i.val := by
-  simp [unprimedVars, mem_iff, BitVec.getElem_ofFnLE]
+  simp only [unprimedVars, mem_ofFn, decide_eq_true_eq]
 
 lemma isUnprimed_unprimedVars {n} : IsUnprimed (unprimedVars n) := by
   simp [mem_unprimedVars, IsUnprimed]
 
-end VarSet
+end STRIPS.VarSet
 
-namespace Formula.Model
+namespace Validator.Formula.Model
 
 @[expose]
 def unprimedState {n} (M : Model (2 * n)) : State n :=
@@ -119,7 +120,7 @@ end Formula.Model
 
 open Formula
 
-class Formalism {n} (pt : STRIPS n) R extends Formula (2 * n) R where
+class Formalism {n} (pt : PlanningTask n) R extends Formula (2 * n) R where
 
   toStates (φ : R) : States n := (Formula.models φ).image Model.unprimedState
 
@@ -127,7 +128,7 @@ class Formalism {n} (pt : STRIPS n) R extends Formula (2 * n) R where
 
 -- TODO : only for completeness, remove?
 @[simp]
-instance {n} {pt : STRIPS n} : Formalism pt (States n) where
+instance {n} {pt : PlanningTask n} : Formalism pt (States n) where
 
   vars _ := VarSet.unprimedVars n
 
@@ -149,9 +150,9 @@ instance {n} {pt : STRIPS n} : Formalism pt (States n) where
 
 namespace Formalism
 
-variable {n} {pt : STRIPS n} {R}
+variable {n} {pt : PlanningTask n} {R}
 
-abbrev Variable (pt : STRIPS n) (R : Type) [Formalism pt R] := R
+abbrev Variable (pt : PlanningTask n) (R : Type) [Formalism pt R] := R
 
 namespace Variable
 
@@ -177,7 +178,7 @@ instance [F : Formalism pt R] : Membership (Fin (2 * n)) (Variable pt R) where
 
 end Variable
 
-abbrev UnprimedVariable (pt : STRIPS n) (R : Type) [F : Formalism pt R] :=
+abbrev UnprimedVariable (pt : PlanningTask n) (R : Type) [F : Formalism pt R] :=
   { x : Variable pt R // x.vars.IsUnprimed }
 
 namespace UnprimedVariable
@@ -273,7 +274,7 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
 
 end UnprimedVariable
 
-inductive Literal (pt : STRIPS n) R [Formalism pt R]
+inductive Literal (pt : PlanningTask n) R [Formalism pt R]
   | pos : Variable pt R → Literal pt R
   | neg : Variable pt R → Literal pt R
 
@@ -302,7 +303,7 @@ lemma toStates_neg [Formalism pt R] {X : Variable pt R} : (neg X).toStates = X.t
 
 end Literal
 
-inductive UnprimedLiteral (pt : STRIPS n) R [Formalism pt R]
+inductive UnprimedLiteral (pt : PlanningTask n) R [Formalism pt R]
   | pos : UnprimedVariable pt R → UnprimedLiteral pt R
   | neg : UnprimedVariable pt R → UnprimedLiteral pt R
 
@@ -356,7 +357,7 @@ lemma subset_states_iff_subset_models {R1 R2} [Formalism pt R1] [Formalism pt R2
   · grind
 end UnprimedLiteral
 
-abbrev Variables (pt : STRIPS n) R [Formalism pt R] := List (Variable pt R)
+abbrev Variables (pt : PlanningTask n) R [Formalism pt R] := List (Variable pt R)
 
 namespace Variables
 
@@ -404,7 +405,7 @@ lemma union_single [Formalism pt R] {x : Variable pt R} : (single x).union = x.t
 
 end Variables
 
-abbrev UnprimedVariables (pt : STRIPS n) R [Formalism pt R] := List (UnprimedVariable pt R)
+abbrev UnprimedVariables (pt : PlanningTask n) R [Formalism pt R] := List (UnprimedVariable pt R)
 
 namespace UnprimedVariables
 
@@ -534,7 +535,7 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
 end UnprimedVariables
 
 -- TODO : check if needed, or if everything can be done in terms of `UnprimedLiterals`
-abbrev Literals (pt : STRIPS n) R [Formalism pt R] :=
+abbrev Literals (pt : PlanningTask n) R [Formalism pt R] :=
   Variables pt R × Variables pt R
 
 -- TODO : write in terms of `Variables`?
@@ -585,7 +586,7 @@ lemma mem_inter [Formalism pt R] {L : Literals pt R} {s} :
 
 end Literals
 
-abbrev UnprimedLiterals (pt : STRIPS n) R [Formalism pt R] :=
+abbrev UnprimedLiterals (pt : PlanningTask n) R [Formalism pt R] :=
   UnprimedVariables pt R × UnprimedVariables pt R
 
 namespace UnprimedLiterals
@@ -697,37 +698,37 @@ lemma inter_append [Formalism pt R] {L1 L2 : UnprimedLiterals pt R} :
 
 end UnprimedLiterals
 
-inductive IsVariable {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsVariable {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | empty : IsVariable pt R ∅
   | init : IsVariable pt R {pt.init}
   | goal : IsVariable pt R pt.goal_states
   | explicit (φ : R) : IsVariable pt R (Formalism.toStates pt φ)
 
-inductive IsLiteral {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsLiteral {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | pos {S} : IsVariable pt R S → IsLiteral pt R S
   | neg {S} : IsVariable pt R S → IsLiteral pt R (Sᶜ)
 
-inductive IsLiteralUnion {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsLiteralUnion {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | single {S} : IsLiteral pt R S → IsLiteralUnion pt R S
   | union {S S'} : IsLiteralUnion pt R S → IsLiteralUnion pt R S' → IsLiteralUnion pt R (S ∪ S')
 
-inductive IsVariableInter {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsVariableInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | single {S} : IsVariable pt R S → IsVariableInter pt R S
   | inter {S S'} : IsVariableInter pt R S → IsVariableInter pt R S' → IsVariableInter pt R (S ∩ S')
 
-inductive IsLiteralInter {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsLiteralInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | single {S} : IsLiteral pt R S → IsLiteralInter pt R S
   | inter {S S'} : IsLiteralInter pt R S → IsLiteralInter pt R S' → IsLiteralInter pt R (S ∩ S')
 
 -- TODO : check whether it should be enforced that A ⊆ pt.actions
-inductive IsProgrInter {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsProgrInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | empty {S A} : IsVariableInter pt R S → IsProgrInter pt R (pt.progression S A)
   | inter {S S' A} :
     IsVariableInter pt R S → IsLiteralInter pt R S' →
     IsProgrInter pt R (pt.progression S A ∩ S')
 
 -- TODO : check whether it should be enforced that A ⊆ pt.actions
-inductive IsRegrInter {n} (pt : STRIPS n) R [Formalism pt R] : States n → Prop
+inductive IsRegrInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | empty {S A} : IsVariableInter pt R S → IsRegrInter pt R (pt.regression S A)
   | inter {S S' A} :
     IsVariableInter pt R S → IsLiteralInter pt R S' →

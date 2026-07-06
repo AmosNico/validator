@@ -2,7 +2,7 @@ module
 
 public import Validator.Certificate.SetExpr
 
-open Validator
+open Validator STRIPS
 
 public structure Constraint (α : Type) where
 
@@ -17,7 +17,7 @@ public structure Constraint (α : Type) where
 
 namespace Constraint
 
-variable {n : ℕ} {pt : STRIPS n}
+variable {n : ℕ} {pt : PlanningTask n}
 
 open ConstraintType
 

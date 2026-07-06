@@ -3,7 +3,7 @@ module
 public import Validator.StateSetFormalism.Formula
 
 namespace Validator
-open Formula
+open Formula STRIPS
 
 public structure MODS n where
   private vars : VarSet n

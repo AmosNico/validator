@@ -5,11 +5,14 @@ public import Validator.Certificate.SetExpr
 import Validator.StateSetFormalism.StateSetFormalism
 
 namespace Validator
-variable {n : ℕ} {pt : STRIPS n} {C : Certificate pt}
+
+open STRIPS
 open Constraint Certificate.validSets
 open ActionSubsetKnowledge StateSubsetKnowledge
 open Formalism StateSetFormalism
 open Formula (Model)
+
+variable {n : ℕ} {pt : PlanningTask n} {C : Certificate pt}
 
 namespace Certificate.validSets
 open StateSetFormalism
@@ -567,7 +570,7 @@ lemma checkB2'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     simp [X, X0'] at h
     simp [checkB2', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
-  simp only [Fin.getElem_fin, STRIPS.mem_progression', UnprimedVariables.mem_inter, Successor,
+  simp only [Fin.getElem_fin, PlanningTask.mem_progression', UnprimedVariables.mem_inter, Successor,
     Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
@@ -590,7 +593,8 @@ def checkB2 R
 
 lemma checkB2_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
     checkB2 R X A L1 L2 ↔ pt.progression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
-  simp [checkB2, checkB2'_correct, STRIPS.progression, ← Set.inter_assoc]
+  simp [checkB2, checkB2'_correct, ← Set.inter_assoc]
+  simp [PlanningTask.progression]
   grind
 
 def checkB3' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt R) : Bool :=
@@ -607,7 +611,7 @@ lemma checkB3'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     simp [X, X0'] at h
     simp [checkB3', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
-  simp only [Fin.getElem_fin, STRIPS.mem_regression', UnprimedVariables.mem_inter, Successor,
+  simp only [Fin.getElem_fin, PlanningTask.mem_regression', UnprimedVariables.mem_inter, Successor,
     Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
@@ -630,7 +634,7 @@ def checkB3 R
 
 lemma checkB3_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
     checkB3 R X A L1 L2 ↔ pt.regression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
-  simp [checkB3, checkB3'_correct, STRIPS.regression, ← Set.inter_assoc]
+  simp [checkB3, checkB3'_correct, PlanningTask.regression, ← Set.inter_assoc]
   grind
 
 def throwUnsuportedB4 {α : outParam Type} {p} (R1 R2 : StateSetFormalism) : Result α p :=

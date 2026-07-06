@@ -6,8 +6,9 @@ import Validator.Certificate.Constraint
 
 namespace Validator.Certificate.valid
 
-variable {n : ℕ} {pt : STRIPS n}
-open Knowledge Certificate ProofSystem Constraint
+open STRIPS Knowledge Certificate ProofSystem Constraint
+
+variable {n : ℕ} {pt : PlanningTask n}
 
 def conclusion {C : Certificate pt} {hC : C.valid} (Kᵢ : Fin C.knowledge.size) : Prop :=
   match heq : C.knowledge[Kᵢ] with
@@ -28,7 +29,7 @@ def conclusion {C : Certificate pt} {hC : C.valid} (Kᵢ : Fin C.knowledge.size)
     let S := hC.getStates ⟨Sᵢ, hᵢ.1⟩
     let S' := hC.getStates ⟨S'ᵢ, hᵢ.2⟩
     S ⊆ S'
-  | unsolvable _ => Unsolvable pt
+  | unsolvable _ => PlanningTask.Unsolvable pt
 
 lemma conclusionDead
     {C : Certificate pt} (hC : C.valid)
@@ -61,7 +62,7 @@ lemma conclusionUnsolvable
     {C : Certificate pt} (hC : C.valid)
     (Kᵢ : Fin C.knowledge.size)
     (h : ∃ K, C.knowledge[Kᵢ] = unsolvable K) :
-    hC.conclusion Kᵢ ↔ Unsolvable pt := by
+    hC.conclusion Kᵢ ↔ PlanningTask.Unsolvable pt := by
   simp [conclusion]
   split
   all_goals simp_all
@@ -605,7 +606,7 @@ theorem soundness' {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.s
   Derivation.soundness (hC.toDerivation Kᵢ)
 
 public theorem soundness {C : Certificate pt} (hC : C.valid) (h : C.IsUnsolvable) :
-    Unsolvable pt := by
+    PlanningTask.Unsolvable pt := by
   rcases h with ⟨Kᵢ, hK⟩
   rw [← hC.conclusionUnsolvable Kᵢ hK]
   exact hC.soundness' Kᵢ

@@ -16,15 +16,15 @@ scope = "leanprover-community"
 rev = "v4.31.0"
 
 [[require]]
-name = "Parser"
-git = "https://github.com/fgdorais/lean4-parser"
-rev = "4a9f45abc119e9a03e9ae41ee80b1cd15ed66467"
-
-[[require]]
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
 rev = "828e70d89d3053cf3cdb43ceb4632ecabebcd72d"
+
+[[require]]
+name = "strips"
+git = "https://github.com/AmosNico/lean4-strips"
+rev = "main"
 
 [[lean_lib]]
 name = "Validator"
