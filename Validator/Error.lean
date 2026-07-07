@@ -5,6 +5,7 @@ import Mathlib.Data.Nat.Notation
 import Mathlib.Data.String.Defs
 
 namespace Validator
+
 /-! # Error Handling for Parsing and Validation
 This file implements error handling for the parsers and the validator.
 -/
@@ -26,37 +27,32 @@ def positionInfo (s : String) (p : String.Pos.Raw) : String × ℕ × ℕ :=
 
 -- Check whether it makes more sense to use `String.ValidPos`
 public inductive Error
-| parseUnexpected : Parser.Stream.Position String.Slice → Error
+| parseUnexpected : String → String.Pos.Raw → Error
 | invalid : String → Error
-| addMessage : Error → Option (Parser.Stream.Position String.Slice) → String → Error
+| addMessage : Error → Option (String × String.Pos.Raw) → String → Error
 
 namespace Error
 
 public instance : Parser.Error Error String.Slice Char where
-  unexpected _ p _ := Error.parseUnexpected p
-  addMessage e _ p msg := Error.addMessage e p msg
+  unexpected s p _ := Error.parseUnexpected s.str p
+  addMessage e s p msg := Error.addMessage e (s.str, p) msg
 
 /--
-Format the given error. The second argument is the context where the error occured.
-In case of a parsing error this is the input string and for an error related to the certificate this
-is the line of the certifcate causing the error.
+Format the given error.
 -/
-public def formatWithContext : Error → String → Std.Format
-  | .invalid msg, _ => .indentD msg ++ .line
-  | .parseUnexpected pos, context =>
-    let ⟨line, k, offset⟩ := positionInfo context pos
+def format : Error →  Std.Format
+  | .invalid msg => .indentD msg ++ .line
+  | .parseUnexpected s pos =>
+    let ⟨line, k, offset⟩ := positionInfo s pos
     f!"Unexpect character on line {k}:\n{line}\n{String.replicate offset ' '}^\n"
-  | .addMessage e none msg, context => msg++ .indentD (formatWithContext e context)
-  | .addMessage e (some pos) msg, context =>
-    let ⟨_, n, k⟩ := positionInfo context pos
-    f!"{msg} (line {n}, pos {k})" ++ .indentD (formatWithContext e context)
+  | .addMessage e none msg => msg++ .indentD e.format
+  | .addMessage e (some (s, pos)) msg =>
+    let ⟨_, n, k⟩ := positionInfo s pos
+    f!"{msg} (line {n}, pos {k})" ++ .indentD e.format
 
-/-- Instance only works if one for error not containing `parseUnexpected`. -/
--- TODO : check whether it makes to use `Parser.Error.Simple` with context inside a
--- `Error` to ensure this this instance always works.
 @[no_expose]
 public instance : Std.ToFormat Error where
-  format e := formatWithContext e ""
+  format := Error.format
 
 end Error
 
@@ -65,7 +61,7 @@ public abbrev Result.{u} (α : Type u) (p : α → Prop) := Except Error { a // 
 public abbrev Result' (p : Prop) := Result Unit (fun _ ↦ p)
 
 public def throwInvalid (msg : String) {α p} : Result α p :=
-  throw (Validator.Error.invalid msg)
+  throw (Error.invalid msg)
 
 public def withErrorMessage {α p} : Option String →  Result α p → Result α p
 | none, res => res
