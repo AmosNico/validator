@@ -132,11 +132,11 @@ public def mkGoal : UnprimedVariable' pt R :=
   UnprimedVariable.ofVarSet (R.type pt) pt.goal'
 
 @[simp]
-public lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goal_states := by
+public lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goalStates := by
   ext s
   simp only [mkGoal, Variable.toStates_eq, Set.mem_image, UnprimedVariable.mem_models_ofVarSet,
     iff_true, Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq]
-  simp only [PlanningTask.mem_goal_states, PlanningTask.GoalState, Set.subset_def, SetLike.mem_coe]
+  simp only [PlanningTask.mem_goalStates, PlanningTask.GoalState, Set.subset_def, SetLike.mem_coe]
   constructor
   · grind only [usr Set.mem_setOf_eq]
   · intro h

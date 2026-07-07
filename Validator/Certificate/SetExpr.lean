@@ -54,7 +54,8 @@ def verify_and {p1 p2} (res1 : Result' p1) (res2 : Result' p2) : Result' (p1 ∧
   let ⟨(), h2⟩ ← res2
   return ⟨(), And.intro h1 h2⟩
 
-def verifyActionsEnum (pt : PlanningTask n) (as : List ℕ) : Result' (∀ a ∈ as, a < pt.actions'.length) :=
+def verifyActionsEnum (pt : PlanningTask n) (as : List ℕ) :
+    Result' (∀ a ∈ as, a < pt.actions'.length) :=
   if h : ∀ a ∈ as, a < pt.actions'.length then
     return ⟨(), h⟩
   else
@@ -191,7 +192,7 @@ public def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.state
   match heq : C.states[Sᵢ] with
   | StateSetExpr.empty => ∅
   | StateSetExpr.init => {pt.init}
-  | StateSetExpr.goal => pt.goal_states
+  | StateSetExpr.goal => pt.goalStates
   | StateSetExpr.bdd φ => φ.val.toStates
   | StateSetExpr.horn φ => φ.val.toStates
   | StateSetExpr.mods φ => φ.val.toStates
@@ -210,11 +211,11 @@ public def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.state
   | StateSetExpr.progr S'ᵢ Aᵢ =>
     have h' : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
       simp_all [Certificate.validStateSetExpr]
-    pt.progression (hC.getStates ⟨S'ᵢ, by omega⟩) (hC.getActions ⟨Aᵢ, h'.2⟩)
+    progression (hC.getStates ⟨S'ᵢ, by omega⟩) (hC.getActions ⟨Aᵢ, h'.2⟩)
   | StateSetExpr.regr S'ᵢ Aᵢ =>
     have h' : S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size := by
       simp_all [Certificate.validStateSetExpr]
-    pt.regression (hC.getStates ⟨S'ᵢ, by omega⟩) (hC.getActions ⟨Aᵢ, h'.2⟩)
+    regression (hC.getStates ⟨S'ᵢ, by omega⟩) (hC.getActions ⟨Aᵢ, h'.2⟩)
 
 public lemma getStatesEmpty {C : Certificate pt} (hC : C.validSets) Sᵢ
     (h : C.states[Sᵢ]? = some StateSetExpr.empty) : hC.getStates Sᵢ = ∅ := by
@@ -229,7 +230,7 @@ public lemma getStatesInit {C : Certificate pt} (hC : C.validSets) Sᵢ
   all_goals simp_all
 
 public lemma getStatesGoal {C : Certificate pt} (hC : C.validSets) Sᵢ
-    (h : C.states[Sᵢ]? = some StateSetExpr.goal) : hC.getStates Sᵢ = pt.goal_states := by
+    (h : C.states[Sᵢ]? = some StateSetExpr.goal) : hC.getStates Sᵢ = pt.goalStates := by
   unfold getStates
   split
   all_goals simp_all
@@ -274,14 +275,14 @@ public lemma getStatesUnion {C : Certificate pt} (hC : C.validSets)
 
 public lemma getStatesProg {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
     (Aᵢ : Fin C.actions.size) (h : C.states[Sᵢ]? = some (StateSetExpr.progr S'ᵢ Aᵢ)) :
-    hC.getStates Sᵢ = pt.progression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
+    hC.getStates Sᵢ = progression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
   rw [getStates]
   split
   all_goals simp_all
 
 public lemma getStatesRegr {C : Certificate pt} (hC : C.validSets) (Sᵢ S'ᵢ : Fin C.states.size)
     (Aᵢ : Fin C.actions.size) (h : C.states[Sᵢ]? = some (StateSetExpr.regr S'ᵢ Aᵢ)) :
-    hC.getStates Sᵢ = pt.regression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
+    hC.getStates Sᵢ = regression (hC.getStates S'ᵢ) (hC.getActions Aᵢ) := by
   rw [getStates]
   split
   all_goals simp_all

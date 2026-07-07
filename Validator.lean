@@ -10,8 +10,8 @@ public def main : IO Unit := do
   try
     let path <- IO.currentDir
     let pt_path := path / "test" / "success-task.txt"
-    let ⟨_, pt⟩ <- Parser.parseFile pt_path
-    IO.println (repr pt)
+    let ⟨_, pt⟩ <- readPlanningTask pt_path
+    IO.println pt
     let certificate_path := path / "test" / "success-certificate.txt"
     IO.println "Parsing the certificate"
     let C <- Certificate.parse pt certificate_path

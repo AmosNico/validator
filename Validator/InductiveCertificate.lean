@@ -22,7 +22,7 @@ This file includes :
 
 /-- A set `S` is inductive if `S[pt.actions] ⊆ S`. -/
 abbrev InductiveSet {n} (pt : PlanningTask n) (S : States n) :=
-  pt.progression S pt.actions ⊆ S
+  progression S pt.actions ⊆ S
 
 /--
 An inductive certificate for a state `s` is an inductive set containing `s`
@@ -52,7 +52,7 @@ theorem soundness' {n} {pt : PlanningTask n} {s S} :
     refine ih ?_ h3
     show s2 ∈ S
     apply h2
-    exact pt.mem_progression_of_successor hs ha h
+    exact mem_progression_of_successor hs ha h
 
 /--
 Inductive certificates are sound, i.e. if an inductive certificate exists,
@@ -74,7 +74,7 @@ theorem completeness' {n} {pt : PlanningTask n} {s} :
     apply h1
     exact ⟨s', π, h3⟩
   · intro s' h
-    simp only [pt.mem_progression, Set.mem_setOf_eq] at h
+    simp only [mem_progression, Set.mem_setOf_eq] at h
     rcases h with ⟨a, ha, s'', h2, h3⟩
     obtain π : pt.Path s s'' := Classical.choice h2
     constructor

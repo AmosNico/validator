@@ -5,7 +5,7 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "ddeff4fa7fdcdd76a6ab05a118866078d1383ad6",
+   "rev": "a925b72c3f93f147fe91316e8e59d231a6bbb313",
    "name": "strips",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",

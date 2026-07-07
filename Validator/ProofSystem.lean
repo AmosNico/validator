@@ -89,32 +89,32 @@ public inductive Derivation {n} (pt : PlanningTask n) : (conclusion : Prop) → 
     Derivation pt (Dead pt S)
   /-- Progression Goal -/
   | PG S S' :
-    Derivation pt (pt.progression S pt.actions ⊆ S ∪ S') →
+    Derivation pt (progression S pt.actions ⊆ S ∪ S') →
     Derivation pt (Dead pt S') →
-    Derivation pt (Dead pt (S ∩ pt.goal_states)) →
+    Derivation pt (Dead pt (S ∩ pt.goalStates)) →
     Derivation pt (Dead pt S)
   /-- Progression Initial -/
   | PI S S' :
-    Derivation pt (pt.progression S pt.actions ⊆ S ∪ S') →
+    Derivation pt (progression S pt.actions ⊆ S ∪ S') →
     Derivation pt (Dead pt S') →
     Derivation pt ({pt.init} ⊆ S) →
     Derivation pt (Dead pt Sᶜ)
   /-- Regression Goal -/
   | RG S S' :
-    Derivation pt (pt.regression S pt.actions ⊆ S ∪ S') →
+    Derivation pt (regression S pt.actions ⊆ S ∪ S') →
     Derivation pt (Dead pt S') →
-    Derivation pt (Dead pt (Sᶜ ∩ pt.goal_states)) →
+    Derivation pt (Dead pt (Sᶜ ∩ pt.goalStates)) →
     Derivation pt (Dead pt Sᶜ)
   /-- Regression Initial -/
   | RI S S' :
-    Derivation pt (pt.regression S pt.actions ⊆ S ∪ S') →
+    Derivation pt (regression S pt.actions ⊆ S ∪ S') →
     Derivation pt (Dead pt S') →
     Derivation pt ({pt.init} ⊆ Sᶜ) →
     Derivation pt (Dead pt S)
   /-- Conclusion Initial -/
   | CI : Derivation pt (Dead pt {pt.init}) → Derivation pt (Unsolvable pt)
   /-- Conclusion Goal -/
-  | CG : Derivation pt (Dead pt pt.goal_states) → Derivation pt (Unsolvable pt)
+  | CG : Derivation pt (Dead pt pt.goalStates) → Derivation pt (Unsolvable pt)
   /-- Union Right -/
   | UR {α} (E E' : Set α) : Derivation pt (E ⊆ E ∪ E')
   /-- Union Left -/
@@ -142,38 +142,38 @@ public inductive Derivation {n} (pt : PlanningTask n) : (conclusion : Prop) → 
     Derivation pt (E ⊆ E'')
   /-- Action Transitivity -/
   | AT S S' A A' :
-    Derivation pt (pt.progression S A ⊆ S') →
+    Derivation pt (progression S A ⊆ S') →
     Derivation pt (A' ⊆ A) →
-    Derivation pt (pt.progression S A' ⊆ S')
+    Derivation pt (progression S A' ⊆ S')
   /-- Action Union -/
   | AU S S' A A' :
-    Derivation pt (pt.progression S A ⊆ S') →
-    Derivation pt (pt.progression S A' ⊆ S') →
-    Derivation pt (pt.progression S (A ∪ A') ⊆ S')
+    Derivation pt (progression S A ⊆ S') →
+    Derivation pt (progression S A' ⊆ S') →
+    Derivation pt (progression S (A ∪ A') ⊆ S')
   /-- Progression Transitivity -/
   | PT S S' S'' A :
-    Derivation pt (pt.progression S A ⊆ S'') →
+    Derivation pt (progression S A ⊆ S'') →
     Derivation pt (S' ⊆ S) →
-    Derivation pt (pt.progression S' A ⊆ S'')
+    Derivation pt (progression S' A ⊆ S'')
   /-- Progression Union -/
   | PU S S' S'' A :
-    Derivation pt (pt.progression S A ⊆ S'') →
-    Derivation pt (pt.progression S' A ⊆ S'') →
-    Derivation pt (pt.progression (S ∪ S') A ⊆ S'')
+    Derivation pt (progression S A ⊆ S'') →
+    Derivation pt (progression S' A ⊆ S'') →
+    Derivation pt (progression (S ∪ S') A ⊆ S'')
   /-- Progression to Regression -/
   | PR S S' A :
-    Derivation pt (pt.progression S A ⊆ S') →
-    Derivation pt (pt.regression (S'ᶜ) A ⊆ Sᶜ)
+    Derivation pt (progression S A ⊆ S') →
+    Derivation pt (regression (S'ᶜ) A ⊆ Sᶜ)
   /-- Regression to Progression -/
   | RP S S' A :
-    Derivation pt (pt.regression (S'ᶜ) A ⊆ Sᶜ) →
-    Derivation pt (pt.progression S A ⊆ S')
+    Derivation pt (regression (S'ᶜ) A ⊆ Sᶜ) →
+    Derivation pt (progression S A ⊆ S')
 
 /-! ## Soundness of the Proof System -/
 
 lemma progression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
-    (h1 : pt.progression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₂, s ∈ S := by
+    (h1 : progression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₂, s ∈ S := by
   induction π₂ with
   | empty s =>
     simp only [Path.mem_empty, forall_eq]
@@ -186,7 +186,7 @@ lemma progression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
       subst heq
       exact hs1
     | inr hs' =>
-      have hs2 : s2 ∈ pt.progression S pt.actions :=
+      have hs2 : s2 ∈ progression S pt.actions :=
         mem_progression_of_successor hs1 ha succ
       have : s2 ∉ S' := by
         by_contra h
@@ -202,22 +202,22 @@ lemma progression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
       exact ih hs2 (Path.snoc a s1 ha π₁ succ) hgoal s' hs'
 
 public lemma progression_goal {n} {pt : PlanningTask n} {S S'}
-    (h1 : pt.progression S pt.actions ⊆ S ∪ S')
+    (h1 : progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
-    (h3 : Dead pt (S ∩ pt.goal_states)) :
+    (h3 : Dead pt (S ∩ pt.goalStates)) :
     Dead pt S := by
   rintro s hs ⟨s', π, hgoal⟩ s_in_π
   obtain ⟨π₁, π₂⟩ := Path.split π s_in_π
   have s'_in_π₂ : s' ∈ π₂ := Path.last_mem π₂
   have s'_in_S : s' ∈ S :=
     progression_aux hs π₁ π₂ hgoal h1 h2 s' s'_in_π₂
-  have hs' : s' ∈ S ∩ pt.goal_states := by
-    simp_all only [Set.mem_inter_iff, mem_goal_states, and_self]
+  have hs' : s' ∈ S ∩ pt.goalStates := by
+    simp_all only [Set.mem_inter_iff, mem_goalStates, and_self]
   apply h3 s' hs' (Plan.mk s' π hgoal)
   exact Path.last_mem π
 
 public lemma progression_initial {n} {pt : PlanningTask n} {S S'}
-    (h1 : pt.progression S pt.actions ⊆ S ∪ S')
+    (h1 : progression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ S) :
     Dead pt (Sᶜ) := by
@@ -231,7 +231,7 @@ public lemma progression_initial {n} {pt : PlanningTask n} {S S'}
 -- Unable to use regular induction on π₁ (I assume because pt.init is not a variable)
 lemma regression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
     (hs1 : s1 ∈ S) (π₁ : Path pt pt.init s1) (π₂ : Path pt s1 s2) (hgoal : pt.GoalState s2)
-    (h1 : pt.regression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₁, s ∈ S := by
+    (h1 : regression S pt.actions ⊆ S ∪ S') (h2 : Dead pt S') : ∀ s ∈ π₁, s ∈ S := by
   cases heq : π₁ using Path.snocCases with
   | empty s =>
     simp only [Path.mem_empty, forall_eq]
@@ -244,7 +244,7 @@ lemma regression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
       subst heq
       exact hs1
     | inr hs' =>
-      have hs0 : s0 ∈ pt.regression S pt.actions :=
+      have hs0 : s0 ∈ regression S pt.actions :=
         mem_regression_of_successor hs1 ha succ
       have : s0 ∉ S' := by
         by_contra h
@@ -261,22 +261,22 @@ lemma regression_aux {n} {pt : PlanningTask n} {S S'} {s1 s2}
 termination_by π₁.length
 
 public lemma regression_goal {n} {pt : PlanningTask n} {S S'}
-    (h1 : pt.regression S pt.actions ⊆ S ∪ S')
+    (h1 : regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
-    (h3 : Dead pt (Sᶜ ∩ pt.goal_states)) :
+    (h3 : Dead pt (Sᶜ ∩ pt.goalStates)) :
     Dead pt Sᶜ := by
   rintro s hs ⟨s', π, hgoal⟩ s_in_π
   obtain ⟨π₁, π₂⟩ := Path.split π s_in_π
   have hs' : s' ∈ S := by
     by_contra h
-    exact h3 s' (by simp_all [mem_goal_states]) (Plan.mk s' π hgoal) (Path.last_mem π)
+    exact h3 s' (by simp_all [mem_goalStates]) (Plan.mk s' π hgoal) (Path.last_mem π)
   have s_in_S : s ∈ S :=
     regression_aux hs' π (Path.empty s') hgoal h1 h2 s s_in_π
   simp only [Set.mem_compl_iff] at hs
   exact hs s_in_S
 
 public lemma regression_initial {n} {pt : PlanningTask n} {S S'}
-    (h1 : pt.regression S pt.actions ⊆ S ∪ S')
+    (h1 : regression S pt.actions ⊆ S ∪ S')
     (h2 : Dead pt S')
     (h3 : {pt.init} ⊆ Sᶜ) :
     Dead pt S := by
@@ -346,7 +346,7 @@ public theorem soundness {n} {pt : PlanningTask n} {conclusion} :
     constructor
     intro plan
     have h : DeadState pt plan.last :=
-      d.soundness plan.last (by simp_all [plan.goal, mem_goal_states])
+      d.soundness plan.last (by simp_all [plan.goal, mem_goalStates])
     apply h plan
     exact Path.last_mem plan.path
   | UR E E' => by simp
@@ -406,14 +406,14 @@ def fromInductiveCertificate {n} {pt : PlanningTask n} {S} :
     apply CI
     · apply SD {pt.init} S
       · apply PG S ∅
-        · apply ST (pt.progression S pt.actions) S (S ∪ ∅)
+        · apply ST (progression S pt.actions) S (S ∪ ∅)
           · apply B2 (States n)
             · exact IsProgrInter.empty <| IsVariableInter.single <| explicit S
             · exact IsLiteralUnion.single <| pos <| explicit S
             · exact h3
           · exact UR S ∅
         · exact ED
-        · apply SD (S ∩ pt.goal_states) ∅
+        · apply SD (S ∩ pt.goalStates) ∅
           · exact ED
           · apply B1 (States n)
             · exact IsLiteralInter.inter
@@ -421,7 +421,7 @@ def fromInductiveCertificate {n} {pt : PlanningTask n} {S} :
                 (IsLiteralInter.single <| pos <| goal)
             · exact IsLiteralUnion.single <| pos <| empty
             · simp only [Set.subset_empty_iff, Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff,
-                mem_goal_states, not_and]
+                mem_goalStates, not_and]
               exact h2
       · apply B1 (States n)
         · exact IsLiteralInter.single <| pos <| init

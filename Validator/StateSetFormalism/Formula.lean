@@ -275,7 +275,7 @@ structure PartialModel (n : ℕ) where
   pos : VarSet n
   neg : VarSet n
   disjoint : pos ∩ neg = ∅
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 namespace PartialModel
 

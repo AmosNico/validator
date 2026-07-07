@@ -87,7 +87,7 @@ def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states
       exact IsVariable.init
     return ⟨R.mkInit pt, by simp [h1], h2⟩
   | .goal =>
-    have h1 : hC.getStates Sᵢ = pt.goal_states :=
+    have h1 : hC.getStates Sᵢ = pt.goalStates :=
       hC.getStatesGoal Sᵢ (by simp_all)
     have h2 : IsVariable pt (type pt R) (hC.getStates Sᵢ) := by
       rw [h1]
@@ -239,7 +239,7 @@ def get_inter_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C
 
 def get_progression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt)
-      fun (X, A) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∧
+      fun (X, A) ↦ hC.getStates Sᵢ = progression X.val.inter A.toActions ∧
         IsVariableInter pt (R.type pt) X.val.inter :=
   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the progression \
     of an intersection of atomic {R} formulas" do
@@ -249,14 +249,14 @@ def get_progression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ :
     simp_all [Certificate.validStateSetExpr]
   let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
   let A := hC.getActionIds ⟨Aᵢ, by omega⟩
-  have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions := by
+  have h3 : hC.getStates Sᵢ = progression X.val.inter A.toActions := by
     rw[ hC.getStatesProg Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)]
     simp only [h1, getActions_eq, A]
   return ⟨(X, A), h3, by simp_all only⟩
 
 def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
-      fun (X, A, L) ↦ hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter ∧
+      fun (X, A, L) ↦ hC.getStates Sᵢ = progression X.val.inter A.toActions ∩ L.val.inter ∧
         IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) :=
   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the progression \
     of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
@@ -267,7 +267,7 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
       simp_all [Certificate.validStateSetExpr]
     let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R ⟨S'ᵢ, by omega⟩
     let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter  := by
+    have h5 : hC.getStates Sᵢ = progression X.val.inter A.toActions ∩ L.val.inter  := by
       rw [← h1, ← h3]
       exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
     have h6 : IsProgrInter pt (R.type pt) (hC.getStates Sᵢ) := by
@@ -277,7 +277,7 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
   | .progr S'ᵢ Aᵢ => do
     let ⟨(X, A), h1, h2⟩ ← hC.get_progression_variables R Sᵢ
     let L := UnprimedLiterals.empty
-    have h3 : hC.getStates Sᵢ = pt.progression X.val.inter A.toActions ∩ L.val.inter := by
+    have h3 : hC.getStates Sᵢ = progression X.val.inter A.toActions ∩ L.val.inter := by
       simp_all [L, UnprimedVariables.val]
     have h4 : IsProgrInter pt (type pt R) (hC.getStates Sᵢ) := by
       simp_all only [Fin.getElem_fin, UnprimedVariables.val,
@@ -288,7 +288,7 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
 
 def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt)
-      fun (X, A) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∧
+      fun (X, A) ↦ hC.getStates Sᵢ = regression X.val.inter A.toActions ∧
         IsVariableInter pt (R.type pt) X.val.inter :=
   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the regression \
     of an intersection of atomic {R} formulas" do
@@ -298,7 +298,7 @@ def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : 
     simp_all [Certificate.validStateSetExpr]
   let ⟨X, h1, h2⟩ ← hC.get_inter_variables R ⟨S'ᵢ, by omega⟩
   let A := hC.getActionIds ⟨Aᵢ, by omega⟩
-  have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions := by
+  have h3 : hC.getStates Sᵢ = regression X.val.inter A.toActions := by
     rw [hC.getStatesRegr Sᵢ ⟨S'ᵢ, by omega⟩ ⟨Aᵢ, by omega⟩ (by simp_all)]
     simp only [h1, getActions_eq, A]
   return ⟨(X, A), h3, by simp_all⟩
@@ -306,7 +306,7 @@ def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : 
 -- TODO : catch errors
 def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt × UnprimedLiterals' pt R)
-      fun (X, A, L) ↦ hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter ∧
+      fun (X, A, L) ↦ hC.getStates Sᵢ = regression X.val.inter A.toActions ∩ L.val.inter ∧
         IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) :=
   withErrorMessage s!"Verifying that the state set #{Sᵢ} is the intersection of the regression \
     of an intersection of atomic {R} formulas and the intersection of {R} literals" <|
@@ -317,7 +317,7 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
       simp_all [Certificate.validStateSetExpr]
     let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R ⟨S'ᵢ, by omega⟩
     let ⟨L, h3, h4⟩ ← hC.get_inter_literals R ⟨S''ᵢ, by omega⟩
-    have h5 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter  := by
+    have h5 : hC.getStates Sᵢ = regression X.val.inter A.toActions ∩ L.val.inter  := by
       rw [← h1, ← h3]
       exact hC.getStatesInter Sᵢ ⟨S'ᵢ, by omega⟩ ⟨S''ᵢ, by omega⟩ (by simp_all)
     have h6 : IsRegrInter pt (R.type pt) (hC.getStates Sᵢ) := by
@@ -327,7 +327,7 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
   | .regr S'ᵢ Aᵢ => do
     let ⟨(X, A), h1, h2⟩ ← hC.get_regression_variables R Sᵢ
     let L := UnprimedLiterals.empty
-    have h3 : hC.getStates Sᵢ = pt.regression X.val.inter A.toActions ∩ L.val.inter := by
+    have h3 : hC.getStates Sᵢ = regression X.val.inter A.toActions ∩ L.val.inter := by
       simp_all [L, UnprimedVariables.val]
     have h4 : IsRegrInter pt (type pt R) (hC.getStates Sᵢ) := by
       simp_all only [Fin.getElem_fin, UnprimedVariables.val,
@@ -563,14 +563,14 @@ def checkB2' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt
 
 lemma checkB2'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     checkB2' R aᵢ X0 X1 X2 ↔
-    pt.progression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union := by
+    progression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union := by
   let X0' := UnprimedVariables.toPrimed (preVariables R aᵢ ++ X0) (effectVarSet aᵢ)
   let X := X0' ++ (effectVariables R aᵢ).val
-  suffices h : X.inter = pt.progression' X0.val.inter pt.actions'[aᵢ] by
+  suffices h : X.inter = progression' X0.val.inter pt.actions'[aᵢ] by
     simp [X, X0'] at h
     simp [checkB2', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
-  simp only [Fin.getElem_fin, PlanningTask.mem_progression', UnprimedVariables.mem_inter, Successor,
+  simp only [Fin.getElem_fin, mem_progression', UnprimedVariables.mem_inter, Successor,
     Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
@@ -592,9 +592,9 @@ def checkB2 R
   A.all (fun aᵢ ↦ checkB2' R aᵢ X (L1.1 ++ L2.2) (L2.1 ++ L1.2))
 
 lemma checkB2_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
-    checkB2 R X A L1 L2 ↔ pt.progression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
+    checkB2 R X A L1 L2 ↔ progression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
   simp [checkB2, checkB2'_correct, ← Set.inter_assoc]
-  simp [PlanningTask.progression]
+  simp [progression]
   grind
 
 def checkB3' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt R) : Bool :=
@@ -604,14 +604,14 @@ def checkB3' R (aᵢ : Fin pt.actions'.length) (X0 X1 X2 : UnprimedVariables' pt
 
 lemma checkB3'_correct {R aᵢ} {X0 X1 X2 : UnprimedVariables' pt R} :
     checkB3' R aᵢ X0 X1 X2 ↔
-    pt.regression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union := by
+    regression' X0.val.inter pt.actions'[aᵢ] ∩ X1.val.inter ⊆ X2.val.union := by
   let X0' := UnprimedVariables.toPrimed ( effectVariables R aᵢ ++ X0) (effectVarSet aᵢ)
   let X := X0' ++ (preVariables R aᵢ).val
-  suffices h : X.inter = pt.regression' X0.val.inter pt.actions'[aᵢ] by
+  suffices h : X.inter = regression' X0.val.inter pt.actions'[aᵢ] by
     simp [X, X0'] at h
     simp [checkB3', check_variables_subset_correct, ← Set.inter_assoc, h]
   ext s
-  simp only [Fin.getElem_fin, PlanningTask.mem_regression', UnprimedVariables.mem_inter, Successor,
+  simp only [Fin.getElem_fin, mem_regression', UnprimedVariables.mem_inter, Successor,
     Applicable, Set.subset_def, SetLike.mem_coe, Set.ext_iff, Set.mem_union, Set.mem_sdiff]
   simp only [UnprimedVariables.inter_variables_append, Set.mem_inter_iff,
     UnprimedVariables.mem_inter_toPrimed, UnprimedVariables.inter_append,
@@ -633,8 +633,8 @@ def checkB3 R
   A.all (fun aᵢ ↦ checkB3' R aᵢ X (L1.1 ++ L2.2) (L2.1 ++ L1.2))
 
 lemma checkB3_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
-    checkB3 R X A L1 L2 ↔ pt.regression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
-  simp [checkB3, checkB3'_correct, PlanningTask.regression, ← Set.inter_assoc]
+    checkB3 R X A L1 L2 ↔ regression X.val.inter A.toActions ∩ L1.val.inter ⊆ L2.val.union := by
+  simp [checkB3, checkB3'_correct, regression, ← Set.inter_assoc]
   grind
 
 def throwUnsuportedB4 {α : outParam Type} {p} (R1 R2 : StateSetFormalism) : Result α p :=

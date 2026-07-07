@@ -9,7 +9,7 @@ public structure MODS n where
   private vars : VarSet n
   private mods : List (PartialModel n)
   private prop : ∀ M ∈ mods, M.vars = vars
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 namespace Formula.PartialModel
 

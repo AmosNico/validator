@@ -165,7 +165,7 @@ public structure Horn n where
 
   private vars_prop : unit_literals.vars ∩ clauses.vars = ∅
 
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 namespace Horn
 

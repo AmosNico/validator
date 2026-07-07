@@ -701,7 +701,7 @@ end UnprimedLiterals
 inductive IsVariable {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
   | empty : IsVariable pt R ∅
   | init : IsVariable pt R {pt.init}
-  | goal : IsVariable pt R pt.goal_states
+  | goal : IsVariable pt R pt.goalStates
   | explicit (φ : R) : IsVariable pt R (Formalism.toStates pt φ)
 
 inductive IsLiteral {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
@@ -722,16 +722,16 @@ inductive IsLiteralInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n
 
 -- TODO : check whether it should be enforced that A ⊆ pt.actions
 inductive IsProgrInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
-  | empty {S A} : IsVariableInter pt R S → IsProgrInter pt R (pt.progression S A)
+  | empty {S A} : IsVariableInter pt R S → IsProgrInter pt R (progression S A)
   | inter {S S' A} :
     IsVariableInter pt R S → IsLiteralInter pt R S' →
-    IsProgrInter pt R (pt.progression S A ∩ S')
+    IsProgrInter pt R (progression S A ∩ S')
 
 -- TODO : check whether it should be enforced that A ⊆ pt.actions
 inductive IsRegrInter {n} (pt : PlanningTask n) R [Formalism pt R] : States n → Prop
-  | empty {S A} : IsVariableInter pt R S → IsRegrInter pt R (pt.regression S A)
+  | empty {S A} : IsVariableInter pt R S → IsRegrInter pt R (regression S A)
   | inter {S S' A} :
     IsVariableInter pt R S → IsLiteralInter pt R S' →
-    IsRegrInter pt R (pt.regression S A ∩ S')
+    IsRegrInter pt R (regression S A ∩ S')
 
 end Validator.Formalism
