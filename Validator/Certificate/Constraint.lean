@@ -10,7 +10,7 @@ public structure Constraint (α : Type) where
 
   verify' :  Result α prop
 
-  elim_exists :
+  elimExists :
     (∃ a, prop a) → {a // prop a ∧ ∀ a', prop a' → a' = a}
 
   message : Option String := none
@@ -21,14 +21,14 @@ variable {n : ℕ} {pt : PlanningTask n}
 
 open ConstraintType
 
-public def elim_exists_0 {prop : Unit → Prop} :
+public def elimExists0 {prop : Unit → Prop} :
     (∃ v, prop v) → {v // prop v ∧ ∀ v', prop v' → v' = v} := by
   intro h'
   use ()
   rcases h' with ⟨⟨⟩, hv⟩
   simp_all
 
-macro "elim_exists_1" e:term : tactic => do
+macro "elimExists1" e:term : tactic => do
   `(tactic|
     intro h <;>
     cases heq : $e with
@@ -39,7 +39,7 @@ macro "elim_exists_1" e:term : tactic => do
       exact ⟨S'ᵢ, by simp_all⟩
     | none => simp_all)
 
-macro "elim_exists_2" e:term : tactic => do
+macro "elimExists2" e:term : tactic => do
   `(tactic|
     intro h <;>
     simp_all <;>
@@ -70,17 +70,17 @@ public def seq {α1 α2} (h1 : Constraint α1) (h2 : α1 → Constraint α2) : C
     let ⟨a2, ha2⟩ ← (h2 a1).verify
     return ⟨(a1, a2), by simp_all⟩
 
-  elim_exists h0 := by
+  elimExists h0 := by
     simp_all only [Prod.exists, exists_and_left, and_imp, Prod.forall]
     have h3 : ∃ v1, h1.prop v1 := by
       rcases h0 with ⟨v1, hv1, _⟩
       use v1, hv1
-    obtain ⟨v1, hv1, h4⟩ := h1.elim_exists h3
+    obtain ⟨v1, hv1, h4⟩ := h1.elimExists h3
     have h5 : ∃ v2, (h2 v1).prop v2 := by
       rcases h0 with ⟨v1', hv1', v2, hv2⟩
       rw [h4 v1' hv1'] at hv2
       use v2
-    obtain ⟨v2, hv2, h6⟩ := (h2 v1).elim_exists h5
+    obtain ⟨v2, hv2, h6⟩ := (h2 v1).elimExists h5
     exact ⟨(v1, v2), by simp_all⟩
 
 @[simp]
@@ -96,10 +96,10 @@ public def and {α1 α2} (h1 : Constraint α1) (h2 : Constraint α2) : Constrain
     let ⟨a2, ha2⟩ ← h2.verify
     return ⟨(a1, a2), by simp_all⟩
 
-  elim_exists h0 := by
+  elimExists h0 := by
     simp_all only [Prod.exists, exists_and_left, exists_and_right, and_imp, Prod.forall]
-    obtain ⟨v1, hv1, h1⟩ := h1.elim_exists h0.1
-    obtain ⟨v2, hv2, h2⟩ := h2.elim_exists h0.2
+    obtain ⟨v1, hv1, h1⟩ := h1.elimExists h0.1
+    obtain ⟨v2, hv2, h2⟩ := h2.elimExists h0.2
     exact ⟨(v1, v2), by simp_all⟩
 
 infixr:70 "∧ᶜ" => and
@@ -123,7 +123,7 @@ def eq (h : Constraint ℕ) (T : SetType) (Eᵢ : ℕ) : Constraint Unit where
       then return ⟨(), by simp_all⟩
       else T.toConstraintType.throw_not_eq Eᵢ E'ᵢ
 
-    elim_exists := elim_exists_0
+    elimExists := elimExists0
 
     message := h.message
 
@@ -155,8 +155,8 @@ public def leftEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E1ᵢ : ℕ) : Co
       exact ⟨E2ᵢ, by simp_all⟩)
     else T.toConstraintType.throw_not_eq E1ᵢ E1'ᵢ
 
-  elim_exists h' := by
-    obtain ⟨⟨E1'ᵢ, E2ᵢ⟩, h1, h2⟩ := h.elim_exists (by tauto)
+  elimExists h' := by
+    obtain ⟨⟨E1'ᵢ, E2ᵢ⟩, h1, h2⟩ := h.elimExists (by tauto)
     use E2ᵢ
     rcases h' with ⟨E2'ᵢ, h'⟩
     obtain ⟨rfl, rfl⟩ := h2 (E1ᵢ, E2'ᵢ) h'
@@ -198,8 +198,8 @@ public def rightEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E2ᵢ : ℕ) : C
       exact ⟨E1ᵢ, by simp_all⟩)
     else T.toConstraintType.throw_not_eq E2ᵢ E2'ᵢ
 
-  elim_exists h' := by
-    obtain ⟨⟨E1ᵢ, E2'ᵢ⟩, h1, h2⟩ := h.elim_exists (by tauto)
+  elimExists h' := by
+    obtain ⟨⟨E1ᵢ, E2'ᵢ⟩, h1, h2⟩ := h.elimExists (by tauto)
     use E1ᵢ
     rcases h' with ⟨E1'ᵢ, h'⟩
     obtain ⟨rfl, rfl⟩ := h2 (E1'ᵢ, E2ᵢ) h'
@@ -256,7 +256,7 @@ def trivial : Constraint Unit where
 
   verify' := pure ⟨(), by simp⟩
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 def bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Constraint Unit where
 
@@ -267,7 +267,7 @@ def bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Constraint Unit where
     then return ⟨(), h⟩
     else T.throw_out_of_bounds Eᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 lemma bounds.prop_eq {T limit Eᵢ a} : (bounds T limit Eᵢ).prop a ↔ Eᵢ < limit := by
@@ -314,7 +314,7 @@ public def actionBounds' (C : Certificate pt) (Aᵢ : ℕ) :
     then return ⟨(), h⟩
     else ActionSetConstraint.throw_out_of_bounds Aᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma actionBounds'.prop_eq {C : Certificate pt} {Aᵢ a} :
@@ -331,7 +331,7 @@ public def stateBounds' (C : Certificate pt) (Sᵢ : ℕ) :
     then return ⟨(), h⟩
     else StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma stateBounds'.prop_eq {C : Certificate pt} {Sᵢ a} :
@@ -352,7 +352,7 @@ public def isActionAll (C : Certificate pt) (Aᵢ : ℕ) : Constraint Unit where
     | some A => ActionSetConstraint.throw_unexpected Aᵢ ActionSetExpr.all A
     | none => ActionSetConstraint.throw_out_of_bounds Aᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
   message := s!"Verifying that action set  #{Aᵢ} is the set of all actions"
 
@@ -372,7 +372,7 @@ public def isActionUnion (C : Certificate pt) (Aᵢ : ℕ) : Constraint (ℕ × 
     | some A => ActionSetConstraint.throw_unexpected Aᵢ "a union of actions" A
     | none => ActionSetConstraint.throw_out_of_bounds Aᵢ
 
-  elim_exists := by elim_exists_2 C.actions[Aᵢ]?
+  elimExists := by elimExists2 C.actions[Aᵢ]?
 
   message := s!"Verifying that action set #{Aᵢ} is the union of two actions sets"
 
@@ -395,7 +395,7 @@ public def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit wher
   | some S => StateSetConstraint.throw_unexpected Sᵢ (empty (pt := pt)) S
   | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
   message := s!"Verifying that state set #{Sᵢ} is {empty (pt := pt)}"
 
@@ -415,7 +415,7 @@ public def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
   | some S => StateSetConstraint.throw_unexpected Sᵢ (init (pt := pt)) S
   | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
   message := s!"Verifying that state set #{Sᵢ} is {init (pt := pt)}"
 
@@ -435,7 +435,7 @@ public def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
   | some S => StateSetConstraint.throw_unexpected Sᵢ (goal (pt := pt)) S
   | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
   message := s!"Verifying that state set #{Sᵢ} is {goal (pt := pt)}"
 
@@ -455,7 +455,7 @@ public def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
     | some S => StateSetConstraint.throw_unexpected Sᵢ "the complement of a state set" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := by elim_exists_1 C.states[Sᵢ]?
+  elimExists := by elimExists1 C.states[Sᵢ]?
 
   message := s!"Verifying that state set #{Sᵢ} is complement of a state set"
 
@@ -475,7 +475,7 @@ public def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
     | some S => StateSetConstraint.throw_unexpected Sᵢ "an intersection of states" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := by elim_exists_2 C.states[Sᵢ]?
+  elimExists := by elimExists2 C.states[Sᵢ]?
 
   message := s!"Verifying that state set #{Sᵢ} is the intersection of two state sets"
 
@@ -496,7 +496,7 @@ public def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a union of states" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := by elim_exists_2 C.states[Sᵢ]?
+  elimExists := by elimExists2 C.states[Sᵢ]?
 
   message := s!"Verifying that state set #{Sᵢ} is the union of two state sets"
 
@@ -517,7 +517,7 @@ public def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a progression" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := by elim_exists_2 C.states[Sᵢ]?
+  elimExists := by elimExists2 C.states[Sᵢ]?
 
   message := s!"Verifying that state set #{Sᵢ} is a progression"
 
@@ -539,7 +539,7 @@ public def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
     | some S => StateSetConstraint.throw_unexpected Sᵢ "a regression" S
     | none => StateSetConstraint.throw_out_of_bounds Sᵢ
 
-  elim_exists := by elim_exists_2 C.states[Sᵢ]?
+  elimExists := by elimExists2 C.states[Sᵢ]?
 
   message := s!"Verifying that state set #{Sᵢ} is a regression"
 
@@ -566,7 +566,7 @@ public def isDeadKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint ℕ wh
     | some K => KnowledgeConstraint.throw_unexpected Kᵢ "dead knowledge" K
     | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
 
-  elim_exists h := by
+  elimExists h := by
     cases heq : C.knowledge[Kᵢ]? with
     | some K =>
       cases K
@@ -591,7 +591,7 @@ public def isActionSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constrain
     | some K => KnowledgeConstraint.throw_unexpected Kᵢ "action subset knowledge" K
     | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
 
-  elim_exists := by
+  elimExists := by
     simp_all only [Prod.exists, forall_exists_index, Prod.forall]
     cases heq : C.knowledge[Kᵢ]? with
     | some K =>
@@ -620,7 +620,7 @@ public def isStateSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint
     | some K => KnowledgeConstraint.throw_unexpected Kᵢ "state subset knowledge" K
     | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
 
-  elim_exists := by
+  elimExists := by
     simp_all only [Prod.exists, forall_exists_index, Prod.forall]
     cases heq : C.knowledge[Kᵢ]? with
     | some K =>

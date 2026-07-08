@@ -18,7 +18,7 @@ namespace Certificate.validSets
 open StateSetFormalism
 
 /-- Returns none if the formula is constant -/
-def get_formalism' (hC : C.validSets) (Sᵢ : Fin C.states.size) : Option StateSetFormalism :=
+def getFormalism' (hC : C.validSets) (Sᵢ : Fin C.states.size) : Option StateSetFormalism :=
   match  heq : C.states[Sᵢ] with
   | .empty => none
   | .init => none
@@ -30,37 +30,37 @@ def get_formalism' (hC : C.validSets) (Sᵢ : Fin C.states.size) : Option StateS
     have : S'ᵢ < Sᵢ := by
       have := hC.validStates Sᵢ
       simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+    hC.getFormalism' ⟨S'ᵢ, by omega⟩
   | .inter S'ᵢ S''ᵢ =>
     have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
       have := hC.validStates Sᵢ
       simp_all [Certificate.validStateSetExpr]
-    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
-    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
+    match hC.getFormalism' ⟨S'ᵢ, by omega⟩ with
+    | none => hC.getFormalism' ⟨S''ᵢ, by omega⟩
     | R => R
   | .union S'ᵢ S''ᵢ =>
     have : S'ᵢ < Sᵢ ∧ S''ᵢ < Sᵢ := by
       have := hC.validStates Sᵢ
       simp_all [Certificate.validStateSetExpr]
-    match hC.get_formalism' ⟨S'ᵢ, by omega⟩ with
-    | none => hC.get_formalism' ⟨S''ᵢ, by omega⟩
+    match hC.getFormalism' ⟨S'ᵢ, by omega⟩ with
+    | none => hC.getFormalism' ⟨S''ᵢ, by omega⟩
     | R => R
   | .progr S'ᵢ _ =>
     have : S'ᵢ < Sᵢ := by
       have := hC.validStates Sᵢ
       simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+    hC.getFormalism' ⟨S'ᵢ, by omega⟩
   | .regr S'ᵢ _ =>
     have : S'ᵢ < Sᵢ := by
       have := hC.validStates Sᵢ
       simp_all [Certificate.validStateSetExpr]
-    hC.get_formalism' ⟨S'ᵢ, by omega⟩
+    hC.getFormalism' ⟨S'ᵢ, by omega⟩
 
-public def get_formalism (hC : C.validSets) : List (Fin C.states.size) → StateSetFormalism
+public def getFormalism (hC : C.validSets) : List (Fin C.states.size) → StateSetFormalism
   | [] => mods -- Fallback if all sets are constant
   | Sᵢ :: tail =>
-    match hC.get_formalism' Sᵢ with
-    | none => hC.get_formalism tail
+    match hC.getFormalism' Sᵢ with
+    | none => hC.getFormalism tail
     | some F => F
 
 def throwIncompatibleFormalism {α : outParam Type} {p}
@@ -683,7 +683,7 @@ end StateSetFormalism
 public def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun _ ↦ ∃ hS1ᵢ hS2ᵢ,
-    have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+    have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsLiteralInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
     IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
     hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩
@@ -694,7 +694,7 @@ public def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
       let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
       let S1ᵢ : Fin C.states.size := ⟨S1ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
       let S2ᵢ : Fin C.states.size := ⟨S2ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
-      let R := hC.get_formalism [S1ᵢ, S2ᵢ]
+      let R := hC.getFormalism [S1ᵢ, S2ᵢ]
       let ⟨L1, h1, h2⟩ ← hC.get_inter_literals R S1ᵢ
       let ⟨L2, h3, h4⟩ ← hC.get_union_literals R S2ᵢ
       if h5 : R.checkB1 L1 L2 then
@@ -704,13 +704,13 @@ public def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
       else
         throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
     (constraintB1 hC S1ᵢ S2ᵢ).prop a ↔
       S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
-      have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+      have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
       IsLiteralInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
       IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
       hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩ := by
@@ -720,7 +720,7 @@ public lemma constraintB1.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ
 public def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
 
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
-    have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+    have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsProgrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
     IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
     hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩
@@ -730,7 +730,7 @@ public def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
     let S1ᵢ : Fin C.states.size := ⟨S1ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
     let S2ᵢ : Fin C.states.size := ⟨S2ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
-    let R := hC.get_formalism [S1ᵢ, S2ᵢ]
+    let R := hC.getFormalism [S1ᵢ, S2ᵢ]
     let ⟨(X, A, L1), h1, h2⟩ ← hC.get_progression_inter R S1ᵢ
     let ⟨L2, h3, h4⟩ ← hC.get_union_literals R S2ᵢ
     if h5 : R.checkB2 X A L1 L2 then
@@ -740,13 +740,13 @@ public def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     else
       throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
   (constraintB2 hC S1ᵢ S2ᵢ).prop a ↔
     S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
-    have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+    have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsProgrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
     IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
     hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩ := by
@@ -755,7 +755,7 @@ public lemma constraintB2.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ
 
 public def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
-    have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+    have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
     IsRegrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
     IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
     hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩
@@ -765,7 +765,7 @@ public def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
     let S1ᵢ : Fin C.states.size := ⟨S1ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
     let S2ᵢ : Fin C.states.size := ⟨S2ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
-    let R := hC.get_formalism [S1ᵢ, S2ᵢ]
+    let R := hC.getFormalism [S1ᵢ, S2ᵢ]
     let ⟨(X, A, L1), h1, h2⟩ ← hC.get_regression_inter R S1ᵢ
     let ⟨L2, h3, h4⟩ ← hC.get_union_literals R S2ᵢ
     if h5 : R.checkB3 X A L1 L2 then
@@ -775,13 +775,13 @@ public def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     else
       throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
     (constraintB3 hC S1ᵢ S2ᵢ).prop a ↔
       S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
-      have R := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
+      have R := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩, ⟨S2ᵢ, hS2ᵢ⟩]
       IsRegrInter pt (R.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
       IsLiteralUnion pt (R.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
       hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩ := by
@@ -790,8 +790,8 @@ public lemma constraintB3.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ
 
 public def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit where
   prop := fun () ↦ ∃ hS1ᵢ hS2ᵢ,
-    have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
-    have R2 := hC.get_formalism [⟨S2ᵢ, hS2ᵢ⟩]
+    have R1 := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩]
+    have R2 := hC.getFormalism [⟨S2ᵢ, hS2ᵢ⟩]
     IsLiteral pt (R1.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
     IsLiteral pt (R2.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
     hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩
@@ -801,22 +801,22 @@ public def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     let ⟨⟨⟩, hS2ᵢ⟩ ← (stateBounds' C S2ᵢ).verify
     let S1ᵢ : Fin C.states.size := ⟨S1ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
     let S2ᵢ : Fin C.states.size := ⟨S2ᵢ, by simp_all only [stateBounds'.prop_eq]⟩
-    let R1 := hC.get_formalism [S1ᵢ]
-    let R2 := hC.get_formalism [S2ᵢ]
+    let R1 := hC.getFormalism [S1ᵢ]
+    let R2 := hC.getFormalism [S2ᵢ]
     let ⟨l1, h1, h2⟩ ← hC.get_literal R1 S1ᵢ
     let ⟨l2, h3, h4⟩ ← hC.get_literal R2 S2ᵢ
     let ⟨(), h6⟩ ← R1.checkB4 R2 l1 l2
     return ⟨(), by use S1ᵢ.prop, S2ᵢ.prop, h2, h4; simp_all only [S1ᵢ, S2ᵢ]⟩
 
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma constraintB4.prop_eq {C : Certificate pt} {hC : C.validSets} {S1ᵢ S2ᵢ : ℕ} {a} :
     (constraintB4 hC S1ᵢ S2ᵢ).prop a ↔
       S1ᵢ < C.states.size ∧ S2ᵢ < C.states.size ∧ ∃ hS1ᵢ hS2ᵢ,
-      have R1 := hC.get_formalism [⟨S1ᵢ, hS1ᵢ⟩]
-      have R2 := hC.get_formalism [⟨S2ᵢ, hS2ᵢ⟩]
+      have R1 := hC.getFormalism [⟨S1ᵢ, hS1ᵢ⟩]
+      have R2 := hC.getFormalism [⟨S2ᵢ, hS2ᵢ⟩]
       IsLiteral pt (R1.type pt) (hC.getStates ⟨S1ᵢ, hS1ᵢ⟩) ∧
       IsLiteral pt (R2.type pt) (hC.getStates ⟨S2ᵢ, hS2ᵢ⟩) ∧
       hC.getStates ⟨S1ᵢ, hS1ᵢ⟩ ⊆ hC.getStates ⟨S2ᵢ, hS2ᵢ⟩ := by
@@ -842,7 +842,7 @@ public def constraintB5 {C : Certificate pt} (hC : C.validSets) (A1ᵢ A2ᵢ : �
     else
       throwInvalid s!"The action set #{A1ᵢ} is not a subset of #{A2ᵢ}"
 
-  elim_exists := elim_exists_0
+  elimExists := elimExists0
 
 @[simp]
 public lemma constraintB5.prop_eq {C : Certificate pt} {hC : C.validSets} {A1ᵢ A2ᵢ : ℕ} {u} :

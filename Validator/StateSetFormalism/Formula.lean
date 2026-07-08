@@ -48,7 +48,7 @@ its negation (represented by `(i, false)`).
 structure Literal (n : ℕ) where
   var : Fin n
   isPos : Bool
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 namespace Literal
 

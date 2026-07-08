@@ -3,12 +3,9 @@ version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["Validator"]
 
-[leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-autoImplicit = false
-relaxedAutoImplicit = false
-weak.linter.mathlibStandardSet = true
-maxSynthPendingDepth = 3
+# TODO: use linter
+# lintDriver = "batteries/runLinter"
+linter.style.header = false
 
 [[require]]
 name = "mathlib"
