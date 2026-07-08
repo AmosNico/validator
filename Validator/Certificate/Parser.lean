@@ -10,138 +10,164 @@ This file contains a parser for parsing certificates for the proof system.
 open Parser STRIPS Validator Knowledge
   DeadKnowledge UnsolvableKnowledge ActionSubsetKnowledge StateSubsetKnowledge
 
+namespace Parser
+
+variable {ε σ τ : Type _} [Parser.Stream σ τ] [Parser.Error ε σ τ] {m} [Monad m]
+
+/--
+For each tuple `(p, p')` in `ps`, try the parser `p` in order (with backtracking) until one
+succeeds. Then run the corresponding parser `p'` and return its result.
+-/
+def cases {α β} : (ps : List (ParserT ε σ τ m β × ParserT ε σ τ m α)) → ParserT ε σ τ m α
+  | [] => throwUnexpected
+  | (p, p') :: ps => do
+    match ← eoption p with
+    | .inl _ => return ← p'
+    | .inr _ => cases ps
+
+end Parser
+
 namespace Validator.Certificate
 
-abbrev Parser := ParserT Error String.Slice Char IO
+/--
+The certificates allow for storing multiple BDDs in one file, and the name of the file is not known
+in advance. To avoid that the same file is read multiple times, the file is read the first time
+it is mentioned, and all BDDs in the file are stored. A `BddManager` keeps track of all Bdds read
+so far.
+-/
+structure BddManager {n} (pt : PlanningTask n) where
+  dir : System.FilePath
+  bdds : Std.HashMap System.FilePath (Array (StateSetExpr pt))
 
-def parseSpaces : Parser Unit :=
+/--
+The certificate parser uses the `IO` monad to read files containing Bdds,
+and the state monad with a `BddManager` to store them.
+-/
+abbrev Parser {n} (pt : PlanningTask n) :=
+  ParserT Error String.Slice Char (StateT (BddManager pt) IO)
+
+variable {n} {pt : PlanningTask n}
+
+def dropSpaces : Parser pt Unit :=
   Parser.dropMany (Parser.Char.char ' ')
 
-def parseSpaces1 : Parser Unit :=
+def dropSpaces1 : Parser pt Unit :=
   Parser.dropMany1 (Parser.Char.char ' ')
 
 -- TODO : check whether allowing semicoloms makes sense
-def parseEol : Parser Unit :=
-  parseSpaces <* Parser.optional (Parser.Char.char ';') <* Parser.Char.eol
+def dropEol : Parser pt Unit :=
+  dropSpaces <* Parser.optional (Parser.Char.char ';') <* Parser.Char.eol
 
-def checkString (s : String) : Parser Unit :=
-  Parser.Char.chars s *> parseSpaces
-
-def checkLine (s : String) : Parser Unit :=
-  Parser.Char.chars s *> parseEol
+def dropString (s : String) : Parser pt Unit :=
+  Parser.Char.chars s *> dropSpaces
 
 -- TODO : rename
-def readLine {α} (s : String) (p : Parser α) : Parser α :=
-  checkString s *> p <* parseEol
+def readLine {α} (s : String) (p : Parser pt α) : Parser pt α :=
+  dropString s *> p <* dropEol
 
-def dropLine : Parser Unit :=
+def dropLine : Parser pt Unit :=
   Parser.dropUntil Parser.Char.eol Parser.anyToken *> pure ()
 
-
-def parseWord : Parser String := do
-  let stop : Parser Unit := parseSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
+def parseWord : Parser pt String := do
+  let stop : Parser pt Unit := dropSpaces1 <|> (Parser.lookAhead Parser.Char.eol *> pure ())
   let ⟨⟨l⟩, _⟩ ← Parser.takeUntil stop Parser.anyToken
   return String.ofList l
 
-def parseNat : Parser ℕ :=
-  Parser.Char.ASCII.parseNat <* parseSpaces
+def parseNat : Parser pt ℕ :=
+  Parser.Char.ASCII.parseNat <* dropSpaces
 
-def parseListNat : Parser (List ℕ) := do
+def parseListNat : Parser pt (List ℕ) := do
   let n ← parseNat
   let ⟨l⟩ ← Parser.take n parseNat
   return l
 
-def push? {α} : Array α → Option α → Array α
-  | xs, none => xs
-  | xs, some x => xs.push x
-
 /--
-For each tuple `(p, p', e)` in the given list, try the parser `p`. If it succeeds,
-run the parser `p'`, otherwise proceed with the next tuple in the list. The optional
-error messages `e` are combined into one error message if none of the parsers `p` succeed.
+For each of the pairs `(s, p)` in `ps`, try to parse the string `s`. If it succeeds,
+run the parser `p`, otherwise proceed with the next pair in the list.
 -/
--- Based on `Parser.first`
-def parseCases' {α} (ps : List (Parser Unit × Parser α × Option String)) :
-  Parser α :=
-  go ps #[]
-where
-  go : List (Parser Unit × Parser α × Option String) → Array String → Parser α
-    | [], ⟨e⟩, s, pos =>
-      Parser.throwUnexpectedWithMessage none s!"expected one of the following : {e}" s pos
-    | (p, p', descr) :: ps, e, s, pos =>
-      p s pos >>= fun
-      | .ok s pos () => p' s pos
-      | .error s _ _ => go ps (push? e descr) s pos
+def parseCases {α} (ps : List (String × Parser pt α)) : Parser pt α :=
+  cases <| ps.map fun ⟨s, p⟩ ↦ (dropString s, p)
 
-/--
-For each of the pairs `(s, p)` in `ps1`, try to parse the string `s`. If it succeeds,
-run the parser `p`, otherwise proceed with the next pair in the list. If none of parsers for
-`s` is successfull, continue with the list `ps2`. For each pair `(p, p')` in this list, try the
-parser `p`, and if it succeed, run `p'` and return its result. If it fails continue with the next
-pair. If all pairs fail, combine the strings in `ps1` into one error message.
--/
-def parseCases {α}
-    (ps1 : List (String × Parser α)) (ps2 : List (Parser Unit × Parser α) := []) :
-  Parser α :=
-  let ps1' := ps1.map fun ⟨s, p⟩ ↦ ⟨checkString s, p, s⟩
-  let ps2' := ps2.map fun ⟨p, p'⟩ ↦ ⟨p, p', none⟩
-  parseCases' (ps1' ++ ps2')
-
-instance {α p} : Coe (Result α p) (Parser { a : α // p a }) where
+instance {α p} : Coe (Result α p) (Parser pt { a : α // p a }) where
   coe
   | .ok a => pure a
   | .error e => throw e
 
-def parseActionSetExpr (idx : ℕ) : Parser ActionSetExpr :=
+def parseActionSetExpr (idx : ℕ) : Parser pt ActionSetExpr :=
   readLine (toString idx) <| parseCases [
     ("b", return ActionSetExpr.enum (← parseListNat)),
     ("u", return ActionSetExpr.union (← parseNat) (← parseNat)),
     ("a", return ActionSetExpr.all)
   ]
 
-def parseConstStateSetExpr {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) :=
+def parseConstStateSetExpr {n} (pt : PlanningTask n) : Parser pt (StateSetExpr pt) :=
   parseCases [
     ("e", return StateSetExpr.empty),
     ("i", return StateSetExpr.init),
     ("g", return StateSetExpr.goal)
   ]
 
-/-- Parse a bdd in the ddmp format. -/
-def parseBdd' n (idx : ℕ) : Parser (BDD (2 * n)) := do
-  -- First line contains variable ordering
+def BddManager.init {n} {pt : PlanningTask n} (dir : String) : BddManager pt :=
+  ⟨dir, ∅⟩
 
-  -- Find BDD with the correct index
-  Parser.dropUntil dropLine (checkLine (toString idx))
-  -- TODO check format, this is probably to rigourous
-  checkLine ".ver DDDMP-2.0"
-  checkLine ".mode A"
-  checkLine ".varinfo 0"
-  let n_nodes ← readLine ".nnodes " parseNat
-  let n_vars ← readLine ".nvars " parseNat
-  let n_suppvars ← readLine ".nsuppvars " parseNat
-  let ids ← readLine ".ids" parseNat
-  let perm_ids ← readLine ".permids" parseListNat
-  -- currently only support for one root
-  checkLine ".nroots 1"
-  let root ← readLine ".rootids" parseNat
-  --let n_roots ← readLine ".nroots" parseListNat
-  --let root_ids ← readLine ".rootids" parseListNat
-  checkLine ".nodes"
-  -- TODO : parse nodes
-  checkLine ".end"
-  return sorry
-
-def parseBdd {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
+def parseBdd' {n} {pt : PlanningTask n} (h : IO.FS.Handle) : Parser pt (StateSetExpr pt) := do
   let path ← parseWord
   let idx ← parseNat
-  let content ← IO.FS.readFile path
-  match ← (parseBdd' n idx).run content with
-  | .ok _ _ bdd => return StateSetExpr.bdd sorry
-  | .error _ _ e =>
+  try
+    let ⟨ψ, h1⟩ ← BDD.parseBDD h
+    return StateSetExpr.bdd ⟨ψ, h1⟩
+  catch _ =>
     let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
     throwUnexpectedWithMessage none msg
 
-def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } := do
+def String.toFin? (n : ℕ) (s : String) : Option (Fin n) := do
+  let i ← s.toNat?
+  if h : i < n then some ⟨i, h⟩ else none
+
+def parseBddFile {n} {pt : PlanningTask n} (path : System.FilePath) :
+    Parser pt (Array (StateSetExpr pt)) := do
+  let h ← IO.FS.Handle.mk path .read
+  -- First line contains the variable ordering. For now it is assumed to be 0, ..., n - 1
+  let l ← h.getLine
+  let some as := (l.trim.splitOn " ").mapM (String.toFin? n)
+    | throwUnexpectedWithMessage none s!"expected a variable ordering, but found \"{l}\""
+  if as == List.finRange n then
+    let mut bdds : Array (StateSetExpr pt) := #[]
+    while True do
+      let l ← h.getLine
+      if l.trimAscii == s!"{bdds.size}" then
+        let ⟨B, h1⟩ ← BDD.parseBDD (n := n) h
+        bdds := bdds.push (StateSetExpr.bdd ⟨B, h1⟩)
+      else
+        break
+    return bdds
+  else
+    let msg := s!"The variable order is currently expected to be 0,...,{n}"
+    throwUnexpectedWithMessage none msg
+
+def getBDD {n} (pt : PlanningTask n) (path : System.FilePath) (id : ℕ) :
+    Parser pt (StateSetExpr pt) := do
+  let M ← get
+  match M.bdds[path]? with
+  | some bdds => do
+    let some B := bdds[id]? | throw (.invalid s!"There is no Bdd with index {id}.")
+    return B
+  | none => do
+    let bdds ← parseBddFile (M.dir / path)
+    set { M with bdds := M.bdds.insert path bdds }
+    let some B := bdds[id]? | throw (.invalid s!"There is no Bdd with index {id}.")
+    return B
+
+def parseBdd {n} (pt : PlanningTask n) : Parser pt (StateSetExpr pt) := do
+  let path ← parseWord
+  let idx ← parseNat
+  try
+    getBDD pt path idx
+  catch e =>
+    let msg := s!"Unable to parse the bdd with index {idx} in the file {path}."
+    throwErrorWithMessage e msg
+
+def parsePosLiteral {n} : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } := do
   let i ← parseNat
   -- The variables in dimacs format start counting with 1, whereas we start with 0
   -- Immediately make the variables unprimed.
@@ -149,28 +175,28 @@ def parsePosLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val }
   then return ⟨⟨⟨2 * (i - 1), by grind⟩, true⟩, by grind⟩
   else Parser.throwUnexpected
 
-def parseNegLiteral {n} : Parser { l : Formula.Literal (2 * n) // Even l.1.val } := do
-  let i ← checkString "-" *> parseNat
+def parseNegLiteral {n} : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } := do
+  let i ← dropString "-" *> parseNat
   if h : 0 < i && i < n + 1
   then return ⟨⟨⟨2 * (i - 1), by grind⟩, false⟩, by grind⟩
   else Parser.throwUnexpected
 
-def parseLiteral n : Parser { l : Formula.Literal (2 * n) // Even l.1.val } :=
+def parseLiteral n : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } :=
   Parser.withErrorMessage "Parsing a literal."
     (parsePosLiteral <|> parseNegLiteral)
 
-def parseClause n : Parser { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } := do
-  let ⟨γ, ()⟩ ← takeUntil (checkString "0") (parseLiteral n)
+def parseClause n : Parser pt { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } := do
+  let ⟨γ, ()⟩ ← takeUntil (dropString "0") (parseLiteral n)
   return ⟨γ.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseCNF {n} : Parser { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
+def parseCNF {n} : Parser pt { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
   Parser.withErrorMessage "Parsing CNF-formula in DIMACS format" do
-    checkString "p" *> checkString "cnf" *> checkString (toString n)
+    dropString "p" *> dropString "cnf" *> dropString (toString n)
     let nb_clauses ← parseNat
     let as ← take nb_clauses (parseClause n)
     return ⟨as.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseHorn {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
+def parseHorn {n} (pt : PlanningTask n) : Parser pt (StateSetExpr pt) := do
   let ⟨φ, h1⟩ ← parseCNF
   match h : Horn.fromCNF φ with
   | none => throwUnexpectedWithMessage none "The given CNF-formula is not a Horn-formula."
@@ -180,10 +206,10 @@ def parseHorn {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) := do
       simp_all only [VarSet.IsUnprimed, VarSet.subset_def, implies_true]
     return StateSetExpr.horn ⟨ψ, h2⟩
 
-def parseMods {n} (pt : PlanningTask n) : Parser (StateSetExpr pt) :=
+def parseMods {n} (pt : PlanningTask n) : Parser pt (StateSetExpr pt) :=
   sorry
 
-def parseStateSetExpr {n} (pt : PlanningTask n) (idx : ℕ) : Parser (StateSetExpr pt) :=
+def parseStateSetExpr {n} (pt : PlanningTask n) (idx : ℕ) : Parser pt (StateSetExpr pt) :=
   readLine (toString idx) <| parseCases [
     ("c", parseConstStateSetExpr pt),
     ("b", parseBdd pt),
@@ -196,7 +222,7 @@ def parseStateSetExpr {n} (pt : PlanningTask n) (idx : ℕ) : Parser (StateSetEx
     ("r", return StateSetExpr.regr (← parseNat) (← parseNat)),
   ]
 
-def parseDeadKnowledge : Parser Knowledge := do
+def parseDeadKnowledge : Parser pt Knowledge := do
   let Sᵢ ← parseNat
   dead Sᵢ <$> parseCases [
     ("ed", return ED Sᵢ),
@@ -208,13 +234,13 @@ def parseDeadKnowledge : Parser Knowledge := do
     ("ri", return RI Sᵢ (← parseNat) (← parseNat) (← parseNat))
   ]
 
-def parseUnsolvableKnowledge : Parser Knowledge :=
+def parseUnsolvableKnowledge : Parser pt Knowledge :=
   unsolvable <$> parseCases [
     ("ci", return CI (← parseNat)),
     ("cg", return CG (← parseNat))
   ]
 
-def parseSubsetKnowledge : Parser Knowledge := do
+def parseSubsetKnowledge : Parser pt  Knowledge := do
   let Eᵢ ← parseNat
   let E'ᵢ ← parseNat
   parseCases [
@@ -243,7 +269,7 @@ def parseSubsetKnowledge : Parser Knowledge := do
     ("b5", return actionSubset Eᵢ E'ᵢ (B5 Eᵢ E'ᵢ)),
   ]
 
-def parseKnowledge (idx : ℕ) : Parser Knowledge :=
+def parseKnowledge (idx : ℕ) : Parser pt Knowledge :=
   readLine (toString idx) <| parseCases [
     ("d", parseDeadKnowledge),
     ("u", parseUnsolvableKnowledge),
@@ -251,21 +277,19 @@ def parseKnowledge (idx : ℕ) : Parser Knowledge :=
   ]
 
 partial def parseCertificate {n} (pt : PlanningTask n)
-    (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) :
-    Parser (Certificate pt) :=
-  parseCases [
-    ("a", do
+    (C : optParam (Certificate pt) (Certificate.mk #[] #[] #[])) : Parser pt (Certificate pt) :=
+  Parser.cases [
+    (dropString "a", do
       let A ← parseActionSetExpr C.actions.size
       parseCertificate pt {C with actions := C.actions.push A}),
-    ("e", do
+    (dropString "e", do
       let S ← parseStateSetExpr pt C.states.size
       parseCertificate pt {C with states := C.states.push S}),
-    ("k", do
+    (dropString "k", do
       let K ← parseKnowledge C.knowledge.size
       parseCertificate pt {C with knowledge := C.knowledge.push K}),
-    ("#", dropLine *> parseCertificate pt C)
-  ] [
-    (parseEol, parseCertificate pt C),
+    (dropString "#", dropLine *> parseCertificate pt C),
+    (dropEol, parseCertificate pt C),
     (Parser.endOfInput, return C)
   ]
 
@@ -340,11 +364,13 @@ of the premises.
 -/
 public def parse {n} (pt : PlanningTask n) (path : System.FilePath) : IO (Certificate pt) := do
   let content ← IO.FS.readFile path
+  let some dir := path.parent | unreachable!
+  let M := BddManager.mk dir ∅
   let p := Parser.withErrorMessage
     s!"The certificate at \"{path}\" is not valid:\n"
     (parseCertificate pt)
-  match ← p.run content with
-  | .ok _ _ res => return res
-  | .error _ _ e => throw <| IO.userError (Std.ToFormat.format e).pretty
+  match ← (p.run content).run M with
+  | (.ok _ _ res, _) => return res
+  | (.error _ _ e, _) => throw <| IO.userError (Std.ToFormat.format e).pretty
 
 end Validator.Certificate

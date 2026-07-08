@@ -1,12 +1,13 @@
 module
 
-public import Validator.StateSetFormalism.Formula
+public import Validator.StateSetFormalism.Formalism
 /-
 Cannot compile inline/specializing declaration `instConsistency` as it uses
 `BDD.instDecidableSemanticEquiv` of module `Bdd.BDD` which must be imported publicly.
 This limitation may be lifted in the future.
 -/
 public import Bdd.BDD
+import Bdd.Parser
 
 namespace Validator
 open Formula STRIPS
@@ -413,5 +414,24 @@ public instance {n} : Rename n (BDD n) where
     ext M
     simp [Formula.models, models, BDD.getElem_relabel, Model.toVector]
     congr
+
+public def parseBDD {n} (h : IO.FS.Handle) :
+    IO { B : BDD (2 * n) // (instFormula.vars B).IsUnprimed } := do
+  let B ← parseBDD' h
+  if h1 : B.nvars = n then
+    let B' := B.relabel Fin.toUnprimed (by simp [Fin.toUnprimed])
+    have h2 : B'.nvars = 2 * n := by
+      subst h1
+      simp only [BDD.relabel_nvars, B']
+    have h3 : ∀ i : Fin (2 * n), B'.DependsOn i → i ∈ VarSet.unprimedVars n := by
+      subst h1
+      simp only [BDD.relabel_dependsOn, forall_exists_index, and_imp, B']
+      grind only [!VarSet.toUnprimed_mem_unprimedVars]
+    let ψ := ⟨VarSet.unprimedVars n, B', h2, h3⟩
+    have h4 : (Formula.vars ψ).IsUnprimed := by
+      simp only [Formula.vars, ψ]
+      exact VarSet.isUnprimed_unprimedVars
+    return ⟨ψ, h4⟩
+  else throw (IO.userError s!"The bdd should have {n} variables.")
 
 end Validator.BDD

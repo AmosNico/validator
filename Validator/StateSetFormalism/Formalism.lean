@@ -72,6 +72,9 @@ lemma mem_unprimedVars {n i} : i ∈ (unprimedVars n) ↔ Even i.val := by
 lemma isUnprimed_unprimedVars {n} : IsUnprimed (unprimedVars n) := by
   simp [mem_unprimedVars, IsUnprimed]
 
+lemma toUnprimed_mem_unprimedVars {n} {i : Fin n} : i.toUnprimed ∈ (unprimedVars n) := by
+  simp only [Fin.toUnprimed, mem_unprimedVars, even_two, Even.mul_right]
+
 end STRIPS.VarSet
 
 namespace Validator.Formula.Model
