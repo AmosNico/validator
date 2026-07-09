@@ -19,8 +19,6 @@ namespace Constraint
 
 variable {n : ℕ} {pt : PlanningTask n}
 
-open ConstraintType
-
 public def elimExists0 {prop : Unit → Prop} :
     (∃ v, prop v) → {v // prop v ∧ ∀ v', prop v' → v' = v} := by
   intro h'
@@ -121,7 +119,7 @@ def eq (h : Constraint ℕ) (T : SetType) (Eᵢ : ℕ) : Constraint Unit where
       let ⟨E'ᵢ, h'⟩ ← h.verify'
       if heq : Eᵢ = E'ᵢ
       then return ⟨(), by simp_all⟩
-      else T.toConstraintType.throw_not_eq Eᵢ E'ᵢ
+      else throw <| .unexpectedId T.toIndexType Eᵢ E'ᵢ
 
     elimExists := elimExists0
 
@@ -153,7 +151,7 @@ public def leftEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E1ᵢ : ℕ) : Co
     then return (by
       subst heq
       exact ⟨E2ᵢ, by simp_all⟩)
-    else T.toConstraintType.throw_not_eq E1ᵢ E1'ᵢ
+    else throw <| .unexpectedId T.toIndexType E1ᵢ E1'ᵢ
 
   elimExists h' := by
     obtain ⟨⟨E1'ᵢ, E2ᵢ⟩, h1, h2⟩ := h.elimExists (by tauto)
@@ -196,7 +194,7 @@ public def rightEq (h : Constraint (ℕ × ℕ)) (T : SetType) (E2ᵢ : ℕ) : C
     then return (by
       subst heq
       exact ⟨E1ᵢ, by simp_all⟩)
-    else T.toConstraintType.throw_not_eq E2ᵢ E2'ᵢ
+    else throw <| .unexpectedId T.toIndexType E2ᵢ E2'ᵢ
 
   elimExists h' := by
     obtain ⟨⟨E1ᵢ, E2'ᵢ⟩, h1, h2⟩ := h.elimExists (by tauto)
@@ -258,14 +256,14 @@ def trivial : Constraint Unit where
 
   elimExists := elimExists0
 
-def bounds (T : ConstraintType) (limit Eᵢ : ℕ) : Constraint Unit where
+def bounds (T : IndexType) (limit Eᵢ : ℕ) : Constraint Unit where
 
   prop := fun _ ↦ Eᵢ < limit
 
   verify' :=
     if h : Eᵢ < limit
     then return ⟨(), h⟩
-    else T.throw_out_of_bounds Eᵢ
+    else throw <| .invalidId T Eᵢ
 
   elimExists := elimExists0
 
@@ -283,26 +281,26 @@ lemma bounds.valid_eq {T} {limit Eᵢ} : (bounds T limit Eᵢ).valid ↔ Eᵢ < 
     simp_all
 
 public def actionBounds limit Aᵢ :=
-  bounds ActionSetConstraint limit Aᵢ
+  bounds .ActionSet limit Aᵢ
 
 @[simp]
 lemma actionBounds.prop_eq {limit Aᵢ a} : (actionBounds limit Aᵢ).prop a ↔ Aᵢ < limit := by rfl
 
 public def stateBounds limit Sᵢ :=
-  bounds StateSetConstraint limit Sᵢ
+  bounds .StateSet limit Sᵢ
 
 @[simp]
 lemma stateBounds.prop_eq {limit Sᵢ a} : (stateBounds limit Sᵢ).prop a ↔ Sᵢ < limit := by rfl
 
 public def knowledgeBounds limit Kᵢ :=
-  bounds KnowledgeConstraint limit Kᵢ
+  bounds .Knowledge limit Kᵢ
 
 @[simp]
 public lemma knowledgeBounds.prop_eq {limit Kᵢ a} :
     (knowledgeBounds limit Kᵢ).prop a ↔ Kᵢ < limit := by rfl
 
 abbrev setBounds (S : SetType) limit Eᵢ :=
-  bounds S.toConstraintType limit Eᵢ
+  bounds S.toIndexType limit Eᵢ
 
 public def actionBounds' (C : Certificate pt) (Aᵢ : ℕ) :
   Constraint Unit where
@@ -312,7 +310,7 @@ public def actionBounds' (C : Certificate pt) (Aᵢ : ℕ) :
   verify' :=
     if h : Aᵢ < C.actions.size
     then return ⟨(), h⟩
-    else ActionSetConstraint.throw_out_of_bounds Aᵢ
+    else throw <| .invalidId .ActionSet Aᵢ
 
   elimExists := elimExists0
 
@@ -329,7 +327,7 @@ public def stateBounds' (C : Certificate pt) (Sᵢ : ℕ) :
   verify' :=
     if h : Sᵢ < C.states.size
     then return ⟨(), h⟩
-    else StateSetConstraint.throw_out_of_bounds Sᵢ
+    else throw <| .invalidId .StateSet Sᵢ
 
   elimExists := elimExists0
 
@@ -349,8 +347,8 @@ public def isActionAll (C : Certificate pt) (Aᵢ : ℕ) : Constraint Unit where
   verify' :=
     match heq : C.actions[Aᵢ]? with
     | some ActionSetExpr.all => return ⟨(), by simp⟩
-    | some A => ActionSetConstraint.throw_unexpected Aᵢ ActionSetExpr.all A
-    | none => ActionSetConstraint.throw_out_of_bounds Aᵢ
+    | some A => throw <| .unexpected .ActionSet Aᵢ (toString ActionSetExpr.all) (toString A)
+    | none => throw <| .invalidId .ActionSet Aᵢ
 
   elimExists := elimExists0
 
@@ -369,8 +367,8 @@ public def isActionUnion (C : Certificate pt) (Aᵢ : ℕ) : Constraint (ℕ × 
   verify' :=
     match C.actions[Aᵢ]? with
     | some (ActionSetExpr.union A'ᵢ A''ᵢ) => pure ⟨(A'ᵢ, A''ᵢ), by simp⟩
-    | some A => ActionSetConstraint.throw_unexpected Aᵢ "a union of actions" A
-    | none => ActionSetConstraint.throw_out_of_bounds Aᵢ
+    | some A => throw <| .unexpected .ActionSet Aᵢ "a union of actions" (toString A)
+    | none => throw <| .invalidId .ActionSet Aᵢ
 
   elimExists := by elimExists2 C.actions[Aᵢ]?
 
@@ -392,8 +390,8 @@ public def isStateEmpty (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit wher
   verify' :=
   match C.states[Sᵢ]? with
   | some empty => return ⟨(), by simp⟩
-  | some S => StateSetConstraint.throw_unexpected Sᵢ (empty (pt := pt)) S
-  | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+  | some S => throw <| .unexpected .StateSet Sᵢ (toString (empty (pt := pt))) (toString S)
+  | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := elimExists0
 
@@ -412,8 +410,8 @@ public def isStateInit (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
   verify' :=
   match C.states[Sᵢ]? with
   | some init => return ⟨(), by simp⟩
-  | some S => StateSetConstraint.throw_unexpected Sᵢ (init (pt := pt)) S
-  | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+  | some S => throw <| .unexpected .StateSet Sᵢ (toString (init (pt := pt))) (toString S)
+  | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := elimExists0
 
@@ -432,8 +430,8 @@ public def isStateGoal (C : Certificate pt) (Sᵢ : ℕ) : Constraint Unit where
   verify' :=
   match C.states[Sᵢ]? with
   | some goal => return ⟨(), by simp⟩
-  | some S => StateSetConstraint.throw_unexpected Sᵢ (goal (pt := pt)) S
-  | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+  | some S => throw <| .unexpected .StateSet Sᵢ (toString (goal (pt := pt))) (toString S)
+  | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := elimExists0
 
@@ -452,8 +450,8 @@ public def isStateNeg (C : Certificate pt) (Sᵢ : ℕ) : Constraint ℕ where
   verify' :=
     match C.states[Sᵢ]? with
     | some (neg S'ᵢ) => pure ⟨S'ᵢ, by simp⟩
-    | some S => StateSetConstraint.throw_unexpected Sᵢ "the complement of a state set" S
-    | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+    | some S => throw <| .unexpected .StateSet Sᵢ "the complement of a state set" (toString S)
+    | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := by elimExists1 C.states[Sᵢ]?
 
@@ -472,8 +470,8 @@ public def isStateInter (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
   verify' :=
     match C.states[Sᵢ]? with
     | some (inter S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
-    | some S => StateSetConstraint.throw_unexpected Sᵢ "an intersection of states" S
-    | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+    | some S => throw <| .unexpected .StateSet Sᵢ "an intersection of states" (toString S)
+    | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := by elimExists2 C.states[Sᵢ]?
 
@@ -493,8 +491,8 @@ public def isStateUnion (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
   verify' :=
     match C.states[Sᵢ]? with
     | some (union S'ᵢ S''ᵢ) => pure ⟨(S'ᵢ, S''ᵢ), by simp⟩
-    | some S => StateSetConstraint.throw_unexpected Sᵢ "a union of states" S
-    | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+    | some S => throw <| .unexpected .StateSet Sᵢ "a union of states" (toString S)
+    | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := by elimExists2 C.states[Sᵢ]?
 
@@ -514,8 +512,8 @@ public def isStateProgr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
   verify' :=
     match C.states[Sᵢ]? with
     | some (progr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
-    | some S => StateSetConstraint.throw_unexpected Sᵢ "a progression" S
-    | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+    | some S => throw <| .unexpected .StateSet Sᵢ "a progression" (toString S)
+    | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := by elimExists2 C.states[Sᵢ]?
 
@@ -536,8 +534,8 @@ public def isStateRegr (C : Certificate pt) (Sᵢ : ℕ) : Constraint (ℕ × �
   verify' :=
     match C.states[Sᵢ]? with
     | some (regr S'ᵢ Aᵢ) => pure ⟨(S'ᵢ, Aᵢ), by simp⟩
-    | some S => StateSetConstraint.throw_unexpected Sᵢ "a regression" S
-    | none => StateSetConstraint.throw_out_of_bounds Sᵢ
+    | some S => throw <| .unexpected .StateSet Sᵢ "a regression" (toString S)
+    | none => throw <| .invalidId .StateSet Sᵢ
 
   elimExists := by elimExists2 C.states[Sᵢ]?
 
@@ -563,8 +561,8 @@ public def isDeadKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint ℕ wh
   verify' :=
     match C.knowledge[Kᵢ]? with
     | some (dead Sᵢ K) => return ⟨Sᵢ, by simp⟩
-    | some K => KnowledgeConstraint.throw_unexpected Kᵢ "dead knowledge" K
-    | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
+    | some K => throw <| .unexpected .Knowledge Kᵢ "dead knowledge" (toString K)
+    | none => throw <| .invalidId .Knowledge Kᵢ
 
   elimExists h := by
     cases heq : C.knowledge[Kᵢ]? with
@@ -588,8 +586,8 @@ public def isActionSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constrain
   verify' :=
     match C.knowledge[Kᵢ]? with
     | some (actionSubset Aᵢ A'ᵢ K) => return ⟨(Aᵢ, A'ᵢ), by simp⟩
-    | some K => KnowledgeConstraint.throw_unexpected Kᵢ "action subset knowledge" K
-    | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
+    | some K => throw <| .unexpected .Knowledge Kᵢ "action subset knowledge" (toString K)
+    | none => throw <| .invalidId .Knowledge Kᵢ
 
   elimExists := by
     simp_all only [Prod.exists, forall_exists_index, Prod.forall]
@@ -617,8 +615,8 @@ public def isStateSubsetKnowledge (C : Certificate pt) (Kᵢ : ℕ) : Constraint
   verify' :=
     match C.knowledge[Kᵢ]? with
     | some (stateSubset Sᵢ S'ᵢ K) => return ⟨(Sᵢ, S'ᵢ), by simp⟩
-    | some K => KnowledgeConstraint.throw_unexpected Kᵢ "state subset knowledge" K
-    | none => KnowledgeConstraint.throw_out_of_bounds Kᵢ
+    | some K => throw <| .unexpected .Knowledge Kᵢ "state subset knowledge" (toString K)
+    | none => throw <| .invalidId .Knowledge Kᵢ
 
   elimExists := by
     simp_all only [Prod.exists, forall_exists_index, Prod.forall]

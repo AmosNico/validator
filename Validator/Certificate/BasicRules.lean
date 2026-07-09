@@ -63,10 +63,9 @@ public def getFormalism (hC : C.validSets) : List (Fin C.states.size) → StateS
     | none => hC.getFormalism tail
     | some F => F
 
-def throwIncompatibleFormalism {α : outParam Type} {p}
-    (R R' : StateSetFormalism) (Sᵢ : ℕ) : Result α p :=
-  throwInvalid s!"The state set expression #{Sᵢ} is expected \
-    to be a {R} formula, but it is a {R'} formula"
+def throwIncompatibleFormalism {α : outParam Type} {p} (R R' : StateSetFormalism) (Sᵢ : ℕ) :
+    Result α p :=
+  throw <| .unexpected .StateSet Sᵢ s!"a {R} formula" s!"a {R'} formula"
 
 def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariable' pt R) fun x ↦
@@ -127,8 +126,7 @@ def get_variable (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states
     else
       throwIncompatibleFormalism mods R Sᵢ
   | S =>
-    throwInvalid s!"Expected the state set #{Sᵢ} to be a constant state set or \
-      an atomic {R} formula, but it is {S}."
+    throw <| .unexpected .StateSet Sᵢ s!"a constant state set or an atomic {R} formula" (toString S)
 
 def get_literal (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedLiteral' pt R) fun l ↦
@@ -284,7 +282,7 @@ def get_progression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin
         UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsProgrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
-  | _ => throwInvalid s!"The state set #{Sᵢ} is not an intersection or progression"
+  | S => throw <| .unexpected .StateSet Sᵢ "an intersection or progression" (toString S)
 
 def get_regression_variables (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin C.states.size) :
     Result (UnprimedVariables' pt R × ActionIds pt)
@@ -334,7 +332,7 @@ def get_regression_inter (hC : C.validSets) (R : StateSetFormalism) (Sᵢ : Fin 
         UnprimedLiterals.empty, UnprimedLiterals.inter_val, L]
       exact IsRegrInter.empty h2
     return ⟨(X, A, L), h3, h4⟩
-  | _ => throwInvalid s!"The state set #{Sᵢ} is not an intersection or regression"
+  | S => throw <| .unexpected .StateSet Sᵢ "an intersection or regression" (toString S)
 
 end Certificate.validSets
 
@@ -401,8 +399,8 @@ lemma check_variables_subset3_correct {R} [F : Formalism pt R]
 def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ToDNF (2 * n) R1]
     [h2 : Implicant (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStates ⊆ x2.val.toStates) :=
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStates ⊆ x2.val.toStates) :=
   if h : (h1.toDNF x1).all fun δ ↦ h2.entails δ x2 then
     have h' : x1.val.toStates ⊆ x2.val.toStates := by
       have h3 := UnprimedLiteral.subset_states_iff_subset_models (.pos x1) (.pos x2)
@@ -411,13 +409,13 @@ def check_variable_subset_pos_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
         h1.models_toDNF, Variable.models]
     return ⟨(), h'⟩
   else
-    throwInvalid "" -- TODO
+    throw e
 
 def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ClausalEntailment (2 * n) R1]
     [h2 : ToCNF (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStates ⊆ x2.val.toStates) :=
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStates ⊆ x2.val.toStates) :=
   if h : (h2.toCNF x2).all fun γ ↦ h1.entails x1 γ then
     have h' : x1.val.toStates ⊆ x2.val.toStates := by
       have h3 := UnprimedLiteral.subset_states_iff_subset_models (.pos x1) (.pos x2)
@@ -425,13 +423,13 @@ def check_variable_subset_pos_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       simp_all [h1.entails_iff, h2.models_toCNF, Variable.models]
     return ⟨(), h'⟩
   else
-    throwInvalid "" -- TODO
+    throw e
 
 def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ToDNF (2 * n) R1]
     [h2 : ClausalEntailment (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStates ⊆ x2.val.toStatesᶜ) :=
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStates ⊆ x2.val.toStatesᶜ) :=
   if h : (h1.negToCNF x1).all fun γ ↦ h2.entails x2 γ then
     have h' : x1.val.toStates ⊆ x2.val.toStatesᶜ := by
       have h3 := UnprimedLiteral.subset_states_iff_subset_models (.pos x1) (.neg x2)
@@ -441,21 +439,21 @@ def check_variable_subset_pos_neg_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       grind only [= Set.subset_def, = Set.mem_compl_iff]
     return ⟨(), h'⟩
   else
-    throwInvalid "" -- TODO
+    throw e
 
 def check_variable_subset_pos_neg_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ClausalEntailment (2 * n) R1]
     [h2 : ToDNF (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStates ⊆ x2.val.toStatesᶜ) := do
-  let ⟨(), h⟩ ← check_variable_subset_pos_neg_1 x2 x1
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStates ⊆ x2.val.toStatesᶜ) := do
+  let ⟨(), h⟩ ← check_variable_subset_pos_neg_1 x2 x1 e
   return ⟨(), by grind⟩
 
 def check_variable_subset_neg_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : ToCNF (2 * n) R1]
     [h2 : Implicant (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStatesᶜ ⊆ x2.val.toStates) :=
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStatesᶜ ⊆ x2.val.toStates) :=
   if h : (h1.negToDNF x1).all fun δ ↦ h2.entails δ x2 then
     have h' : x1.val.toStatesᶜ ⊆ x2.val.toStates := by
       have h3 := UnprimedLiteral.subset_states_iff_subset_models (.neg x1) (.pos x2)
@@ -463,14 +461,14 @@ def check_variable_subset_neg_pos_1 {R1 R2} [Formalism pt R1] [Formalism pt R2]
       simp_all [Variable.models, h2.entails_iff, h1.models_negToDNF]
     return ⟨(), h'⟩
   else
-    throwInvalid "" -- TODO
+    throw e
 
 def check_variable_subset_neg_pos_2 {R1 R2} [Formalism pt R1] [Formalism pt R2]
     [h1 : Implicant (2 * n) R1]
     [h2 : ToCNF (2 * n) R2]
-    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) :
-    Result' (x1.val.toStatesᶜ ⊆ x2.val.toStates) := do
-  let ⟨(), h⟩ ← check_variable_subset_neg_pos_1 x2 x1
+    (x1 : UnprimedVariable pt R1) (x2 : UnprimedVariable pt R2) (e : Error) :
+    ResultProp (x1.val.toStatesᶜ ⊆ x2.val.toStates) := do
+  let ⟨(), h⟩ ← check_variable_subset_neg_pos_1 x2 x1 e
   return ⟨(), by grind⟩
 
 end Formalism
@@ -637,40 +635,38 @@ lemma checkB3_correct {R X A} {L1 L2 : UnprimedLiterals' pt R} :
   simp [checkB3, checkB3'_correct, regression, ← Set.inter_assoc]
   grind
 
-def throwUnsuportedB4 {α : outParam Type} {p} (R1 R2 : StateSetFormalism) : Result α p :=
-  throwInvalid s!"The rule B4 is not supported when \
-  the left-hand-side is a {R1}-formula and the right-hand-side is a {R2}-formula."
-
-def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) :
-    Result' (l1.val.toStates ⊆ l2.val.toStates) :=
-  if h : R1 == R2 then by
-    rw [beq_iff_eq] at h
-    subst h
-    if h : checkB1 R1 (UnprimedLiterals.single l1) (UnprimedLiterals.single l2) then
-      exact return ⟨(), by simp_all [checkB1_correct]⟩
-    else exact throwInvalid s!"The left hand side is not a subset of the right hand side"
+/--
+Check whether the stateset corresponding to `l1` is a subset of the stateset corresponding to`l2`.
+`e` is the error that should be thrown if `l1` is not a subset of `l2`.
+-/
+def checkB4 R1 R2 (l1 : UnprimedLiteral' pt R1) (l2 : UnprimedLiteral' pt R2) (e : Error):
+    ResultProp (l1.val.toStates ⊆ l2.val.toStates) :=
+  if h1 : R1 == R2 then
+    if h2 : checkB1 R1 (.single l1) (.single (beq_iff_eq.1 h1 ▸ l2)) then
+      return ⟨(), by simp_all [checkB1_correct]; grind only⟩
+    else throw e
   else
     match l1, l2 with
     | .pos v1, .pos v2 =>
       match R1, R2 with
-      | mods, _ => check_variable_subset_pos_pos_1 v1 v2
-      | _, mods => check_variable_subset_pos_pos_2 v1 v2
-      | bdd, horn => check_variable_subset_pos_pos_2 v1 v2
-      | _, _ => throwUnsuportedB4 R1 R2
+      | mods, _ => check_variable_subset_pos_pos_1 v1 v2 e
+      | _, mods => check_variable_subset_pos_pos_2 v1 v2 e
+      | bdd, horn => check_variable_subset_pos_pos_2 v1 v2 e
+      | _, _ => throw <| .unsupportedB4 R1 R2
     | .pos v1, .neg v2 =>
       match R1, R2 with
-      | mods, _ => check_variable_subset_pos_neg_1 v1 v2
-      | _, mods => check_variable_subset_pos_neg_2 v1 v2
-      | _, _ => throwUnsuportedB4 R1 R2
+      | mods, _ => check_variable_subset_pos_neg_1 v1 v2 e
+      | _, mods => check_variable_subset_pos_neg_2 v1 v2 e
+      | _, _ => throw <| .unsupportedB4 R1 R2
     | .neg v1, .pos v2 =>
       match R1, R2 with
-      | mods, _ => check_variable_subset_neg_pos_1 v1 v2
-      | _, mods => check_variable_subset_neg_pos_2 v1 v2
-      | bdd, horn => check_variable_subset_neg_pos_2 v1 v2
-      | horn, bdd => check_variable_subset_neg_pos_1 v1 v2
-      | _, _ => throwUnsuportedB4 R1 R2
+      | mods, _ => check_variable_subset_neg_pos_1 v1 v2 e
+      | _, mods => check_variable_subset_neg_pos_2 v1 v2 e
+      | bdd, horn => check_variable_subset_neg_pos_2 v1 v2 e
+      | horn, bdd => check_variable_subset_neg_pos_1 v1 v2 e
+      | _, _ => throw <| .unsupportedB4 R1 R2
     | .neg v1, .neg v2 => do
-      let ⟨(), h2⟩ ← checkB4 R2 R1 (.pos v2) (.pos v1)
+      let ⟨(), h2⟩ ← checkB4 R2 R1 (.pos v2) (.pos v1) e
       return ⟨(), by simp_all [UnprimedLiteral.val, Literal.toStates_neg]⟩
     termination_by
       match l1, l2 with
@@ -702,7 +698,7 @@ public def constraintB1 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
           simp_all only [checkB1_correct]
         return ⟨(), by use S1ᵢ.prop, S2ᵢ.prop, h2, h4, h6⟩
       else
-        throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+        throw <| .notSubset .StateSet S1ᵢ S2ᵢ
 
   elimExists := elimExists0
 
@@ -738,7 +734,7 @@ public def constraintB2 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
         simp_all only [checkB2_correct]
       return ⟨(), by use S1ᵢ.prop, S2ᵢ.prop, h2, h4, h6⟩
     else
-      throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      throw <| .notSubset .StateSet S1ᵢ S2ᵢ
 
   elimExists := elimExists0
 
@@ -773,7 +769,7 @@ public def constraintB3 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
         simp_all only [checkB3_correct]
       return ⟨(), by use S1ᵢ.prop, S2ᵢ.prop, h2, h4, h6⟩
     else
-      throwInvalid s!"The state set #{S1ᵢ} is not a subset of #{S2ᵢ}"
+      throw <| .notSubset .StateSet S1ᵢ S2ᵢ
 
   elimExists := elimExists0
 
@@ -805,9 +801,8 @@ public def constraintB4 (hC : C.validSets) (S1ᵢ S2ᵢ : ℕ) : Constraint Unit
     let R2 := hC.getFormalism [S2ᵢ]
     let ⟨l1, h1, h2⟩ ← hC.get_literal R1 S1ᵢ
     let ⟨l2, h3, h4⟩ ← hC.get_literal R2 S2ᵢ
-    let ⟨(), h6⟩ ← R1.checkB4 R2 l1 l2
+    let ⟨(), h6⟩ ← R1.checkB4 R2 l1 l2 (.notSubset .StateSet S1ᵢ S2ᵢ)
     return ⟨(), by use S1ᵢ.prop, S2ᵢ.prop, h2, h4; simp_all only [S1ᵢ, S2ᵢ]⟩
-
 
   elimExists := elimExists0
 
@@ -840,7 +835,7 @@ public def constraintB5 {C : Certificate pt} (hC : C.validSets) (A1ᵢ A2ᵢ : �
         use A1ᵢ.prop, A2ᵢ.prop
         grind⟩
     else
-      throwInvalid s!"The action set #{A1ᵢ} is not a subset of #{A2ᵢ}"
+      throw <| .notSubset .ActionSet A1ᵢ A2ᵢ
 
   elimExists := elimExists0
 

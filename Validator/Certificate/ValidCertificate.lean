@@ -7,7 +7,7 @@ open STRIPS
 namespace Validator.Certificate
 
 variable {n : ℕ} {pt : PlanningTask n} (C : Certificate pt)
-open Validator Constraint ConstraintType Knowledge
+open Validator Constraint Knowledge
 open DeadKnowledge ActionSubsetKnowledge StateSubsetKnowledge UnsolvableKnowledge
 
 @[expose]
@@ -376,7 +376,7 @@ end valid
 
 -- TODO : improve names
 def verifyAll_aux {k} (h : (j : Fin k) → Σ α, Constraint α) : (i : Fin (k + 1)) →
-    Result' (∀ j : Fin k, j.val < i → (h j).snd.valid)
+    ResultProp (∀ j : Fin k, j.val < i → (h j).snd.valid)
   | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
   | ⟨n + 1, h1⟩ => do
     let ⟨⟨⟩, h2⟩ ← verifyAll_aux h ⟨n, by omega⟩
@@ -390,12 +390,12 @@ def verifyAll_aux {k} (h : (j : Fin k) → Σ α, Constraint α) : (i : Fin (k +
     return ⟨⟨⟩, h⟩
 
 def verifyAll {k} (h : (j : Fin k) → Σ α, Constraint α) :
-    Result' (∀ j : Fin k, (h j).snd.valid) := do
+    ResultProp (∀ j : Fin k, (h j).snd.valid) := do
   let ⟨(), h⟩ ← verifyAll_aux h (Fin.last k)
   return ⟨(), by simp_all⟩
 
-def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → Result' (p j)) :
-    (i : Fin (k + 1)) →  Result' (∀ j : Fin k, j.val < i → p j)
+def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → ResultProp (p j)) :
+    (i : Fin (k + 1)) →  ResultProp (∀ j : Fin k, j.val < i → p j)
   | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
   | ⟨n + 1, h1⟩ => do
     let ⟨⟨⟩, h2⟩ ← verifyAll'_aux verify ⟨n, by omega⟩
@@ -408,8 +408,8 @@ def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → Result' (p
       · exact h3
     return ⟨⟨⟩, h⟩
 
-def verifyAll' {k} {p : Fin k → Prop} (verify : (i : Fin k) → Result' (p i)) :
-    Result' (∀ i, p i) := do
+def verifyAll' {k} {p : Fin k → Prop} (verify : (i : Fin k) → ResultProp (p i)) :
+    ResultProp (∀ i, p i) := do
   let ⟨(), h⟩ ← verifyAll'_aux verify (Fin.last k)
   return ⟨(), by simp_all⟩
 
@@ -418,14 +418,14 @@ public def IsUnsolvable : Prop :=
   ∃ Kᵢ : Fin C.knowledge.size, ∃ K, C.knowledge[Kᵢ] = unsolvable K
 
 def verifyIsUnsolvable : optParam (Fin (C.knowledge.size + 1)) (Fin.last C.knowledge.size) →
-    Result' (IsUnsolvable C)
-  | 0 => throwInvalid "Unsolvability NOT proven"
+    ResultProp (IsUnsolvable C)
+  | 0 => throw .noUnsolvability
   | ⟨Kᵢ + 1, h⟩ =>
     match heq : C.knowledge[Kᵢ] with
     | unsolvable K => return ⟨(), by use ⟨Kᵢ, by omega⟩, K, heq⟩
     | _ => verifyIsUnsolvable ⟨Kᵢ, by omega⟩
 
-public def verify : Result' (C.valid ∧ IsUnsolvable C) := do
+public def verify : ResultProp (C.valid ∧ IsUnsolvable C) := do
   let ⟨(), h1⟩ ← verifyAll' C.verifyActionSetExpr
   let ⟨(), h2⟩ ← verifyAll' C.verifyStateSetExpr
   let hC : C.validSets := ⟨h1, h2⟩
