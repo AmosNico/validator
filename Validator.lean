@@ -6,22 +6,24 @@ import Validator.Certificate.ToDerivation
 
 open STRIPS Validator
 
-public def main : IO Unit := do
-  try
-    let path <- IO.currentDir
-    let pt_path := path / "test" / "success-task.txt"
-    let ⟨_, pt⟩ <- readPlanningTask pt_path
-    IO.println pt
-    let certificate_path := path / "test" / "success-certificate.txt"
-    IO.println "Parsing the certificate"
-    let C <- Certificate.parse pt certificate_path
-    IO.println "Verifying the certificate"
-    match C.verify with
-    | .ok ⟨(), hC, h⟩ =>
-      have : PlanningTask.Unsolvable pt := hC.soundness h
-      IO.println "The certificate is valid!"
-    | .error e =>
-      -- TODO Fix error messages
-      throw (IO.userError (Std.ToFormat.format e).pretty)
-  catch e =>
-    IO.println e
+public def main (args : List String) : IO Unit := do
+  match args with
+  | [pathTask, pathCertificate] =>
+    try
+      let path <- IO.currentDir
+      let ⟨_, pt⟩ <- readPlanningTask (path / pathTask)
+      IO.println pt
+      IO.println "Parsing the certificate"
+      let C <- Certificate.parse pt (path / pathCertificate)
+      IO.eprintln "Verifying the certificate"
+      match C.verify with
+      | .ok ⟨(), hC, h⟩ =>
+        have : PlanningTask.Unsolvable pt := hC.soundness h
+        IO.println "The certificate is valid!"
+      | .error e =>
+        -- TODO Fix error messages
+        throw (IO.userError (Std.ToFormat.format e).pretty)
+    catch e =>
+      IO.println e
+  | _ =>
+    IO.println "Usage: validator <task.txt> <certificate.txt>"
