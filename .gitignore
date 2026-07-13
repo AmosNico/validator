@@ -1,5 +1,7 @@
 /.lake
 docbuild/.lake
 
+test/certificate
+
 dependencies
 .first-run-done
