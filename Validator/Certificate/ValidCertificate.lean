@@ -270,6 +270,12 @@ public def validKnowledge {C : Certificate pt}
     (hC : C.validSets) (Kᵢ : Fin C.knowledge.size) : Prop :=
   (constraintKnowledge hC Kᵢ).snd.valid
 
+def verifyKnowledge  {C : Certificate pt} (hC : C.validSets) (Kᵢ : Fin C.knowledge.size) :
+    ResultProp (C.validKnowledge hC Kᵢ) :=
+  withErrorMessage s!"Verifying the knowledge with id #{n}:" do
+    let ⟨a, h⟩ ← (constraintKnowledge hC Kᵢ).snd.verify
+    return ⟨(), by use a⟩
+
 public structure valid (C : Certificate pt) extends C.validSets where
   validKnowledge : ∀ Kᵢ, C.validKnowledge tovalidSets Kᵢ
 
@@ -374,31 +380,11 @@ public lemma stateSubsetKnowledgeBounds
 
 end valid
 
--- TODO : improve names
-def verifyAll_aux {k} (h : (j : Fin k) → Σ α, Constraint α) : (i : Fin (k + 1)) →
-    ResultProp (∀ j : Fin k, j.val < i → (h j).snd.valid)
-  | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
-  | ⟨n + 1, h1⟩ => do
-    let ⟨⟨⟩, h2⟩ ← verifyAll_aux h ⟨n, by omega⟩
-    let ⟨a, h3⟩ ← (h ⟨n, by omega⟩).snd.verify
-    have h : ∀ j : Fin k, j < n + 1 → (h j).snd.valid := by
-      intro j hj
-      simp_all only [Nat.lt_add_one_iff_lt_or_eq]
-      rcases hj with h | ⟨rfl⟩
-      · exact h2 j h
-      · use a
-    return ⟨⟨⟩, h⟩
-
-def verifyAll {k} (h : (j : Fin k) → Σ α, Constraint α) :
-    ResultProp (∀ j : Fin k, (h j).snd.valid) := do
-  let ⟨(), h⟩ ← verifyAll_aux h (Fin.last k)
-  return ⟨(), by simp_all⟩
-
-def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → ResultProp (p j)) :
+def verifyAll_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → ResultProp (p j)) :
     (i : Fin (k + 1)) →  ResultProp (∀ j : Fin k, j.val < i → p j)
   | ⟨0, _⟩ => pure ⟨⟨⟩, by rintro j ⟨⟩⟩
   | ⟨n + 1, h1⟩ => do
-    let ⟨⟨⟩, h2⟩ ← verifyAll'_aux verify ⟨n, by omega⟩
+    let ⟨⟨⟩, h2⟩ ← verifyAll_aux verify ⟨n, by omega⟩
     let ⟨⟨⟩, h3⟩ ← verify ⟨n, by omega⟩
     have h : ∀ j : Fin k, j < n + 1 → p j := by
       intro j hj
@@ -408,9 +394,9 @@ def verifyAll'_aux {k} {p : Fin k → Prop} (verify : (j : Fin k) → ResultProp
       · exact h3
     return ⟨⟨⟩, h⟩
 
-def verifyAll' {k} {p : Fin k → Prop} (verify : (i : Fin k) → ResultProp (p i)) :
+def verifyAll {k} {p : Fin k → Prop} (verify : (i : Fin k) → ResultProp (p i)) :
     ResultProp (∀ i, p i) := do
-  let ⟨(), h⟩ ← verifyAll'_aux verify (Fin.last k)
+  let ⟨(), h⟩ ← verifyAll_aux verify (Fin.last k)
   return ⟨(), by simp_all⟩
 
 @[expose]
@@ -426,10 +412,10 @@ def verifyIsUnsolvable : optParam (Fin (C.knowledge.size + 1)) (Fin.last C.knowl
     | _ => verifyIsUnsolvable ⟨Kᵢ, by omega⟩
 
 public def verify : ResultProp (C.valid ∧ IsUnsolvable C) := do
-  let ⟨(), h1⟩ ← verifyAll' C.verifyActionSetExpr
-  let ⟨(), h2⟩ ← verifyAll' C.verifyStateSetExpr
+  let ⟨(), h1⟩ ← verifyAll C.verifyActionSetExpr
+  let ⟨(), h2⟩ ← verifyAll C.verifyStateSetExpr
   let hC : C.validSets := ⟨h1, h2⟩
-  let ⟨(), h3⟩ ← verifyAll (constraintKnowledge hC)
+  let ⟨(), h3⟩ ← verifyAll (C.verifyKnowledge hC)
   let ⟨(), h4⟩ ← verifyIsUnsolvable C
   return ⟨(), ⟨hC, h3⟩, h4⟩
 

@@ -303,7 +303,7 @@ increase by one for each state set expression.
     e <SID> c i                                                 (constant initial state set)
     e <SID> c g                                                 (constant goal set)
     e <SID> b <bdd_filename> <bdd_index>                        (bdd set)
-    e <SID> t <discription in DIMACS>                           (horn set)
+    e <SID> h <discription in DIMACS>                           (horn set)
     e <SID> e <TODO>                                            (MODS set)
     e <SID> n <ID of negated state set>                         (negation)
     e <SID> i <SID left> <SID right>                            (intersection)

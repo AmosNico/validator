@@ -22,7 +22,7 @@ rev = "40ccb6dcacdcdb9bf1c403225ed80827003e626a"
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
-rev = "b09490af5fd2ad64fd015b74d329c077bf3afe38"
+rev = "parser"
 
 [[require]]
 name = "strips"

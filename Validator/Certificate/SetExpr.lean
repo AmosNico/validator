@@ -67,7 +67,8 @@ public def validStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) : P
   | StateSetExpr.regr S'ᵢ Aᵢ => S'ᵢ < Sᵢ ∧ Aᵢ < C.actions.size
 
 public def verifyActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) :
-    ResultProp (C.validActionSetExpr Aᵢ) := by
+    ResultProp (C.validActionSetExpr Aᵢ) :=
+  withErrorMessage s!"Verififying action set #{Aᵢ}" <| by
   unfold validActionSetExpr
   cases C.actions[Aᵢ] with
   | enum as => exact verifyActionsEnum pt as
@@ -76,7 +77,8 @@ public def verifyActionSetExpr (C : Certificate pt) (Aᵢ : Fin C.actions.size) 
   | all => exact pure ⟨(), True.intro⟩
 
 public def verifyStateSetExpr (C : Certificate pt) (Sᵢ : Fin C.states.size) :
-    ResultProp (C.validStateSetExpr Sᵢ) := by
+    ResultProp (C.validStateSetExpr Sᵢ) :=
+  withErrorMessage s!"Verififying state set #{Sᵢ}" <| by
   unfold validStateSetExpr
   cases C.states[Sᵢ] with
   | empty => exact pure ⟨(), True.intro⟩
