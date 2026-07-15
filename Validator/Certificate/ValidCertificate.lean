@@ -6,6 +6,8 @@ open STRIPS
 
 namespace Validator.Certificate
 
+set_option backward.do.legacy true
+
 variable {n : ℕ} {pt : PlanningTask n} (C : Certificate pt)
 open Validator Constraint Knowledge
 open DeadKnowledge ActionSubsetKnowledge StateSubsetKnowledge UnsolvableKnowledge

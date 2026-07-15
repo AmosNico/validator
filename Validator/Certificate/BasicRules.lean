@@ -6,6 +6,8 @@ import Validator.StateSetFormalism.StateSetFormalism
 
 namespace Validator
 
+set_option backward.do.legacy true
+
 open STRIPS
 open Constraint Certificate.validSets
 open ActionSubsetKnowledge StateSubsetKnowledge

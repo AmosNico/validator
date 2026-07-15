@@ -21,6 +21,7 @@ public def SetType.toIndexType : SetType → IndexType
 public instance : ToString SetType where
   toString T := toString T.toIndexType
 
+set_option backward.do.legacy true in
 def verify_bounds (T : IndexType) (limit Eᵢ : ℕ) : ResultProp (Eᵢ < limit)  :=
   if h : Eᵢ < limit
   then return ⟨(), h⟩
@@ -30,11 +31,13 @@ def verify_action_bounds := verify_bounds .ActionSet
 
 def verify_state_bounds := verify_bounds .StateSet
 
+set_option backward.do.legacy true in
 def verify_and {p1 p2} (res1 : ResultProp p1) (res2 : ResultProp p2) : ResultProp (p1 ∧ p2) := do
   let ⟨(), h1⟩ ← res1
   let ⟨(), h2⟩ ← res2
   return ⟨(), And.intro h1 h2⟩
 
+set_option backward.do.legacy true in
 def verifyActionsEnum (pt : PlanningTask n) (as : List ℕ) :
     ResultProp (∀ a ∈ as, a < pt.actions'.length) :=
   if h : ∀ a ∈ as, a < pt.actions'.length then

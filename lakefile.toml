@@ -10,24 +10,24 @@ linter.style.header = false
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.31.0"
+rev = "v4.32.0"
 
 [[require]]
 name = "Parser"
 git = "https://github.com/AmosNico/lean4-parser"
 # git = "https://github.com/fgdorais/lean4-parser"
-rev = "40ccb6dcacdcdb9bf1c403225ed80827003e626a"
+rev = "57874a1f4ff2cc9913ebc0c6f0d8cb85690b8ebf"
 
 [[require]]
 name = "bdd"
 # git = "https://github.com/eshelyaron/lean4-bdd"
 git = "https://github.com/AmosNico/lean4-bdd"
-rev = "parser"
+rev = "parser-v4.32.0"
 
 [[require]]
 name = "strips"
 git = "https://github.com/AmosNico/lean4-strips"
-rev = "main"
+rev = "v4.32.0"
 
 [[lean_lib]]
 name = "Validator"
