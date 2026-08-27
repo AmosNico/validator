@@ -67,14 +67,14 @@ theorem completeness' {n} {pt : PlanningTask n} {s} :
     pt.UnsolvableState s → ∃ S, InductiveCertificateState pt s S := by
   rintro ⟨h1⟩
   use { s' | pt.Reachable s s' }
-  simp only [InductiveCertificateState, Set.mem_setOf_eq, Nonempty.forall]
+  simp only [InductiveCertificateState, Set.mem_ofPred_eq, Nonempty.forall]
   split_ands
   · exact pt.reachable_self s
   · intro s' π h3
     apply h1
     exact ⟨s', π, h3⟩
   · intro s' h
-    simp only [mem_progression, Set.mem_setOf_eq] at h
+    simp only [mem_progression, Set.mem_ofPred_eq] at h
     rcases h with ⟨a, ha, s'', h2, h3⟩
     obtain π : pt.Path s s'' := Classical.choice h2
     constructor

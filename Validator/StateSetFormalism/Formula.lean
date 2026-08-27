@@ -68,7 +68,7 @@ def negate {n} (l : Literal n) : Literal n :=
 @[simp]
 lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ := by
   simp only [models, negate]
-  grind only [= Set.mem_compl_iff, usr Set.mem_setOf_eq]
+  grind only [= Set.mem_compl_iff, usr Set.mem_ofPred_eq]
 
 lemma eq_or_eq_negate_iff_var_eq {n} {l l' : Literal n} :
     l.var = l'.var ↔ l = l' ∨ l = l'.negate := by
@@ -95,12 +95,12 @@ lemma mem_models {n} (γ : Clause n) M : M ∈ γ.models ↔ ∃ l ∈ γ, M ∈
 
 @[simp]
 lemma models_nil {n} : models ([] : Clause n) = ∅ := by
-  simp only [models, List.not_mem_nil, false_and, exists_false, Set.setOf_false]
+  simp only [models, List.not_mem_nil, false_and, exists_false, Set.ofPred_false]
 
 @[simp]
 lemma models_append {n} (γ1 γ2 : Clause n) : models (γ1 ++ γ2) = γ1.models ∪ γ2.models := by
   ext M
-  grind only [models, List.mem_append, Set.mem_setOf_eq, Set.mem_union]
+  grind only [models, List.mem_append, Set.mem_ofPred_eq, Set.mem_union]
 
 def vars {n} (γ : Clause n) : VarSet n :=
   VarSet.ofList (γ.map Literal.var)
@@ -133,16 +133,16 @@ lemma mem_models {n} (δ : Cube n) M : M ∈ δ.models ↔ ∀ l ∈ δ, M ∈ l
 @[simp]
 lemma models_append {n} (δ1 δ2 : Cube n) : models (δ1 ++ δ2) = δ1.models ∩ δ2.models := by
   ext M
-  grind only [models, List.mem_append, Set.mem_setOf_eq, Set.mem_inter_iff]
+  grind only [models, List.mem_append, Set.mem_ofPred_eq, Set.mem_inter_iff]
 
 @[simp]
 lemma models_nil {n} : models ([] : Cube n) = Set.univ := by
-  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.setOf_true]
+  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.ofPred_true]
 
 @[simp]
 lemma models_cons {n l} (δ : Cube n) : models (l :: δ) = l.models ∩ δ.models := by
   ext M
-  simp only [models, List.mem_cons, forall_eq_or_imp, Set.mem_setOf_eq, Set.mem_inter_iff]
+  simp only [models, List.mem_cons, forall_eq_or_imp, Set.mem_ofPred_eq, Set.mem_inter_iff]
 
 def vars {n} (δ : Cube n) : VarSet n :=
   VarSet.ofList (δ.map Literal.var)
@@ -210,11 +210,11 @@ lemma mem_models {n} (φ : CNF n) {M} : M ∈ φ.models ↔ ∀ γ ∈ φ, M ∈
 
 @[simp]
 lemma models_nil {n} : CNF.models ([] : CNF n) = Set.univ := by
-  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.setOf_true]
+  simp only [models, List.not_mem_nil, IsEmpty.forall_iff, implies_true, Set.ofPred_true]
 
 @[simp]
 lemma models_cons {n} (φ : CNF n) {γ} : CNF.models (γ :: φ) = γ.models ∩ φ.models := by
-  simp only [models, List.mem_cons, Clause.models, Set.mem_setOf_eq, forall_eq_or_imp,
+  simp only [models, List.mem_cons, Clause.models, Set.mem_ofPred_eq, forall_eq_or_imp,
     Set.inter_def]
 
 @[simp]
@@ -243,7 +243,7 @@ lemma vars_cons {n γ} {φ : CNF n} : CNF.vars (γ :: φ) = γ.vars ∪ φ.vars 
 
 @[simp]
 lemma forall_iff_subset_models {n} {φ : CNF n} {Ms} : (∀ γ ∈ φ, Ms ⊆ γ.models) ↔ Ms ⊆ φ.models := by
-  grind only [Set.subset_def, Clause.mem_models, models, Set.mem_setOf_eq]
+  grind only [Set.subset_def, Clause.mem_models, models, Set.mem_ofPred_eq]
 
 lemma models_equiv_right {n} {φ : CNF n} {M M' : Formula.Model n} :
     (∀ i ∈ vars φ, M i = M' i) → M ∈ models φ → M' ∈ models φ := by
@@ -267,7 +267,7 @@ lemma DNF.mem_models {n} (φ : DNF n) {M} : M ∈ φ.models ↔ ∃ δ ∈ φ, M
 @[simp]
 lemma DNF.exists_iff_models_subset {n} {φ : DNF n} {Ms} :
     (∀ δ ∈ φ, δ.models ⊆ Ms) ↔ φ.models ⊆ Ms := by
-  grind only [Set.subset_def, Cube.mem_models, models, Set.mem_setOf_eq]
+  grind only [Set.subset_def, Cube.mem_models, models, Set.mem_ofPred_eq]
 
 /-! ## PartialModel -/
 /-- Partial models are partial assignments. In contrast to `Model`, these are used at runtime. -/
@@ -318,17 +318,17 @@ lemma mem_models' {n} (M : PartialModel n) {M'} :
   simp [models]
 
 lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M, M' ∈ l.models := by
-  simp only [models, Set.mem_setOf_eq, Literal.models]
+  simp only [models, Set.mem_ofPred_eq, Literal.models]
   constructor
   · grind [mem_def]
   · intro h1
     constructor
     · intro i hi
       specialize h1 ⟨i, true⟩ hi
-      simp_all only [Set.mem_setOf_eq]
+      simp_all only [Set.mem_ofPred_eq]
     · intro i hi
       specialize h1 ⟨i, false⟩ hi
-      simp_all only [Set.mem_setOf_eq, not_false_eq_true]
+      simp_all only [Set.mem_ofPred_eq, not_false_eq_true]
 
 lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty := by
   use fun i ↦ ⟨i, true⟩ ∈ M
@@ -468,7 +468,7 @@ lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
     intro M
     have := M.models_nonempty
     simp_all only [List.foldlM_nil, Option.pure_def, reduceCtorEq, models, List.not_mem_nil,
-      IsEmpty.forall_iff, implies_true, Set.setOf_true, Set.univ_inter, Set.nonempty_iff_ne_empty]
+      IsEmpty.forall_iff, implies_true, Set.ofPred_true, Set.univ_inter, Set.nonempty_iff_ne_empty]
   | cons l δ' ih =>
     intro M
     simp only [List.foldlM_cons, Option.bind_eq_bind, Option.bind_eq_none_iff, models_cons, ih]
@@ -493,7 +493,7 @@ lemma models_toPartialModel {n} {δ : Cube n} {M} :
   induction δ generalizing M with
   | nil =>
     grind only [models, = List.foldlM_nil, = Option.pure_apply, = Set.mem_inter_iff,
-      usr Set.mem_setOf_eq, ← List.not_mem_nil]
+      usr Set.mem_ofPred_eq, ← List.not_mem_nil]
   | cons l δ' ih =>
     simp_all only [List.foldlM_cons, Option.bind_eq_bind, models_cons, Option.bind_eq_some_iff]
     rintro M'' ⟨M', h3, h4⟩
@@ -685,8 +685,8 @@ lemma CNF.mem_vars_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} {
 lemma CNF.models_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} :
     (φ.rename r).models = φ.models.preimage (Model.rename r) := by
   simp only [models, rename, List.mem_map, Clause.rename, Clause.models, Literal.mem_models,
-    Set.mem_setOf_eq, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, Literal.rename,
-    exists_exists_and_eq_and, Set.preimage_setOf_eq, Model.rename]
+    Set.mem_ofPred_eq, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, Literal.rename,
+    exists_exists_and_eq_and, Set.preimage_ofPred_eq, Model.rename]
 
 def VarSet.rename {n} {dom : VarSet n} (r : Renaming dom) (V : VarSet n) : VarSet n :=
   V.map r.rename
@@ -722,8 +722,8 @@ lemma PartialModel.mem_vars_rename {n dom} {r : Renaming dom} {M : PartialModel 
 lemma PartialModel.models_rename {n dom} {r : Renaming dom} {M : PartialModel n} {h1} :
     (M.rename r h1).models = M.models.preimage (Model.rename r) := by
   ext M'
-  simp only [models, rename, VarSet.mem_rename, forall_exists_index, and_imp, Set.mem_setOf_eq,
-    Set.preimage_setOf_eq, Model.rename]
+  simp only [models, rename, VarSet.mem_rename, forall_exists_index, and_imp, Set.mem_ofPred_eq,
+    Set.preimage_ofPred_eq, Model.rename]
   grind
 
 /-- Renaming consistent with order -/
@@ -757,7 +757,7 @@ lemma models_disjunctionToCNF {n} {R} [F : Formula n R] [h : ToCNF n R] {φs} :
     (disjunctionToCNF φs).models = { M | ∃ φ ∈ φs, M ∈ F.models φ } := by
   ext M
   simp only [disjunctionToCNF, CNF.mem_models, Clause.mem_models, ← models_toCNF,
-    Set.mem_setOf_eq]
+    Set.mem_ofPred_eq]
   induction φs with
   | nil => simp
   | cons φ φs ih =>
@@ -795,7 +795,7 @@ def conjunctionToDNF {n} {R} [Formula n R] [ToDNF n R] (l : List R) : DNF n :=
 lemma models_conjunctionToDnF {n} {R} [F : Formula n R] [h : ToDNF n R] {φs} :
     (conjunctionToDNF φs).models = { M | ∀ φ ∈ φs, M ∈ F.models φ } := by
   ext M
-  simp only [conjunctionToDNF, DNF.mem_models, Cube.mem_models, ← models_toDNF, Set.mem_setOf_eq]
+  simp only [conjunctionToDNF, DNF.mem_models, Cube.mem_models, ← models_toDNF, Set.mem_ofPred_eq]
   induction φs with
     | nil => simp
     | cons φ φs ih =>

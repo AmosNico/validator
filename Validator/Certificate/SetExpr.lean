@@ -112,7 +112,7 @@ public def ActionIds.toActions (A : ActionIds pt) : Actions n :=
 @[simp]
 public lemma ActionIds.mem_toActions (A : ActionIds pt) {a} :
     a ∈ A.toActions ↔ ∃ i ∈ A, pt.actions'[i] = a := by
-  simp only [toActions, List.coe_toFinset, List.mem_map, Set.mem_setOf_eq]
+  simp only [toActions, List.coe_toFinset, List.mem_map, Set.mem_ofPred_eq]
 
 public def getActionIds {C : Certificate pt} (hC : C.validSets)
     (Aᵢ : Fin C.actions.size) : ActionIds pt :=

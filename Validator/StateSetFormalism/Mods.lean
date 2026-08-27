@@ -193,7 +193,7 @@ public instance {n} : OfPartialModel n (MODS n) where
   vars_ofPartialModel := by simp only [Formula.vars, implies_true]
 
   models_ofPartialModel := by simp only [Formula.models, models, List.mem_singleton, exists_eq_left,
-    Set.setOf_mem_eq, implies_true]
+    Set.ofPred_mem_eq, implies_true]
 
 @[no_expose]
 public instance {n} : Rename n (MODS n) where

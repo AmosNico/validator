@@ -124,8 +124,8 @@ public lemma toStates_mkInit : (mkInit pt R).val.toStates = {pt.init} := by
   · intro rfl
     obtain ⟨M, h⟩ := Model.exists_model_of_state pt.init
     use M
-    simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq] at h
-    simp only [Set.ext_iff, Set.mem_setOf_eq]
+    simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_ofPred_eq] at h
+    simp only [Set.ext_iff, Set.mem_ofPred_eq]
     grind only [= Nat.even_iff]
 
 public def mkGoal : UnprimedVariable' pt R :=
@@ -135,13 +135,13 @@ public def mkGoal : UnprimedVariable' pt R :=
 public lemma toStates_mkGoal : (mkGoal pt R).val.toStates = pt.goalStates := by
   ext s
   simp only [mkGoal, Variable.toStates_eq, Set.mem_image, UnprimedVariable.mem_models_ofVarSet,
-    iff_true, Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq]
+    iff_true, Model.unprimedState, Fin.toUnprimed, Set.mem_ofPred_eq]
   simp only [PlanningTask.mem_goalStates, PlanningTask.GoalState, Set.subset_def, SetLike.mem_coe]
   constructor
-  · grind only [usr Set.mem_setOf_eq]
+  · grind only [usr Set.mem_ofPred_eq]
   · intro h
     obtain ⟨M, rfl⟩ := Model.exists_model_of_state s
     use M
-    simp_all only [Model.unprimedState, Fin.toUnprimed, Set.mem_setOf_eq, implies_true, and_self]
+    simp_all only [Model.unprimedState, Fin.toUnprimed, Set.mem_ofPred_eq, implies_true, and_self]
 
 end Validator.StateSetFormalism

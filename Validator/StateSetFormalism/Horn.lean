@@ -682,15 +682,14 @@ public lemma vars_fromCNF {n} {φ : CNF n} {ψ} :
     grind only [!top_vars, VarSet.mem_empty]
   | cons γ φ ih =>
     intro h1
-    simp_all only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.vars_cons]
-    split at h1
-    · simp only [Option.bind_eq_some_iff, Option.some.injEq] at h1
-      rcases h1 with ⟨φ', h2, rfl⟩
-      intro i hi
-      apply vars_insert at hi
-      simp only [VarSet.mem_union, VarSet.subset_def] at *
-      grind only
-    · grind only [Option.bind_eq_none_iff]
+    simp_all only [List.foldrM_cons, CNF.vars_cons]
+    simp only [Option.bind_eq_bind, insert', Option.bind_eq_some_iff,
+      Option.dite_none_right_eq_some, Option.some.injEq] at h1
+    rcases h1 with ⟨φ', h1, h2, rfl⟩
+    intro i hi
+    apply vars_insert at hi
+    simp only [VarSet.mem_union, VarSet.subset_def] at *
+    grind only
 
 public lemma models_fromCNF {n} {φ : CNF n} {ψ} :
     Horn.fromCNF φ = some ψ → Formula.models ψ = φ.models := by
@@ -700,10 +699,9 @@ public lemma models_fromCNF {n} {φ : CNF n} {ψ} :
     simp
     grind [models_top]
   | cons γ φ ih =>
-    simp only [List.foldrM_cons, Option.bind_eq_bind, insert', CNF.models_cons]
-    split
-    · grind only [Option.bind_eq_some_iff, !models_insert]
-    · grind only [Option.bind_eq_none_iff]
-
+    simp only [List.foldrM_cons, CNF.models_cons]
+    simp only [Option.bind_eq_bind, insert', Option.bind_eq_some_iff,
+      Option.dite_none_right_eq_some, Option.some.injEq]
+    grind only [!models_insert]
 
 end Validator.Horn

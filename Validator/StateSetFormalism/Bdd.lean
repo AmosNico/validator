@@ -22,7 +22,7 @@ namespace Formula.Model
 
 noncomputable def toVector {n} (M : Model n) : Vector Bool n :=
   have := Classical.decPred M
-  Vector.ofFn fun i ↦ if M i then true else false
+  Vector.ofFn fun i ↦ M i
 
 def ofVector {n} (V : Vector Bool n) : Model n :=
   fun i ↦ V[i]
@@ -33,7 +33,7 @@ lemma ofVector_toVector {n} (M : Model n) : ofVector M.toVector = M := by
 
 @[simp]
 lemma toVector_ofVector {n} (V : Vector Bool n) : (ofVector V).toVector = V := by
-  simp [ofVector, toVector]
+  grind only [toVector, = Vector.getElem_ofFn, ofVector, = Fin.getElem_fin]
 
 end Formula.Model
 namespace BDD
@@ -74,7 +74,7 @@ def not {n} (φ : BDD n) : BDD n where
 @[simp]
 lemma models_not {n} (φ : BDD n) : φ.not.models = φ.modelsᶜ := by
   simp only [models, not, BDD.getElem_not, Bool.not_eq_eq_eq_not, Bool.not_true, Set.compl_def,
-    Set.mem_setOf_eq, Bool.not_eq_true]
+    Set.mem_ofPred_eq, Bool.not_eq_true]
 
 def ofLiteral {n} : Literal n → _root_.BDD
   | ⟨i, true⟩ => BDD.var i
@@ -131,7 +131,7 @@ lemma vars_ofCube {n} (δ : Cube n) : (ofCube δ).vars = δ.vars := by
 
 @[simp]
 lemma models_ofCube {n} (δ : Cube n) : (ofCube δ).models = δ.models := by
-  simp only [models, ofCube, Set.ext_iff, Set.mem_setOf_eq, Cube.mem_models]
+  simp only [models, ofCube, Set.ext_iff, Set.mem_ofPred_eq, Cube.mem_models]
   induction δ with
   | nil => simp [getElem_top_bdd]
   | cons l δ ih =>
@@ -172,7 +172,7 @@ def ofClause {n} (γ : Clause n) : BDD n where
 
 @[simp]
 lemma models_ofClause {n} (γ : Clause n) : (ofClause γ).models = γ.models := by
-  simp only [models, ofClause, Set.ext_iff, Set.mem_setOf_eq, Clause.mem_models]
+  simp only [models, ofClause, Set.ext_iff, Set.mem_ofPred_eq, Clause.mem_models]
   induction γ with
   | nil => simp [getElem_bot_bdd]
   | cons l δ ih =>
@@ -192,7 +192,7 @@ public instance {n} : Formula n (BDD n) where
     have h3 := φ.nvars_prop
     suffices
       φ.bdd[M.toVector] = φ.bdd[M'.toVector] by
-      simp_all only [eq_iff_iff, models, Set.mem_setOf_eq]
+      simp_all only [eq_iff_iff, models, Set.mem_ofPred_eq]
     apply BDD.congrInterpretation
     rintro ⟨i, h4⟩ h5
     simp [Model.toVector]
@@ -212,7 +212,7 @@ public instance {n} : Top n (BDD n) where
   }
 
   models_top := by
-    simp only [Formula.models, models, getElem_top_bdd, Set.setOf_true]
+    simp only [Formula.models, models, getElem_top_bdd, Set.ofPred_true]
 
 @[no_expose]
 public instance {n} : Bot n (BDD n) where
@@ -229,7 +229,7 @@ public instance {n} : Bot n (BDD n) where
   vars_bot := by simp only [Formula.vars]
 
   models_bot := by
-    simp only [Formula.models, models, getElem_bot_bdd, Bool.false_eq_true, Set.setOf_false]
+    simp only [Formula.models, models, getElem_bot_bdd, Bool.false_eq_true, Set.ofPred_false]
 
 @[no_expose]
 public instance {n} : Consistency n (BDD n) where
@@ -238,7 +238,7 @@ public instance {n} : Consistency n (BDD n) where
 
   consistent_iff φ := by
     simp only [BDD.SemanticEquiv, BDD.getElem_const, not_forall, Bool.not_eq_false,
-      decide_eq_true_eq, Set.Nonempty, Formula.models, models, Set.mem_setOf_eq]
+      decide_eq_true_eq, Set.Nonempty, Formula.models, models, Set.mem_ofPred_eq]
     have h1 : max φ.bdd.nvars (BDD.const false).nvars = n := by
         simp only [φ.nvars_prop, BDD.const_nvars, Nat.zero_le, sup_of_le_left]
     constructor
@@ -267,7 +267,7 @@ public instance {n} : BoundedConjuction n (BDD n) where
 
   models_and φ ψ := by
     simp only [Formula.models, models, BDD.getElem_and, Bool.and_eq_true, Set.ext_iff,
-      Set.mem_setOf_eq, Set.mem_inter_iff, implies_true]
+      Set.mem_ofPred_eq, Set.mem_inter_iff, implies_true]
 
 @[no_expose]
 public instance {n} : BoundedDisjunction n (BDD n) where
@@ -285,7 +285,7 @@ public instance {n} : BoundedDisjunction n (BDD n) where
 
   models_or φ ψ := by
     simp only [Formula.models, models, BDD.getElem_or, Bool.or_eq_true, Set.ext_iff,
-      Set.mem_setOf_eq, Set.mem_union, implies_true]
+      Set.mem_ofPred_eq, Set.mem_union, implies_true]
 
 @[no_expose]
 public instance {n} : SententialEntailment n (BDD n) where
@@ -421,12 +421,9 @@ public def parseBDD {n} (h : IO.FS.Handle) :
   if h1 : B.nvars = n then
     let B' := B.relabel Fin.toUnprimed (by simp [Fin.toUnprimed])
     have h2 : B'.nvars = 2 * n := by
-      subst h1
-      simp only [BDD.relabel_nvars, B']
+      grind only [!BDD.relabel_nvars]
     have h3 : ∀ i : Fin (2 * n), B'.DependsOn i → i ∈ VarSet.unprimedVars n := by
-      subst h1
-      simp only [BDD.relabel_dependsOn, forall_exists_index, and_imp, B']
-      grind only [!VarSet.toUnprimed_mem_unprimedVars]
+      grind only [BDD.relabel_dependsOn, !VarSet.toUnprimed_mem_unprimedVars]
     let ψ := ⟨VarSet.unprimedVars n, B', h2, h3⟩
     have h4 : (Formula.vars ψ).IsUnprimed := by
       simp only [Formula.vars, ψ]

@@ -107,7 +107,7 @@ lemma toPrimed_eq {n} (V : VarSet n) (M : Model (2 * n)) : M.toPrimed V =
 
 lemma unprimedState_eq_iff_unprimedVars {n} {M M' : Model (2 * n)} :
     M.unprimedState = M'.unprimedState ↔ ∀ i ∈ (VarSet.unprimedVars n), M i = M' i := by
-  simp only [unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq,
+  simp only [unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_ofPred_eq,
     VarSet.mem_unprimedVars, eq_iff_iff]
   constructor
   · intro h1 i h2
@@ -227,7 +227,7 @@ lemma mem_models_of_eq_toState [Formalism pt R] {x : UnprimedVariable pt R} {M M
     intro i hi
     simp only [VarSet.IsUnprimed, even_iff_exists_two_mul] at h1
     have ⟨j, hj⟩ := h1 i hi
-    simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_setOf_eq] at h2
+    simp only [Model.unprimedState, Fin.toUnprimed, Set.ext_iff, Set.mem_ofPred_eq] at h2
     have h5 := @h2 ⟨j, by omega⟩
     simp [← hj] at h5
     simp [h5]
@@ -501,7 +501,7 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
     {X : UnprimedVariables pt R} {V s} :
     s ∈ (toPrimed X V).inter ↔ ∃ s' ∈ X.val.inter, ∀ i ∉ V, i ∈ s' ↔ i ∈ s := by
   simp only [Variables.inter, toPrimed, List.mem_map, Subtype.exists, forall_exists_index,
-    and_imp, Set.mem_setOf_eq, val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
+    and_imp, Set.mem_ofPred_eq, val, List.pure_def, List.bind_eq_flatMap, List.flatMap_subtype,
     List.flatMap_singleton', List.mem_unattach, ↓existsAndEq, true_and]
   constructor
   · rintro ⟨M, rfl, h1⟩
@@ -521,8 +521,8 @@ lemma mem_inter_toPrimed [F : Formalism pt R] [Rename (2 * n) R]
       else
         ⟨i / 2, by omega⟩ ∈ M.unprimedState
     simp only [Model.unprimedState, Fin.toUnprimed, even_two, Even.mul_right, ↓reduceIte, ne_eq,
-      OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀, Fin.eta, Set.setOf_mem_eq,
-      Set.mem_setOf_eq, true_and]
+      OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀, Fin.eta, Set.ofPred_mem_eq,
+      Set.mem_ofPred_eq, true_and]
     intro _ x h3 h4 rfl
     simp only [UnprimedVariable.mem_models_toPrimed_iff]
     specialize h1 x h3 h4
@@ -567,7 +567,7 @@ def union [Formalism pt R] (L : Literals pt R) : States n :=
 lemma mem_union [Formalism pt R] {ls : Literals pt R} {s} :
     s ∈ ls.union ↔ ∃ M : Model (2 * n), M.unprimedState = s ∧
     ((∃ x ∈ ls.1, M ∈ x.models) ∨ (∃ x ∈ ls.2, M ∉ x.models)) := by
-  simp only [union, Set.mem_setOf_eq]
+  simp only [union, Set.mem_ofPred_eq]
 
 @[simp]
 lemma union_append [Formalism pt R] {L1 L2 : Literals pt R} :
@@ -585,7 +585,7 @@ def inter [Formalism pt R] (L : Literals pt R) : States n :=
 lemma mem_inter [Formalism pt R] {L : Literals pt R} {s} :
     s ∈ L.inter ↔ ∃ M : Model (2 * n), M.unprimedState = s ∧
     (∀ x ∈ L.1, M ∈ x.models) ∧ (∀ x ∈ L.2, M ∉ x.models) := by
-  simp only [inter, Set.mem_setOf_eq]
+  simp only [inter, Set.mem_ofPred_eq]
 
 end Literals
 
