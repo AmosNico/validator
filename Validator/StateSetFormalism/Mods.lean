@@ -13,6 +13,45 @@ public structure MODS n where
 
 namespace Formula.PartialModel
 
+/--
+Returns the conjunction of two partial models.
+Returns `none` if the conjunction of the two partial models is inconsistent.
+-/
+def and {n} (M1 M2 : PartialModel n) : Option (PartialModel n) :=
+  let pos := M1.pos ∪ M2.pos
+  let neg := M1.neg ∪ M2.neg
+  if h : pos ∩ neg = ∅ then
+    return ⟨pos, neg, h⟩
+  else
+    none
+
+lemma vars_and {n} {M1 M2 M : PartialModel n} :
+    M1.and M2 = some M → M.vars = M1.vars ∪ M2.vars := by
+  simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
+  rintro ⟨h1, rfl⟩
+  simp only [vars_eq, SetLike.ext_iff, VarSet.mem_union]
+  tauto
+
+@[grind →]
+lemma models_and {n} {M1 M2 M : PartialModel n} :
+    M1.and M2 = some M → M.models = M1.models ∩ M2.models := by
+  simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
+  rintro ⟨h1, rfl⟩
+  simp only [Set.ext_iff, mem_models', VarSet.mem_union, Set.mem_inter_iff]
+  grind only
+
+lemma isSome_and_iff {n} {M1 M2 : PartialModel n} :
+    (M1.and M2).isSome ↔ M1.models ∩ M2.models ≠ ∅ := by
+  simp only [and, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or, Option.pure_def,
+    Option.isSome_dite]
+  simp only [ne_eq, Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and, not_forall, not_not]
+  simp only [mem_models', exists_and_left, exists_prop]
+  constructor
+  · intro h1
+    use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+    grind only
+  · grind only
+
 /-
 lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
   M ∈ M1.models → M ∈ M2.models → M1 = M2 :=
@@ -174,9 +213,29 @@ public instance {n} : Implicant n (MODS n) where
 @[no_expose]
 public instance {n} : BoundedConjuction n (MODS n) where
 
-  and φ ψ := sorry
+  and φ ψ := {
+    vars := φ.vars ∪ ψ.vars
+    mods := φ.mods.flatMap fun δ ↦ ψ.mods.filterMap fun δ' ↦ δ.and δ'
+    prop := by
+      simp only [List.mem_flatMap, List.mem_filterMap, forall_exists_index, and_imp]
+      intro M M1 h1 M2 h2
+      rw [← φ.prop M1 h1, ← ψ.prop M2 h2]
+      exact PartialModel.vars_and
+    }
 
-  models_and := sorry
+  models_and φ ψ := by
+    simp only [Formula.models, Set.ext_iff, mem_models, List.mem_flatMap, List.mem_filterMap,
+      Set.mem_inter_iff]
+    intro M
+    constructor
+    · grind only [→ PartialModel.models_and, = Set.mem_inter_iff]
+    · rintro ⟨⟨M1, hM1, h1⟩, M2, hM2, h2⟩
+      have h3 : M1.models ∩ M2.models ≠ ∅ := by
+        simp only [ne_eq, Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_forall, not_not]
+        use M
+      rw [← PartialModel.isSome_and_iff, Option.isSome_iff_exists] at h3
+      rcases h3 with ⟨M', hM'⟩
+      grind only [= Set.mem_inter_iff, PartialModel.models_and hM']
 
 @[no_expose]
 public instance {n} : SententialEntailment n (MODS n) where
