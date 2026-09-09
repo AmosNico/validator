@@ -526,6 +526,7 @@ public instance {n} : ClausalEntailment n (Horn n) where
       Set.nonempty_def, Set.mem_inter_iff, Set.mem_compl_iff, Clause.mem_models, Set.subset_def]
     grind only
 
+-- TODO : remove?
 @[no_expose]
 public instance {n} : SententialEntailment n (Horn n) where
 

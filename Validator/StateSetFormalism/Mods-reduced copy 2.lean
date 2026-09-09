@@ -5,10 +5,17 @@ public import Validator.StateSetFormalism.Formula
 namespace Validator
 open Formula STRIPS
 
-public structure MODS n where
+structure RawMODS n where
   private vars : VarSet n
   private mods : List (PartialModel n)
   private prop : ∀ M ∈ mods, M.vars = vars
+deriving DecidableEq
+
+public structure MODS n where
+  private inner : RawMODS n
+  /-- All variables in `vars` are needed for representing the formula. -/
+  private reduced : ∀ i ∈ inner.vars, ∃ M ∈ inner.mods, ∀ M' ∈ inner.mods,
+    (∀ l : Literal n, l.var ≠ i → l ∈ M ↔ l ∈ M') → M = M'
 deriving DecidableEq
 
 namespace Formula.PartialModel
@@ -106,19 +113,28 @@ lemma mem_models' {n} (γ : Clause n) (M : Model n) :
   simp_all only [mem_models, isTrivial_iff, Set.eq_univ_iff_forall, iff_self_or, implies_true]
 
 end Formula.Clause
+
+@[match_pattern]
+def MODS.mk' {n} (vars : VarSet n) (mods : List (PartialModel n)) (prop : ∀ M ∈ mods, M.vars = vars)
+    (reduced : ∀ i ∈ vars, ∃ M ∈ mods, ∀ M' ∈ mods,
+      (∀ l : Literal n, l.var ≠ i → l ∈ M ↔ l ∈ M') → M = M') :
+    MODS n := sorry
+
+def RawMODS.reduce {n} : RawMODS n → MODS n := sorry
+
 namespace MODS
 
 def models {n} (φ : MODS n) : Models n :=
-  { M | ∃ M' ∈ φ.mods, M ∈ PartialModel.models M' }
+  { M | ∃ M' ∈ φ.inner.mods, M ∈ PartialModel.models M' }
 
 @[simp]
-lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models := by
+lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.inner.mods, M ∈ M'.models := by
   simp [models]
 
 @[no_expose]
 public instance {n} : Formula n (MODS n) where
 
-  vars φ := φ.vars
+  vars φ := φ.inner.vars
 
   models := models
 
@@ -126,14 +142,14 @@ public instance {n} : Formula n (MODS n) where
     simp only [mem_models, PartialModel.mem_models, Literal.mem_models]
     rintro h1 ⟨M'', h2, h3⟩
     use M'', h2
-    have h4 := φ.prop M'' h2
+    have h4 := φ.inner.prop M'' h2
     simp only [← h4, PartialModel.mem_vars] at h1
     grind only
 
 @[no_expose]
 public instance {n} : Top n (MODS n) where
 
-  top := ⟨∅, [PartialModel.empty], by simp⟩
+  top := ⟨⟨∅, [PartialModel.empty], by simp⟩, by simp⟩
 
   models_top := by
     simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
@@ -142,7 +158,7 @@ public instance {n} : Top n (MODS n) where
 @[no_expose]
 public instance {n} : Bot n (MODS n) where
 
-  bot := ⟨∅, [], by simp⟩
+  bot := ⟨⟨∅, [], by simp⟩, by simp⟩
 
   vars_bot := by simp only [Formula.vars]
 
@@ -153,7 +169,7 @@ public instance {n} : Bot n (MODS n) where
 @[no_expose]
 public instance {n} : ClausalEntailment n (MODS n) where
 
-  entails φ γ := φ.mods.all (fun M ↦ γ.any fun l ↦ l ∈ M) || γ.isTrivial
+  entails φ γ := φ.inner.mods.all (fun M ↦ γ.any fun l ↦ l ∈ M) || γ.isTrivial
 
   entails_iff := by
     intro φ γ
@@ -163,7 +179,7 @@ public instance {n} : ClausalEntailment n (MODS n) where
     · intro h M M' hM' hM
       rcases h with h | h
       · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hM'
-        specialize h φ.mods[i] hM'
+        specialize h φ.inner.mods[i] hM'
         rcases h with ⟨l, h1, h2⟩
         rw [Clause.mem_models]
         use l, h1
@@ -224,6 +240,7 @@ public instance {n} : BoundedConjuction n (MODS n) where
       intro M M1 h1 M2 h2
       rw [← φ.prop M1 h1, ← ψ.prop M2 h2]
       exact PartialModel.vars_and
+    reduced := sorry
     }
 
   models_and φ ψ := by
@@ -243,7 +260,7 @@ public instance {n} : BoundedConjuction n (MODS n) where
 @[no_expose]
 public instance {n} : OfPartialModel n (MODS n) where
 
-  ofPartialModel M := ⟨M.vars, [M], by simp⟩
+  ofPartialModel M := ⟨M.vars, [M], by simp, by simp⟩
 
   vars_ofPartialModel := by simp only [Formula.vars, implies_true]
 
@@ -261,6 +278,7 @@ public instance {n} : Rename n (MODS n) where
       intro M' M hM rfl
       simp only [← φ.prop M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
       grind only [PartialModel.mem_vars]
+    reduced := by sorry
     }
 
   vars_rename φ V r h1 := by
