@@ -5,10 +5,16 @@ public import Validator.StateSetFormalism.Formula
 namespace Validator
 open Formula STRIPS
 
-public structure MODS n where
+public structure RawMODS n where
   private vars : VarSet n
   private mods : List (PartialModel n)
   private prop : ∀ M ∈ mods, M.vars = vars
+deriving DecidableEq
+
+public structure MODS n extends RawMODS n where
+  /-- All variables in `vars` are needed for representing the formula. -/
+  private reduced : ∀ i ∈ vars, ∃ M ∈ mods, ∀ M' ∈ mods,
+    (∀ l : Literal n, l.var ≠ i → l ∈ M ↔ l ∈ M') → M = M'
 deriving DecidableEq
 
 namespace Formula.PartialModel
@@ -106,6 +112,12 @@ lemma mem_models' {n} (γ : Clause n) (M : Model n) :
   simp_all only [mem_models, isTrivial_iff, Set.eq_univ_iff_forall, iff_self_or, implies_true]
 
 end Formula.Clause
+
+
+def RawMODS.reduce {n} : RawMODS n → MODS n :=
+
+  sorry
+
 namespace MODS
 
 def models {n} (φ : MODS n) : Models n :=
@@ -133,7 +145,7 @@ public instance {n} : Formula n (MODS n) where
 @[no_expose]
 public instance {n} : Top n (MODS n) where
 
-  top := ⟨∅, [PartialModel.empty], by simp⟩
+  top := ⟨⟨∅, [PartialModel.empty], by simp⟩, by simp⟩
 
   models_top := by
     simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
@@ -142,7 +154,7 @@ public instance {n} : Top n (MODS n) where
 @[no_expose]
 public instance {n} : Bot n (MODS n) where
 
-  bot := ⟨∅, [], by simp⟩
+  bot := ⟨⟨∅, [], by simp⟩, by simp⟩
 
   vars_bot := by simp only [Formula.vars]
 
@@ -224,6 +236,7 @@ public instance {n} : BoundedConjuction n (MODS n) where
       intro M M1 h1 M2 h2
       rw [← φ.prop M1 h1, ← ψ.prop M2 h2]
       exact PartialModel.vars_and
+    reduced := sorry
     }
 
   models_and φ ψ := by
@@ -243,7 +256,7 @@ public instance {n} : BoundedConjuction n (MODS n) where
 @[no_expose]
 public instance {n} : OfPartialModel n (MODS n) where
 
-  ofPartialModel M := ⟨M.vars, [M], by simp⟩
+  ofPartialModel M := ⟨⟨M.vars, [M], by simp⟩, by simp⟩
 
   vars_ofPartialModel := by simp only [Formula.vars, implies_true]
 
@@ -261,6 +274,7 @@ public instance {n} : Rename n (MODS n) where
       intro M' M hM rfl
       simp only [← φ.prop M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
       grind only [PartialModel.mem_vars]
+    reduced := by sorry
     }
 
   vars_rename φ V r h1 := by

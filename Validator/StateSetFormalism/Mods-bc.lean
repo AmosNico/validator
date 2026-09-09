@@ -9,7 +9,7 @@ public structure MODS n where
   private vars : VarSet n
   private mods : List (PartialModel n)
   private prop : ∀ M ∈ mods, M.vars = vars
-deriving DecidableEq
+  deriving DecidableEq
 
 namespace Formula.PartialModel
 
@@ -32,15 +32,77 @@ lemma vars_and {n} {M1 M2 M : PartialModel n} :
   simp only [vars_eq, SetLike.ext_iff, VarSet.mem_union]
   tauto
 
-@[grind →]
-lemma models_and {n} {M1 M2 M : PartialModel n} :
+lemma models_and' {n} {M1 M2 M : PartialModel n} :
     M1.and M2 = some M → M.models = M1.models ∩ M2.models := by
   simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
   rintro ⟨h1, rfl⟩
   simp only [Set.ext_iff, mem_models', VarSet.mem_union, Set.mem_inter_iff]
   grind only
 
-lemma isSome_and_iff {n} {M1 M2 : PartialModel n} :
+lemma models_and {n} {M1 M2 M : PartialModel n} :
+    M1.and M2 = some M ↔ M.models = M1.models ∩ M2.models := by
+  simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
+  constructor
+  · rintro ⟨h1, rfl⟩
+    simp only [Set.ext_iff, mem_models', VarSet.mem_union, Set.mem_inter_iff]
+    grind only
+  · have hM := M.disjoint
+    rw [VarSet.inter_eq_empty_iff] at hM
+    intro h1
+    simp only [Set.ext_iff, Set.mem_inter_iff, mem_models'] at h1
+    have h2 := (h1 fun i ↦ i ∈ M.pos).1 (by grind only)
+    have h3 := (h1 fun i ↦ i ∉ M.neg).1 (by grind only)
+    have h4 : (M1.pos ∪ M2.pos) ∩ (M1.neg ∪ M2.neg) = ∅ := by
+      grind only [VarSet.inter_eq_empty_iff, VarSet.mem_union]
+    use h4
+    have hpos : M1.pos ∪ M2.pos = M.pos := by
+      simp only [SetLike.ext_iff, VarSet.mem_union]
+      specialize h1 fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+      grind only
+    have hneg : M1.neg ∪ M2.neg = M.neg := by
+      simp only [SetLike.ext_iff, VarSet.mem_union]
+      specialize h1 fun i ↦ i ∉ M1.neg ∧ i ∉ M2.neg
+      grind only
+    congr
+
+lemma subset_models_iff {n} (M1 M2 : PartialModel n) :
+    M1.models ⊆ M2.models ↔ (∀ i, i ∈ M2.pos → i ∈ M1.pos) ∧ (∀ i, i ∈ M2.neg → i ∈ M1.neg) := by
+  simp only [Set.subset_def, mem_models', and_imp]
+  constructor
+  · have h1 := M1.disjoint
+    rw [VarSet.inter_eq_empty_iff] at h1
+    intro h2
+    have h3 := h2 (fun i ↦ i ∉ M1.neg) (by grind only) (by grind only)
+    specialize h2 (fun i ↦ i ∈ M1.pos) (by grind only) (by grind only)
+    grind only
+  · grind only
+
+lemma models_and'' {n} {M1 M2 M : PartialModel n} :
+    M1.and M2 = some M ↔ M.models = M1.models ∩ M2.models := by
+  simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
+  constructor
+  · rintro ⟨h1, rfl⟩
+    simp only [Set.ext_iff, mem_models', VarSet.mem_union, Set.mem_inter_iff]
+    grind only
+  · intro h1
+    have h2 : (M1.pos ∪ M2.pos) ∩ (M1.neg ∪ M2.neg) = ∅ := by
+      have ⟨M', h⟩ := M.models_nonempty
+      simp only [h1, Set.mem_inter_iff, mem_models'] at h
+      grind only [VarSet.inter_eq_empty_iff, VarSet.mem_union]
+    use h2
+    have ⟨pos1, hneg1⟩ := (subset_models_iff M M1).1 (by simp only [h1, Set.inter_subset_left])
+    have ⟨pos2, hneg2⟩ := (subset_models_iff M M2).1 (by simp only [h1, Set.inter_subset_right])
+    have hpos : M1.pos ∪ M2.pos = M.pos := by
+      simp only [SetLike.ext_iff, VarSet.mem_union]
+
+      sorry
+    congr
+    simp only [SetLike.ext_iff, VarSet.mem_union]
+    grind [subset_models_iff M M1, subset_models_iff M M2]
+    sorry
+    sorry
+
+lemma models_and1 {n} {M1 M2 : PartialModel n} :
     (M1.and M2).isSome ↔ M1.models ∩ M2.models ≠ ∅ := by
   simp only [and, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or, Option.pure_def,
     Option.isSome_dite]
@@ -52,13 +114,36 @@ lemma isSome_and_iff {n} {M1 M2 : PartialModel n} :
     grind only
   · grind only
 
+
+
+lemma models_eq_none {n} {M1 M2 : PartialModel n} :
+    M1.and M2 = none → M1.models ∩ M2.models = ∅ := by
+  simp only [and, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or, Option.pure_def,
+    dite_eq_right_iff, reduceCtorEq, imp_false, not_forall, not_and, Decidable.not_not]
+  simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, mem_models', not_and, not_forall,
+    not_not, and_imp]
+  grind only
+
+lemma models_eq_none' {n} {M1 M2 : PartialModel n} :
+    M1.and M2 = none ↔ M1.models ∩ M2.models = ∅ := by
+  simp only [and, VarSet.inter_eq_empty_iff, VarSet.mem_union, Option.pure_def,
+    dite_eq_right_iff]
+  simp only [not_or, reduceCtorEq, imp_false, not_forall, not_and, Decidable.not_not]
+  simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, mem_models', not_and, not_forall,
+    not_not, and_imp]
+  constructor
+  · grind only
+  · simp
+    intro h
+    sorry
+
 /-
 lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
   M ∈ M1.models → M ∈ M2.models → M1 = M2 :=
   by
     simp only [models]
     intro hM1 hM2
-    ext i hisorry
+    ext i hi
     specialize hM1 ⟨i, hi⟩
     specialize hM2 ⟨i, hi⟩
     simp_all
@@ -206,10 +291,7 @@ public instance {n} : ClausalEntailment n (MODS n) where
 @[no_expose]
 public instance {n} : Implicant n (MODS n) where
 
-  entails δ φ :=
-    -- restrict δ to φ.vars
-    -- either extend δ to all PartialModels over φ.vars or reduce φ.vars and check whether it contains the partial model corresponding to δ
-    sorry
+  entails δ φ := sorry
 
   entails_iff := sorry
 
@@ -231,14 +313,24 @@ public instance {n} : BoundedConjuction n (MODS n) where
       Set.mem_inter_iff]
     intro M
     constructor
-    · grind only [→ PartialModel.models_and, = Set.mem_inter_iff]
+    · rintro ⟨M', ⟨M1, hM1, M2, hM2, h⟩, hM'⟩
+      simp only [PartialModel.models_and' h, Set.mem_inter_iff] at hM'
+      exact ⟨⟨M1, hM1, hM'.1⟩, M2, hM2, hM'.2⟩
+    --· grind only [PartialModel.models_and, Set.mem_inter_iff]
     · rintro ⟨⟨M1, hM1, h1⟩, M2, hM2, h2⟩
       have h3 : M1.models ∩ M2.models ≠ ∅ := by
         simp only [ne_eq, Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_forall, not_not]
         use M
-      rw [← PartialModel.isSome_and_iff, Option.isSome_iff_exists] at h3
+      rw [← PartialModel.models_and1, Option.isSome_iff_exists] at h3
       rcases h3 with ⟨M', hM'⟩
-      grind only [= Set.mem_inter_iff, PartialModel.models_and hM']
+      grind only [= Set.mem_inter_iff, PartialModel.models_and' hM']
+
+@[no_expose]
+public instance {n} : SententialEntailment n (MODS n) where
+
+  entails φ ψ := sorry
+
+  entails_iff := sorry
 
 @[no_expose]
 public instance {n} : OfPartialModel n (MODS n) where
