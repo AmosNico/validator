@@ -29,8 +29,8 @@ lemma vars_and {n} {M1 M2 M : PartialModel n} :
     M1.and M2 = some M → M.vars = M1.vars ∪ M2.vars := by
   simp only [and, Option.pure_def, Option.dite_none_right_eq_some, Option.some.injEq]
   rintro ⟨h1, rfl⟩
-  simp only [vars_eq, SetLike.ext_iff, VarSet.mem_union]
-  tauto
+  ext i
+  grind only [vars_eq, VarSet.mem_union]
 
 @[grind →]
 lemma models_and {n} {M1 M2 M : PartialModel n} :
@@ -51,6 +51,16 @@ lemma isSome_and_iff {n} {M1 M2 : PartialModel n} :
     use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
     grind only
   · grind only
+
+def restrict {n} (M : PartialModel n) (vars : VarSet n) : PartialModel n where
+  pos := M.pos ∩ vars
+  neg := M.neg ∩ vars
+  disjoint := by grind only [VarSet.inter_eq_empty_iff, VarSet.mem_inter, M.disjoint]
+
+@[simp]
+lemma vars_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).vars = M.vars ∩ vars := by
+  ext i
+  grind only [restrict, vars_eq, VarSet.mem_union, VarSet.mem_inter]
 
 /-
 lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
@@ -259,8 +269,8 @@ public instance {n} : Rename n (MODS n) where
     prop := by
       simp only [List.mem_map, List.mem_attach, true_and, Subtype.exists, forall_exists_index]
       intro M' M hM rfl
-      simp only [← φ.prop M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
-      grind only [PartialModel.mem_vars]
+      ext i
+      simp only [← φ.prop M hM, PartialModel.mem_vars_rename, VarSet.mem_map]
     }
 
   vars_rename φ V r h1 := by
