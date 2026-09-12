@@ -111,7 +111,7 @@ lemma mem_vars {n} (γ : Clause n) {i} : i ∈ γ.vars ↔ ∃ l ∈ γ, l.var =
 
 @[simp]
 lemma vars_cons {n} (γ : Clause n) {l} : Clause.vars (l :: γ) = γ.vars.insert l.var := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
 
 end Clause
@@ -153,12 +153,12 @@ lemma mem_vars {n} (δ : Cube n) i : i ∈ δ.vars ↔ ∃ l ∈ δ, i = l.var :
 
 @[simp]
 lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = δ.vars.insert l.var := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
 
 -- TODO : remove
 lemma vars_append {n} (δ δ' : Cube n) : Cube.vars (δ ++ δ') = δ.vars ∪ δ'.vars := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_union, VarSet.mem_ofList, = List.map_append, = List.mem_append]
 
 def consistent {n} (δ : Cube n) : Bool :=
@@ -238,8 +238,8 @@ lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, i ∈ γ.
 
 @[simp]
 lemma vars_cons {n γ} {φ : CNF n} : CNF.vars (γ :: φ) = γ.vars ∪ φ.vars := by
-  simp only [SetLike.ext_iff, mem_vars, List.mem_cons, Clause.mem_vars, exists_eq_or_imp,
-    VarSet.mem_union, implies_true]
+  ext i
+  simp only [mem_vars, List.mem_cons, Clause.mem_vars, exists_eq_or_imp, VarSet.mem_union]
 
 @[simp]
 lemma forall_iff_subset_models {n} {φ : CNF n} {Ms} : (∀ γ ∈ φ, Ms ⊆ γ.models) ↔ Ms ⊆ φ.models := by
@@ -271,6 +271,7 @@ lemma DNF.exists_iff_models_subset {n} {φ : DNF n} {Ms} :
 
 /-! ## PartialModel -/
 /-- Partial models are partial assignments. In contrast to `Model`, these are used at runtime. -/
+@[ext]
 structure PartialModel (n : ℕ) where
   pos : VarSet n
   neg : VarSet n
@@ -338,7 +339,7 @@ lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty := by
   case h_1 l i => tauto
   case h_2 l i =>
     have := M.disjoint
-    simp_all only [SetLike.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and,
+    simp_all only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and,
       Bool.false_eq_true]
     grind only [mem_def]
 
@@ -398,10 +399,9 @@ lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
     · grind only [VarSet.mem_insert]
     · rintro ⟨h1, h2⟩
       use h1
-      congr 1
+      ext i
       all_goals
-        simp only [SetLike.ext_iff, VarSet.mem_insert]
-        intro i
+        simp only [VarSet.mem_insert]
         have h3 := h2 ⟨i, false⟩
         specialize h2 ⟨i, true⟩
         grind only
@@ -409,8 +409,8 @@ lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
 lemma vars_insert {n} {M M' : PartialModel n} {l} (h : M.insert l = some M') :
     M'.vars = M.vars.insert l.var := by
   have ⟨h1, h2⟩ := insert_eq_some_iff.1 h
-  simp only [SetLike.ext_iff, mem_vars, h2, VarSet.mem_insert]
-  grind
+  ext i
+  grind only [mem_vars, VarSet.mem_insert]
 
 lemma models_insert {n} {M M' : PartialModel n} {l} :
     M.insert l = some M' → M'.models = M.models ∩ l.models := by
@@ -442,7 +442,7 @@ def toCube {n} (M : PartialModel n) : Cube n :=
 
 @[simp]
 lemma vars_toCube {n} {M : PartialModel n} : M.toCube.vars = M.vars := by
-  simp [toCube, foldl_cons, mem_vars, SetLike.ext_iff, Cube.mem_vars]
+  simp [toCube, foldl_cons, mem_vars, VarSet.ext_iff, Cube.mem_vars]
   grind only
 
 @[simp]
