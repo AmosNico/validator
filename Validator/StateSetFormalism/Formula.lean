@@ -44,7 +44,7 @@ abbrev Models n := Set (Model n)
 A Literal is a variable `i` (represented by `(i, true)`) or
 its negation (represented by `(i, false)`).
 -/
-@[unbox]
+@[unbox, ext]
 structure Literal (n : ℕ) where
   var : Fin n
   isPos : Bool
@@ -61,9 +61,16 @@ lemma mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.var ↔ l.isPos
   split
   all_goals simp
 
-@[expose]
 def negate {n} (l : Literal n) : Literal n :=
   ⟨l.var, !l.isPos⟩
+
+lemma negate_eq {n} (l : Literal n) : l.negate = ⟨l.var, !l.isPos⟩ := (rfl)
+
+@[simp]
+lemma isPos_negate {n} (l : Literal n) : l.negate.isPos = !l.isPos := (rfl)
+
+@[simp]
+lemma var_negate {n} (l : Literal n) : l.negate.var = l.var := (rfl)
 
 @[simp]
 lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ := by
@@ -280,7 +287,6 @@ structure PartialModel (n : ℕ) where
 
 namespace PartialModel
 
-@[simps]
 instance {n} : Membership (Literal n) (PartialModel n) where
   mem M
   | ⟨i, true⟩ => i ∈ M.pos
@@ -288,14 +294,29 @@ instance {n} : Membership (Literal n) (PartialModel n) where
 
 lemma mem_iff {n} (M : PartialModel n) l :
     l ∈ M ↔ l.var ∈ M.pos ∧ l.isPos ∨ l.var ∈ M.neg ∧ ¬l.isPos := by
-  rw [mem_def]
+  rw [instMembershipLiteral]
   grind only
 
-instance {n l} {M : PartialModel n} : Decidable (l ∈ M) := by
-  rw [mem_def]
-  split
-  all_goals
-    exact VarSet.instDecidableMemFin
+lemma mem_pos_iff {n} (M : PartialModel n) i : i ∈ M.pos ↔ ⟨i, true⟩ ∈ M := by
+  grind only [mem_iff]
+
+lemma mem_neg_iff {n} (M : PartialModel n) i : i ∈ M.neg ↔ ⟨i, false⟩ ∈ M := by
+  grind only [mem_iff]
+
+@[grind .]
+lemma not_mem_or_negate_not_mem {n} (M : PartialModel n) : ∀ l, l ∉ M ∨ l.negate ∉ M := by
+  grind only [mem_iff, !Literal.isPos_negate, !Literal.var_negate, VarSet.inter_eq_empty_iff,
+    M.disjoint]
+
+@[ext 2000]
+lemma ext' {n} {M M' : PartialModel n} : (∀ l, l ∈ M ↔ l ∈ M') → M = M' := by
+  intro h
+  ext i
+  · simp only [mem_pos_iff, h]
+  · simp only [mem_neg_iff, h]
+
+instance {n l} {M : PartialModel n} : Decidable (l ∈ M) :=
+  decidable_of_iff' _ (mem_iff M l)
 
 def vars {n} (M : PartialModel n) : VarSet n :=
   M.pos ∪ M.neg
@@ -321,7 +342,7 @@ lemma mem_models' {n} (M : PartialModel n) {M'} :
 lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M, M' ∈ l.models := by
   simp only [models, Set.mem_ofPred_eq, Literal.models]
   constructor
-  · grind [mem_def]
+  · grind [mem_iff]
   · intro h1
     constructor
     · intro i hi
@@ -333,15 +354,11 @@ lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M
 
 lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty := by
   use fun i ↦ ⟨i, true⟩ ∈ M
-  simp only [mem_models, Literal.mem_models, mem_def]
+  simp only [mem_models, Literal.mem_models, mem_iff]
   intro l
-  split
-  case h_1 l i => tauto
-  case h_2 l i =>
-    have := M.disjoint
-    simp_all only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and,
-      Bool.false_eq_true]
-    grind only [mem_def]
+  have h := M.disjoint
+  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and] at h
+  grind only [mem_iff]
 
 -- TODO : remove?
 lemma subset_models_of_mem {n} {M : PartialModel n} {l} : l ∈ M →  M.models ⊆ l.models := by
@@ -357,64 +374,83 @@ lemma vars_empty {n} : (@empty n).vars = ∅ := by
 
 @[simp]
 lemma models_empty {n} : (@empty n).models = Set.univ := by
-  simp [empty, Set.ext_iff, mem_models]
-  grind
+  simp [empty, Set.ext_iff, mem_models, mem_iff]
 
-/-- Returns none if the negation of the literal already occurs in M -/
-def insert {n} (M : PartialModel n) : Literal n → Option (PartialModel n)
-  | ⟨i, true⟩ =>
-    if h : i ∈ M.neg then
-      none
-    else
-      some { M with
-        pos := M.pos.insert i
-        disjoint := by
-          have := M.disjoint
-          grind only [VarSet.inter_eq_empty_iff, VarSet.mem_insert]
-        }
-  | ⟨i, false⟩ =>
-    if h : i ∈ M.pos then
-      none
-    else
-      some { M with
-        neg := M.neg.insert i
-        disjoint := by
-          have := M.disjoint
-          grind only [VarSet.inter_eq_empty_iff, VarSet.mem_insert]
-        }
+/--
+The partial model equivalent to the conjunction of the given partial model and the given literal.
+The condition `l.var ∉ M.vars` can be weakened to `l.negate ∉ M` if needed.
+-/
+def insert {n} (M : PartialModel n) (l : Literal n) (h : l.var ∉ M.vars) : PartialModel n :=
+  match l with
+  | ⟨i, true⟩ => { M with
+    pos := M.pos.insert i
+    disjoint := by
+      simp only [vars_eq, VarSet.mem_union, not_or] at h
+      grind [VarSet.inter_eq_empty_iff, VarSet.mem_insert, M.disjoint]
+    }
+  | ⟨i, false⟩ => { M with
+    neg := M.neg.insert i
+    disjoint := by
+      simp only [vars_eq, VarSet.mem_union, not_or] at h
+      grind only [VarSet.inter_eq_empty_iff, VarSet.mem_insert, M.disjoint]
+    }
 
 @[simp]
-lemma insert_eq_none_iff {n} {M : PartialModel n} {l} : M.insert l = none ↔ l.negate ∈ M := by
-  simp [mem_def, insert, Literal.negate]
-  grind
-
-@[simp]
-lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
-    M.insert l = some M' ↔ l.negate ∉ M ∧ ∀ l', l' ∈ M' ↔ l' ∈ M ∨ l' = l := by
-  simp only [insert, mem_def, Literal.negate]
+lemma mem_insert_iff {n} {M : PartialModel n} {l h} :
+    ∀ l', l' ∈ M.insert l h ↔ l' ∈ M ∨ l' = l := by
+  simp only [insert]
   split
   all_goals
-    simp only [Option.dite_none_left_eq_some, Option.some.injEq]
-    constructor
-    · grind only [VarSet.mem_insert]
-    · rintro ⟨h1, h2⟩
-      use h1
-      ext i
-      all_goals
-        simp only [VarSet.mem_insert]
-        have h3 := h2 ⟨i, false⟩
-        specialize h2 ⟨i, true⟩
-        grind only
+    simp only [mem_iff, VarSet.mem_insert, Bool.not_eq_true, Literal.ext_iff]
+    grind only
 
-lemma vars_insert {n} {M M' : PartialModel n} {l} (h : M.insert l = some M') :
+@[simp]
+lemma vars_insert {n} {M : PartialModel n} {l h} :
+    (M.insert l h).vars = M.vars.insert l.var := by
+  ext i
+  grind only [mem_vars, VarSet.mem_insert, M.mem_insert_iff]
+
+/-- Returns none if the negation of the literal already occurs in M -/
+def insert? {n} (M : PartialModel n) (l : Literal n) : Option (PartialModel n) :=
+  if h : l.var ∈ M.vars then
+    if l ∈ M then M else none
+  else
+    M.insert l h
+
+@[simp]
+lemma insert_eq_none_iff {n} {M : PartialModel n} {l} : M.insert? l = none ↔ l.negate ∈ M := by
+  simp only [insert?]
+  split
+  next h =>
+    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
+    grind only [M.not_mem_or_negate_not_mem l]
+  next h =>
+    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
+    grind only
+
+@[simp]
+lemma insert?_eq_some_iff {n} {M M' : PartialModel n} {l} :
+    M.insert? l = some M' ↔ l.negate ∉ M ∧ ∀ l', l' ∈ M' ↔ l' ∈ M ∨ l' = l := by
+  simp only [insert?]
+  split
+  next h =>
+    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
+    simp only [Option.ite_none_right_eq_some, Option.some.injEq, PartialModel.ext'_iff]
+    grind only [not_mem_or_negate_not_mem]
+  next h =>
+    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq, not_exists, not_and, not_or] at h
+    simp [Option.some.injEq, PartialModel.ext'_iff]
+    grind only
+
+lemma vars_insert? {n} {M M' : PartialModel n} {l} (h : M.insert? l = some M') :
     M'.vars = M.vars.insert l.var := by
-  have ⟨h1, h2⟩ := insert_eq_some_iff.1 h
+  have ⟨h1, h2⟩ := insert?_eq_some_iff.1 h
   ext i
   grind only [mem_vars, VarSet.mem_insert]
 
 lemma models_insert {n} {M M' : PartialModel n} {l} :
-    M.insert l = some M' → M'.models = M.models ∩ l.models := by
-  simp only [insert_eq_some_iff, Set.ext_iff, mem_models, Set.mem_inter_iff]
+    M.insert? l = some M' → M'.models = M.models ∩ l.models := by
+  simp only [insert?_eq_some_iff, Set.ext_iff, mem_models, Set.mem_inter_iff]
   grind
 
 def foldl {α n} (f : α → Literal n → α) (init : α) (M : PartialModel n) : α :=
@@ -422,14 +458,14 @@ def foldl {α n} (f : α → Literal n → α) (init : α) (M : PartialModel n) 
 
 lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
     a ∈ M.foldl (fun a l ↦ f l :: a) [] ↔ ∃ l ∈ M, a = f l := by
-  simp only [foldl, VarSet.foldl_cons, List.not_mem_nil, or_false, mem_def]
-  grind
+  simp only [foldl, VarSet.foldl_cons, List.not_mem_nil, or_false, mem_iff, Bool.not_eq_true]
+  grind only [Literal]
 
 def toCNF {n} (M : PartialModel n) : CNF n :=
   M.foldl (fun φ l ↦ [l] :: φ) []
 
 lemma mem_toCNF {n} {M : PartialModel n} {γ} : γ ∈ M.toCNF ↔ ∃ l ∈ M, γ = [l] := by
-  simp [toCNF, foldl_cons, mem_def]
+  simp [toCNF, foldl_cons, mem_iff]
 
 lemma models_toCNF {n} {M : PartialModel n} : M.toCNF.models = M.models := by
   ext M'
@@ -455,12 +491,12 @@ end PartialModel
 namespace Cube
 /-- Translate `δ` to a partial model. Returns `none` if `δ` is inconsistent. -/
 def toPartialModel {n} (δ : Cube n) : Option (PartialModel n) :=
-  δ.foldlM PartialModel.insert PartialModel.empty
+  δ.foldlM PartialModel.insert? PartialModel.empty
 
 @[simp]
 lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
     δ.toPartialModel = none ↔ δ.models = ∅ := by
-  suffices h1 : ∀ M, δ.foldlM PartialModel.insert M = none ↔ δ.models ∩ M.models = ∅ by
+  suffices h1 : ∀ M, δ.foldlM PartialModel.insert? M = none ↔ δ.models ∩ M.models = ∅ by
     have := h1 PartialModel.empty
     simp_all only [PartialModel.models_empty, Set.inter_univ, toPartialModel]
   induction δ with
@@ -472,7 +508,7 @@ lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
   | cons l δ' ih =>
     intro M
     simp only [List.foldlM_cons, Option.bind_eq_bind, Option.bind_eq_none_iff, models_cons, ih]
-    cases h1 : M.insert l with
+    cases h1 : M.insert? l with
     | none =>
       simp only [reduceCtorEq, IsEmpty.forall_iff, implies_true, Set.inter_assoc, true_iff]
       rw [PartialModel.insert_eq_none_iff] at h1
@@ -480,13 +516,13 @@ lemma toPartialModel_eq_none_iff {n} {δ : Cube n} :
       grind [Literal.models_negate]
     | some M' =>
       have := M.models_insert h1
-      grind only [PartialModel.insert_eq_some_iff, Option.some.injEq]
+      grind only [PartialModel.insert?_eq_some_iff, Option.some.injEq]
 
 @[simp]
 lemma models_toPartialModel {n} {δ : Cube n} {M} :
     δ.toPartialModel = some M → M.models = δ.models := by
   suffices h1 :
-    ∀ M', (δ.foldlM PartialModel.insert M') = some M → M.models = δ.models ∩ M'.models by
+    ∀ M', (δ.foldlM PartialModel.insert? M') = some M → M.models = δ.models ∩ M'.models by
     intro h2
     have := h1 PartialModel.empty h2
     simp_all only [PartialModel.models_empty, Set.inter_univ]

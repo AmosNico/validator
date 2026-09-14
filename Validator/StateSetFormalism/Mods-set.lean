@@ -93,6 +93,117 @@ lemma isSome_and_iff {n} {M1 M2 : PartialModel n} :
     grind only
   · grind only
 
+def restrict {n} (M : PartialModel n) (vars : VarSet n) : PartialModel n where
+  pos := M.pos ∩ vars
+  neg := M.neg ∩ vars
+  disjoint := by grind only [VarSet.inter_eq_empty_iff, VarSet.mem_inter, M.disjoint]
+
+@[simp]
+lemma pos_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).pos = M.pos ∩ vars := rfl
+
+@[simp]
+lemma neg_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).neg = M.neg ∩ vars := rfl
+
+@[simp]
+lemma vars_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).vars = M.vars ∩ vars := by
+  ext i
+  grind only [vars_eq, !pos_restrict, !neg_restrict, VarSet.mem_inter, VarSet.mem_union]
+
+@[simp]
+lemma mem_restrict_insert {n} {M : PartialModel n} {vars i l} :
+    l ∈ M.restrict (vars.insert i) ↔ l ∈ M.restrict vars ∨ (l ∈ M ∧ l.var = i) := by
+  simp only [restrict, mem_iff, VarSet.mem_inter, VarSet.mem_insert, Bool.not_eq_true]
+  grind only
+
+@[simp]
+lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
+    M.restrict vars = M ↔ M.vars ⊆ vars := by
+  simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
+    neg_restrict, vars_eq, VarSet.subset_iff, VarSet.mem_union]
+  grind only
+
+/--
+Expand the given partial model `M` to `2 ^ |vars|` partial models over `vars`,
+where `vars := M.vars ∪ Varset.ofList xs`.
+-/
+-- TODO : implement iterator for `VarSet` and use it here instead of `List`
+def expand {n} (M : PartialModel n) (xs : List (Fin n))
+    (h1 : xs.Nodup) (h2 : ∀ x ∈ xs, x ∉ M.vars) : List (PartialModel n) :=
+  match xs with
+  | [] => [M]
+  | x :: xs' =>
+    let M1 := M.insert ⟨x, false⟩ (by grind only [= List.mem_cons])
+    let M2 := M.insert ⟨x, true⟩ (by grind only [= List.mem_cons])
+    have hM1 : ∀ x ∈ xs', x ∉ M1.vars := by
+      simp only [vars_insert, VarSet.mem_insert, not_or, M1]
+      grind only [= List.nodup_cons, = List.mem_cons]
+    have hM2 : ∀ x ∈ xs', x ∉ M2.vars := by
+      simp only [vars_insert, VarSet.mem_insert, not_or, M2]
+      grind only [= List.nodup_cons, = List.mem_cons]
+    M1.expand xs' (by grind) hM1 ++ M2.expand xs' (by grind) hM2
+
+lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
+    M' ∈ M.expand xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
+  fun_induction expand with
+  | case1 M =>
+    simp only [List.mem_cons, List.not_mem_nil, or_false, VarSet.ofList_nil, VarSet.union_empty]
+    constructor
+    · rintro rfl
+      simp only [VarSet.subset_iff, imp_self, implies_true, restrict_vars_eq_self_iff, and_self]
+    · rintro ⟨h1, h2⟩
+      symm
+      rw [← h2, restrict_vars_eq_self_iff]
+      grind only
+  | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
+    simp only [List.mem_append, ih1, ih2, VarSet.ofList_cons]
+    constructor
+    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · constructor
+        · simp [h1, M1, VarSet.ext_iff]
+          grind only
+        · simp only [vars_insert, PartialModel.ext'_iff, mem_restrict_insert, mem_insert_iff,
+            M1] at h2
+          simp [PartialModel.ext'_iff]
+          intro l
+          constructor
+          · intro h3
+            specialize h2 l
+            simp [h3] at h2
+            sorry
+          specialize h2 l
+          simp_all
+          sorry
+      sorry
+    simp only [vars_insert, M1, M2]
+
+    sorry
+
+lemma models_expand {n} {M : PartialModel n} {xs h1 h2} :
+    M.models = ⋃ M' ∈ M.expand xs h1 h2, M'.models := by
+  ext M1
+  simp only [Set.mem_iUnion, exists_prop]
+  sorry
+
+/-- Expand the partialModel `M` to -/
+def expand' {n} (M : PartialModel n) (xs : VarSet n) (h : ∀ x ∈ xs, x ∉ M.vars) :
+    List (PartialModel n) :=
+  xs.foldl f [M] where
+  f (Ms : List (PartialModel n)) (x : Fin n) : List (PartialModel n) :=
+    let Ms1 := Ms.map (insert · ⟨x, true⟩ (by simp; sorry))
+    sorry
+  /-match xs with
+  | [] => [M]
+  | x :: xs' =>
+    let M1 := M.insert ⟨x, false⟩ (by grind only [= List.mem_cons])
+    let M2 := M.insert ⟨x, true⟩ (by grind only [= List.mem_cons])
+    have hM1 : ∀ x ∈ xs', x ∉ M1.vars := by
+      simp only [vars_insert, VarSet.mem_insert, not_or, M1]
+      grind only [= List.nodup_cons, = List.mem_cons]
+    have hM2 : ∀ x ∈ xs', x ∉ M2.vars := by
+      simp only [vars_insert, VarSet.mem_insert, not_or, M2]
+      grind only [= List.nodup_cons, = List.mem_cons]
+    M1.expand xs' (by grind) hM1 ++ M2.expand xs' (by grind) hM2-/
+
 /-
 lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
   M ∈ M1.models → M ∈ M2.models → M1 = M2 :=
@@ -135,9 +246,9 @@ lemma isTrivial_iff' {n} {γ : Clause n} : isTrivial γ ↔ ∃ l ∈ γ, l.nega
   simp only [isTrivial, Vector.mem_iff_getElem', Fin.getElem_fin, getElem_isTrivial_aux,
     Vector.getElem_replicate, Bool.true_eq_false, decide_false, Bool.false_or, decide_eq_true_eq]
   constructor
-  · grind [Literal.negate]
+  · grind only [Literal.negate_eq]
   · rintro ⟨⟨v, (true | false)⟩, h⟩
-    all_goals grind [Literal.negate]
+    all_goals grind only [Literal.negate_eq]
 
 lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ γ.models = Set.univ := by
   sorry
@@ -155,6 +266,30 @@ def models {n} (φ : MODS n) : Models n :=
 @[simp]
 lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models := by
   simp [models]
+
+lemma restrict_mem_mods {n} {φ : MODS n} {M : PartialModel n} (h : φ.vars ⊆ M.vars) :
+    M.restrict φ.vars ∈ φ.mods ↔ M.models ⊆ φ.models := by
+  simp only [Set.subset_def, mem_models]
+  constructor
+  · grind only [PartialModel.mem_models', !PartialModel.pos_restrict, !PartialModel.neg_restrict,
+      VarSet.mem_inter]
+  · intro h'
+    have h1 : ∀ i ∈ M.neg, i ∉ M.pos := by
+      grind only [VarSet.inter_eq_empty_iff, M.disjoint]
+    specialize h' (fun i ↦ i ∈ M.pos) (by grind only [PartialModel.mem_models'])
+    rcases h' with ⟨M', h2, h3⟩
+    have h4 : M.restrict φ.vars = M' := by
+      simp [PartialModel.mem_models'] at h3
+      rw [← φ.vars_eq M' h2] at ⊢ h
+      ext i
+      · grind only [PartialModel.vars_eq, !PartialModel.pos_restrict, VarSet.mem_inter,
+          VarSet.mem_union]
+      · have : ∀ i ∈ M'.neg, i ∈ M.neg := by
+          simp only [PartialModel.vars_eq, VarSet.subset_iff, VarSet.mem_union] at h
+          grind only
+        grind only [PartialModel.vars_eq, !PartialModel.neg_restrict, VarSet.mem_inter,
+          VarSet.mem_union]
+    simp only [h4, h2]
 
 @[no_expose]
 public instance {n} : Formula n (MODS n) where
@@ -240,14 +375,21 @@ public instance {n} : ClausalEntailment n (MODS n) where
         · simp_all
           specialize h3 _ h1
           specialize h2 _ h1
-          grind only [Literal.negate, PartialModel.mem_iff]
+          grind only [Literal.negate_eq, PartialModel.mem_iff]
       specialize h1 M' M hM h4 h2
       grind only [Clause.mem_models]
 
 @[no_expose]
 public instance {n} : Implicant n (MODS n) where
 
-  entails δ φ := by sorry
+  entails δ φ := match δ.toPartialModel with
+    | some M =>
+      if φ.vars ⊆ M.vars then
+        M.restrict φ.vars ∈ φ.mods
+      else
+        let vars := φ.vars \ M.vars
+        M.restrict φ.vars |>.expand sorry sorry sorry |>.any (· ∈ φ.mods)
+    | none => true
 
   entails_iff := sorry
 
