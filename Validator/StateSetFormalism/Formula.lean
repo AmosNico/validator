@@ -331,6 +331,10 @@ lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.var 
     · use ⟨i, false⟩; grind only
   · grind only
 
+lemma var_mem_vars {n} {l : Literal n} {M : PartialModel n} :
+    l.var ∈ M.vars ↔ l ∈ M ∨ l.negate ∈ M := by
+  grind only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq]
+
 /-- All models corresponding to to partial model `M`. -/
 def models {n} (M : PartialModel n) : Models n :=
   { M' | (∀ i ∈ M.pos, M' i) ∧ (∀ i ∈ M.neg, ¬ M' i) }
@@ -419,14 +423,7 @@ def insert? {n} (M : PartialModel n) (l : Literal n) : Option (PartialModel n) :
 
 @[simp]
 lemma insert_eq_none_iff {n} {M : PartialModel n} {l} : M.insert? l = none ↔ l.negate ∈ M := by
-  simp only [insert?]
-  split
-  next h =>
-    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
-    grind only [M.not_mem_or_negate_not_mem l]
-  next h =>
-    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
-    grind only
+  grind only [insert?, var_mem_vars, M.not_mem_or_negate_not_mem l]
 
 @[simp]
 lemma insert?_eq_some_iff {n} {M M' : PartialModel n} {l} :
@@ -434,11 +431,11 @@ lemma insert?_eq_some_iff {n} {M M' : PartialModel n} {l} :
   simp only [insert?]
   split
   next h =>
-    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq] at h
+    simp only [var_mem_vars] at h
     simp only [Option.ite_none_right_eq_some, Option.some.injEq, PartialModel.ext'_iff]
     grind only [not_mem_or_negate_not_mem]
   next h =>
-    simp only [mem_vars, Literal.eq_or_eq_negate_iff_var_eq, not_exists, not_and, not_or] at h
+    simp only [var_mem_vars, not_or] at h
     simp [Option.some.injEq, PartialModel.ext'_iff]
     grind only
 
