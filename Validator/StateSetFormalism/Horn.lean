@@ -218,7 +218,7 @@ def unit_propagate {n} (φ : Horn n) (δ : Cube n) : Horn n :=
   match δ with
   | [] => φ
   | l :: todo =>
-    match h : φ.unit_literals.insert l with
+    match h : φ.unit_literals.insert? l with
     | none => bot
     | some M =>
       let res := (φ.clauses.propagate_literal l).partition fun γ ↦ γ.length < 2
@@ -235,9 +235,9 @@ def unit_propagate {n} (φ : Horn n) (δ : Cube n) : Horn n :=
           simp [res]
         subset_vars := by
           have h1 := φ.subset_vars
-          simp only [PartialModel.vars_insert h, VarSet.mem_union, VarSet.mem_insert, CNF.mem_vars,
+          simp only [PartialModel.vars_insert? h, VarSet.mem_union, VarSet.mem_insert, CNF.mem_vars,
             Clause.mem_vars]
-          simp_all only [PartialModel.insert_eq_some_iff, VarSet.mem_union, CNF.mem_vars,
+          simp_all only [PartialModel.insert?_eq_some_iff, VarSet.mem_union, CNF.mem_vars,
             Clause.mem_vars, List.partition_eq_filter_filter, List.mem_filter,
             CNF.mem_propagate_literal, ne_eq, decide_not, Function.comp_apply,
             Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not, not_lt, ↓existsAndEq,
@@ -246,7 +246,7 @@ def unit_propagate {n} (φ : Horn n) (δ : Cube n) : Horn n :=
         vars_prop := by
           suffices h1 : l.1 ∉ CNF.vars res.2 by
             simp only [VarSet.inter_eq_empty_iff, CNF.mem_vars, Clause.mem_vars,
-              PartialModel.vars_insert h, VarSet.mem_insert]
+              PartialModel.vars_insert? h, VarSet.mem_insert]
             simp only [List.partition_eq_filter_filter, List.mem_filter, CNF.mem_propagate_literal,
               ne_eq, decide_not, Function.comp_apply, Bool.not_eq_eq_eq_not, Bool.not_true,
               decide_eq_false_iff_not, not_lt, ↓existsAndEq, and_true, not_exists, not_and, and_imp,
@@ -448,7 +448,7 @@ public instance {n} : Formula n (Horn n) where
       split at hγ
       · grind
       · simp_all only [eq_iff_iff, Bool.not_eq_true, List.mem_append, PartialModel.mem_toCNF,
-          PartialModel.mem_def, VarSet.mem_union,
+          PartialModel.mem_iff, VarSet.mem_union,
           PartialModel.vars_eq, CNF.mem_vars, Clause.mem_vars]
         grind only [= List.mem_cons, ← List.not_mem_nil]
     specialize h1 l.1 h3
@@ -489,7 +489,7 @@ public instance {n} : Consistency n (Horn n) where
       intro l hl
       rcases l with ⟨i, true | false⟩
       · have h := φ.unit_literals.disjoint
-        simp_all [VarSet.inter_eq_empty_iff, PartialModel.mem_def]
+        simp_all [VarSet.inter_eq_empty_iff, PartialModel.mem_iff]
         grind
       · grind
     · intro γ hγ
@@ -506,7 +506,8 @@ public instance {n} : Consistency n (Horn n) where
           · simp [Clause.IsHorn] at h
             use l2.1
             simp [← h.1]
-      simp only [PartialModel.mem_def, Clause.mem_models]
+      simp only [PartialModel.mem_iff, and_true, not_true_eq_false, and_false, or_false,
+        Clause.mem_models]
       use ⟨i, false⟩
       simp only [h2, Literal.mem_models, Bool.false_eq_true, iff_false, true_and]
       intro h3
