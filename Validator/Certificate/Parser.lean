@@ -192,7 +192,7 @@ def parseHorn : Parser pt (StateSetExpr pt) := do
   | some ψ =>
     have h2 : (Formula.vars ψ).IsUnprimed := by
       apply Horn.vars_fromCNF at h
-      simp_all only [VarSet.IsUnprimed, VarSet.subset_def, implies_true]
+      simp_all only [VarSet.IsUnprimed, VarSet.subset_iff, implies_true]
     return StateSetExpr.horn ⟨ψ, h2⟩
 
 def parseMods : Parser pt (StateSetExpr pt) :=

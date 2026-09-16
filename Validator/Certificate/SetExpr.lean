@@ -128,6 +128,12 @@ public def getActionIds {C : Certificate pt} (hC : C.validSets)
     hC.getActionIds ⟨A'ᵢ, by omega⟩ ∪ hC.getActionIds ⟨A''ᵢ, by omega⟩
   | ActionSetExpr.all => List.finRange pt.actions'.length
 
+public lemma getActionIds_union {C : Certificate pt} {hC : C.validSets}
+    (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size) (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
+    hC.getActionIds Aᵢ = hC.getActionIds A'ᵢ ∪ hC.getActionIds A''ᵢ := by
+  rw [getActionIds]
+  grind only [= getElem?_pos, = Lean.Grind.toInt_fin]
+
 public def getActions {C : Certificate pt} (hC : C.validSets) (Aᵢ : Fin C.actions.size) :
     Actions n :=
   (getActionIds hC Aᵢ).toActions
@@ -158,13 +164,13 @@ public lemma getActionsAll {C : Certificate pt} {hC : C.validSets} Aᵢ
   split
   all_goals simp_all [ActionIds.toActions, PlanningTask.mem_actions']
 
-public lemma getActionsUnion {C : Certificate pt} {hC : C.validSets}
+public lemma getActions_union {C : Certificate pt} {hC : C.validSets}
     (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size) (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
     hC.getActions Aᵢ = hC.getActions A'ᵢ ∪ hC.getActions A''ᵢ := by
   simp only [getActions, ActionIds.toActions, List.map_toFinset, Finset.coe_image,
     List.coe_toFinset]
-  rw [getActionIds]
-  grind
+  grind only [= Set.mem_image, = Set.mem_union, usr Set.mem_ofPred_eq, = List.mem_union_iff,
+    getActionIds_union Aᵢ A'ᵢ A''ᵢ h]
 
 public def getStates {C : Certificate pt} (hC : C.validSets) (Sᵢ : Fin C.states.size) : States n :=
   have h := hC.validStates Sᵢ

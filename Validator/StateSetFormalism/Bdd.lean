@@ -26,6 +26,7 @@ noncomputable def toVector {n} (M : Model n) : Vector Bool n :=
 
 def ofVector {n} (V : Vector Bool n) : Model n :=
   fun i ↦ V[i]
+deriving Decidable
 
 @[simp]
 lemma ofVector_toVector {n} (M : Model n) : ofVector M.toVector = M := by
@@ -104,7 +105,7 @@ lemma nvars_ofCube_bdd {n} (δ : Cube n) : (ofCube_bdd δ).nvars = n := by
   | cons l δ ih => simp only [List.foldr_cons, BDD.and_nvars, ih, sup_eq_left, nvars_ofLiteral]
 
 lemma getElem_ofCube_bdd {n} (δ : Cube n) {h} v :
-    (ofCube_bdd δ)[v]'h = δ.all fun l ↦ Model.ofVector v l.1 = l.2 := by
+    (ofCube_bdd δ)[v]'h = δ.all fun l ↦ Model.ofVector v l.var = l.isPos := by
   induction δ with
   | nil => simp only [List.foldr_nil, getElem_top_bdd, eq_iff_iff, List.all_nil]
   | cons l δ ih =>

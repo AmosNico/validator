@@ -249,7 +249,7 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       rcases h' with ⟨hAᵢ, hA1ᵢ, hA1⟩
       have hA'ᵢ : A'ᵢ < C.actions.size :=
         (hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1).2
-      rw [hC.getActionsUnion ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
+      rw [hC.getActions_union ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
       apply Derivation.UR
     | ULA =>
       rename' A1ᵢ => Aᵢ, A2ᵢ => A1ᵢ
@@ -261,7 +261,7 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       rcases h' with ⟨hAᵢ, hA1ᵢ, hA1⟩
       have hA'ᵢ : A'ᵢ < C.actions.size :=
         (hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1).1
-      rw [hC.getActionsUnion ⟨A1ᵢ, hA1ᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ hA1]
+      rw [hC.getActions_union ⟨A1ᵢ, hA1ᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ hA1]
       apply Derivation.UL
     | SUA K1ᵢ K2ᵢ =>
       rename' A2ᵢ => A''ᵢ
@@ -273,7 +273,7 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       rcases h' with ⟨hA''ᵢ, hK1ᵢ, hK2ᵢ, ⟨hA1ᵢ, hA1⟩, hK1, hK2⟩
       obtain ⟨hAᵢ, hA'ᵢ⟩ : Aᵢ < C.actions.size ∧ A'ᵢ < C.actions.size :=
         hC.actionUnionBounds ⟨A1ᵢ, hA1ᵢ⟩ hA1
-      rw [hC.getActionsUnion ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
+      rw [hC.getActions_union ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
       apply Derivation.SU (hC.getActions ⟨Aᵢ, hAᵢ⟩)
       · rw[← hC.conclusionActionSubset ⟨K1ᵢ, by omega⟩ hK1]
         exact hC.toDerivation ⟨K1ᵢ, by omega⟩
@@ -482,7 +482,7 @@ def toDerivation {C : Certificate pt} (hC : C.valid) (Kᵢ : Fin C.knowledge.siz
       have hA'ᵢ : A'ᵢ < C.actions.size :=
         (hC.stateProgrBounds ⟨S3ᵢ, hS3ᵢ⟩ hS3).2
       rw[hC.getStatesProg ⟨S1ᵢ, hS1ᵢ⟩ ⟨Sᵢ, hSᵢ⟩ ⟨A1ᵢ, hA1ᵢ⟩ hS1]
-      rw[hC.getActionsUnion ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
+      rw[hC.getActions_union ⟨A1ᵢ, hA1ᵢ⟩ ⟨Aᵢ, hAᵢ⟩ ⟨A'ᵢ, hA'ᵢ⟩ hA1]
       apply Derivation.AU
       · rw[← hC.getStatesProg ⟨S2ᵢ, hS2ᵢ⟩ ⟨Sᵢ, hSᵢ⟩ ⟨Aᵢ, hAᵢ⟩ hS2]
         rw[← hC.conclusionStateSubset ⟨K1ᵢ, by omega⟩ hK1]
