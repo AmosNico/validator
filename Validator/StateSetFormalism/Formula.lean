@@ -308,7 +308,7 @@ lemma not_mem_or_negate_not_mem {n} (M : PartialModel n) : ∀ l, l ∉ M ∨ l.
   grind only [mem_iff, !Literal.isPos_negate, !Literal.var_negate, VarSet.inter_eq_empty_iff,
     M.disjoint]
 
-@[ext 2000]
+@[ext 500]
 lemma ext' {n} {M M' : PartialModel n} : (∀ l, l ∈ M ↔ l ∈ M') → M = M' := by
   intro h
   ext i

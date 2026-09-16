@@ -123,11 +123,11 @@ lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
   grind only
 
 /--
-Expand the given partial model `M` to `2 ^ |vars|` partial models over `vars`,
-where `vars := M.vars ∪ Varset.ofList xs`.
+Expand the given partial model `M` to `2 ^ |Varset.ofList xs|` partial models over
+`M.vars ∪ Varset.ofList xs`.
 -/
 -- TODO : implement iterator for `VarSet` and use it here instead of `List`
-def expand {n} (M : PartialModel n) (xs : List (Fin n))
+def expand' {n} (M : PartialModel n) (xs : List (Fin n))
     (h1 : xs.Nodup) (h2 : ∀ x ∈ xs, x ∉ M.vars) : List (PartialModel n) :=
   match xs with
   | [] => [M]
@@ -140,11 +140,11 @@ def expand {n} (M : PartialModel n) (xs : List (Fin n))
     have hM2 : ∀ x ∈ xs', x ∉ M2.vars := by
       simp only [vars_insert, VarSet.mem_insert, not_or, M2]
       grind only [= List.nodup_cons, = List.mem_cons]
-    M1.expand xs' (by grind) hM1 ++ M2.expand xs' (by grind) hM2
+    M1.expand' xs' (by grind) hM1 ++ M2.expand' xs' (by grind) hM2
 
-lemma vars_of_mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
-    M' ∈ M.expand xs h1 h2 → M'.vars = M.vars ∪ VarSet.ofList xs := by
-  fun_induction expand with
+lemma vars_of_mem_expand' {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
+    M' ∈ M.expand' xs h1 h2 → M'.vars = M.vars ∪ VarSet.ofList xs := by
+  fun_induction expand' with
   | case1 M =>
     grind only [List.mem_cons, !VarSet.ofList_nil, List.not_mem_nil, VarSet.union_empty]
   | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
@@ -154,10 +154,10 @@ lemma vars_of_mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel 
     · grind only [ih1 h3, vars_insert, VarSet.mem_insert]
     · grind only [ih2 h3, vars_insert, VarSet.mem_insert]
 
-lemma mem_expand_aux1 {n} {M M' : PartialModel n} {l hl} :
+lemma mem_expand'_aux1 {n} {M M' : PartialModel n} {l hl} :
     M'.restrict (M.insert l hl).vars = M.insert l hl → M'.restrict M.vars = M := by
   rintro h1
-  ext l'
+  refine ext' (fun l' ↦ ?_)
   simp only [mem_restrict]
   if heq : l' = l then
     grind only [mem_vars]
@@ -169,10 +169,10 @@ lemma mem_expand_aux1 {n} {M M' : PartialModel n} {l hl} :
     simp only [Literal.ext_iff, Literal.var_negate, Literal.isPos_negate] at *
     grind only [not_mem_or_negate_not_mem]
 
-lemma mem_expand_aux2 {n} {M M' : PartialModel n} {l hl} :
+lemma mem_expand'_aux2 {n} {M M' : PartialModel n} {l hl} :
     M'.restrict M.vars = M → l ∈ M' → M'.restrict (M.insert l hl).vars = M.insert l hl := by
   rintro h1 h2
-  ext l'
+  refine ext' (fun l' ↦ ?_)
   simp only [vars_insert, mem_restrict, VarSet.mem_insert, mem_insert_iff]
   if heq : l' = l then
     grind only
@@ -181,12 +181,12 @@ lemma mem_expand_aux2 {n} {M M' : PartialModel n} {l hl} :
     simp only [← h1 l', heq, or_false, and_congr_right_iff, or_iff_left_iff_imp]
     grind only [not_mem_or_negate_not_mem, Literal.eq_or_eq_negate_iff_var_eq]
 
-lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
-    M' ∈ M.expand xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
+lemma mem_expand' {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
+    M' ∈ M.expand' xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
   constructor
   · intro h3
-    simp only [vars_of_mem_expand h3, true_and]
-    fun_induction expand with
+    simp only [vars_of_mem_expand' h3, true_and]
+    fun_induction expand' with
     | case1 M =>
       simp only [List.mem_cons, List.not_mem_nil, or_false] at h3
       simp only [← h3, restrict_vars_eq_self_iff]
@@ -194,10 +194,10 @@ lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
     | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
       simp only [List.mem_append] at h3
       rcases h3 with (h3 | h3)
-      · exact mem_expand_aux1 (ih1 h3)
-      · exact mem_expand_aux1 (ih2 h3)
+      · exact mem_expand'_aux1 (ih1 h3)
+      · exact mem_expand'_aux1 (ih2 h3)
   · rintro ⟨h3, h4⟩
-    fun_induction expand with
+    fun_induction expand' with
     | case1 M =>
       simp only [List.mem_cons, List.not_mem_nil, or_false]
       simp only [VarSet.ofList_nil, VarSet.union_empty] at h3
@@ -217,159 +217,33 @@ lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
       simp only [or_true, iff_true, PartialModel.mem_vars] at h3
       rcases h3 with ⟨l, hl, rfl⟩
       cases h6 : l.isPos with
-      | false => exact .inl <| ih1 <| mem_expand_aux2 h4 (by simp only [← h6, hl])
-      | true => exact .inr <| ih2 <| mem_expand_aux2 h4 (by simp only [← h6, hl])
+      | false => exact .inl <| ih1 <| mem_expand'_aux2 h4 (by simp only [← h6, hl])
+      | true => exact .inr <| ih2 <| mem_expand'_aux2 h4 (by simp only [← h6, hl])
 
-lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
-    M' ∈ M.expand xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
-  fun_induction expand with
-  | case1 M =>
-    simp only [List.mem_cons, List.not_mem_nil, or_false, VarSet.ofList_nil, VarSet.union_empty]
-    constructor
-    · rintro rfl
-      simp only [VarSet.subset_iff, imp_self, implies_true, restrict_vars_eq_self_iff, and_self]
-    · rintro ⟨h1, h2⟩
-      symm
-      rw [← h2, restrict_vars_eq_self_iff]
-      grind only
-  | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
-    simp only [ih1, ih2, List.mem_append]
-    simp only [vars_insert, VarSet.ofList_cons, M1, M2]
-    simp only [List.mem_append, ih1, ih2, VarSet.ofList_cons]
-    simp only [PartialModel.ext'_iff, mem_restrict]
-    simp only [VarSet.ext_iff, VarSet.mem_union, VarSet.mem_ofList, VarSet.mem_insert]
-    constructor
-    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
-      · constructor
-        · grind only [vars_insert, VarSet.mem_insert]
-        · simp only [vars_insert, VarSet.mem_insert, mem_insert_iff, M1] at h2
-          intro l
-          constructor
-          · grind only
-          · intro h3
-            specialize h2 l
-            simp [h3] at h2
-            rcases h2 with ⟨h2, (h3 | rfl)⟩
-            · grind only
-            · simp [M1] at h1
-              specialize h1 l.var
-              simp_all
-              simp [M1] at hM1
-              sorry
-      · constructor
-        · sorry
-        · sorry
-    simp only [vars_insert, M1, M2]
-
-    sorry
-
-lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
-    M' ∈ M.expand xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
-  fun_induction expand with
-  | case1 M =>
-    simp only [List.mem_cons, List.not_mem_nil, or_false, VarSet.ofList_nil, VarSet.union_empty]
-    constructor
-    · rintro rfl
-      simp only [VarSet.subset_iff, imp_self, implies_true, restrict_vars_eq_self_iff, and_self]
-    · rintro ⟨h1, h2⟩
-      symm
-      rw [← h2, restrict_vars_eq_self_iff]
-      grind only
-  | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
-    simp only [ih1, ih2, List.mem_append]
-    simp only [List.mem_append, ih1, ih2, VarSet.ofList_cons]
-    simp only [PartialModel.ext'_iff, mem_restrict]
-    simp only [VarSet.ext_iff, VarSet.mem_union, VarSet.mem_ofList, VarSet.mem_insert]
-    constructor
-    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
-      · constructor
-        · grind only [vars_insert, VarSet.mem_insert]
-        · simp only [vars_insert, VarSet.mem_insert, mem_insert_iff, M1] at h2
-          intro l
-          constructor
-          · grind only
-          · intro h3
-            specialize h2 l
-            simp [h3] at h2
-            rcases h2 with ⟨h2, (h3 | rfl)⟩
-            · grind only
-            · simp [M1] at h1
-              specialize h1 l.var
-              simp_all
-              simp [M1] at hM1
-              sorry
-      · constructor
-        · sorry
-        · sorry
-    simp only [vars_insert, M1, M2]
-
-    sorry
-
-lemma mem_expand {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
-    M' ∈ M.expand xs h1 h2 ↔ M'.vars = M.vars ∪ VarSet.ofList xs ∧ M'.restrict M.vars = M := by
-  fun_induction expand with
-  | case1 M =>
-    simp only [List.mem_cons, List.not_mem_nil, or_false, VarSet.ofList_nil, VarSet.union_empty]
-    constructor
-    · rintro rfl
-      simp only [VarSet.subset_iff, imp_self, implies_true, restrict_vars_eq_self_iff, and_self]
-    · rintro ⟨h1, h2⟩
-      symm
-      rw [← h2, restrict_vars_eq_self_iff]
-      grind only
-  | case2 M x xs h1 h2 M1 M2 hM1 hM2 ih1 ih2 =>
-    simp only [List.mem_append, ih1, ih2, VarSet.ofList_cons]
-    constructor
-    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
-      · constructor
-        · simp [h1, M1, VarSet.ext_iff]
-          grind only
-        · simp only [vars_insert, PartialModel.ext'_iff, mem_restrict, mem_insert_iff,
-            M1] at h2
-          simp [PartialModel.ext'_iff]
-          intro l
-          constructor
-          · intro h3
-            specialize h2 l
-            simp [h3] at h2
-            rcases h2 with (h2 | rfl)
-            · exact h2
-            · simp at h2
-              simp at h3
-              sorry
-          specialize h2 l
-          simp_all
-          sorry
-      sorry
-    simp only [vars_insert, M1, M2]
-
-    sorry
-
-lemma models_expand {n} {M : PartialModel n} {xs h1 h2} :
-    M.models = ⋃ M' ∈ M.expand xs h1 h2, M'.models := by
-  ext M1
-  simp only [Set.mem_iUnion, exists_prop]
-  sorry
-
-/-- Expand the partialModel `M` to -/
-def expand' {n} (M : PartialModel n) (xs : VarSet n) (h : ∀ x ∈ xs, x ∉ M.vars) :
+/-- Expand the given partial model `M` to `2 ^ |V|` partial models over `M.vars ∪ V`. -/
+def expand {n} (M : PartialModel n) (V : VarSet n) (h : V ∩ M.vars = ∅) :
     List (PartialModel n) :=
-  xs.foldl f [M] where
-  f (Ms : List (PartialModel n)) (x : Fin n) : List (PartialModel n) :=
-    let Ms1 := Ms.map (insert · ⟨x, true⟩ (by simp; sorry))
-    sorry
-  /-match xs with
-  | [] => [M]
-  | x :: xs' =>
-    let M1 := M.insert ⟨x, false⟩ (by grind only [= List.mem_cons])
-    let M2 := M.insert ⟨x, true⟩ (by grind only [= List.mem_cons])
-    have hM1 : ∀ x ∈ xs', x ∉ M1.vars := by
-      simp only [vars_insert, VarSet.mem_insert, not_or, M1]
-      grind only [= List.nodup_cons, = List.mem_cons]
-    have hM2 : ∀ x ∈ xs', x ∉ M2.vars := by
-      simp only [vars_insert, VarSet.mem_insert, not_or, M2]
-      grind only [= List.nodup_cons, = List.mem_cons]
-    M1.expand xs' (by grind) hM1 ++ M2.expand xs' (by grind) hM2-/
+  M.expand' V.toList VarSet.toList_nodup (by simp_all)
+
+lemma vars_of_mem_expand {n} {M : PartialModel n} {V h} {M' : PartialModel n} :
+    M' ∈ M.expand V h → M'.vars = M.vars ∪ V := by
+  grind only [expand, vars_of_mem_expand', VarSet.ofList_toList]
+
+lemma mem_expand {n} {M : PartialModel n} {V h} {M' : PartialModel n} :
+    M' ∈ M.expand V h ↔ M'.vars = M.vars ∪ V ∧ M'.restrict M.vars = M := by
+  grind only [expand, mem_expand', = VarSet.ofList_toList]
+
+lemma models_expand {n} {M : PartialModel n} {V h} :
+    M.models = ⋃ M' ∈ M.expand V h, M'.models := by
+  ext M1
+  simp only [Set.mem_iUnion, mem_expand, exists_prop]
+  constructor
+  · sorry
+  · rintro ⟨M', ⟨h1, h2⟩, h3⟩
+    simp only [mem_models'] at ⊢ h3
+    simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
+      neg_restrict] at h2
+    grind only
 
 /-
 lemma disjoint {n} {V : VarSet n} {M1 M2 : PartialModel V} {M} :
@@ -554,11 +428,32 @@ public instance {n} : Implicant n (MODS n) where
       if φ.vars ⊆ M.vars then
         M.restrict φ.vars ∈ φ.mods
       else
-        let vars := φ.vars \ M.vars
-        M.restrict φ.vars |>.expand sorry sorry sorry |>.any (· ∈ φ.mods)
+        have h : (φ.vars \ M.vars) ∩ (M.restrict φ.vars).vars = ∅ := by
+          grind only [!PartialModel.vars_restrict, VarSet.inter_eq_empty_iff, VarSet.mem_diff,
+            VarSet.mem_inter]
+        M.restrict φ.vars |>.expand (φ.vars \ M.vars) h |>.any (· ∈ φ.mods)
     | none => true
 
-  entails_iff := sorry
+  entails_iff δ φ := by
+    simp only [Formula.models]
+    split
+    next M h1 =>
+      rw [← Cube.models_toPartialModel h1]
+      split
+      next h2 => simp only [restrict_mem_mods h2, decide_eq_true_eq]
+      next h2 =>
+        simp only [List.any_eq_true, decide_eq_true_eq]
+        simp only [PartialModel.mem_expand, PartialModel.vars_restrict]
+        constructor
+        · rintro ⟨mod, h3, h4⟩ M' hM'
+          simp only [mem_models]
+          simp [VarSet.ext_iff] at h3
+          use mod, h4
+          sorry
+        sorry
+    next h =>
+      rw [Cube.toPartialModel_eq_none_iff] at h
+      simp only [h, Set.empty_subset]
 
 @[no_expose]
 public instance {n} : BoundedConjuction n (MODS n) where
