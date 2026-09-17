@@ -114,6 +114,11 @@ lemma mem_restrict {n} {M : PartialModel n} {vars l} :
     l ∈ M.restrict vars ↔ l ∈ M ∧ l.var ∈ vars := by
   grind only [restrict, mem_iff, VarSet.mem_inter]
 
+@[simp]
+lemma restrict_inter {n} {M : PartialModel n} {V1 V2} :
+    M.restrict (V1 ∩ V2) = (M.restrict V1).restrict V2 := by
+  rw [PartialModel.ext'_iff]
+  grind only [mem_restrict, VarSet.mem_inter]
 
 @[simp]
 lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
@@ -121,6 +126,52 @@ lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
   simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
     neg_restrict, vars_eq, VarSet.subset_iff, VarSet.mem_union]
   grind only
+
+/--
+If two partial models `M1` and `M2` agree on their common variables,
+then their conjunction is well-defined.
+-/
+lemma exists_of_restrict_eq {n} {M1 M2 : PartialModel n} :
+    M1.restrict M2.vars = M2.restrict M1.vars → ∃ M3 : PartialModel n, M1.and M2 = some M3 := by
+  intro h1
+  rw [← Option.isSome_iff_exists ,isSome_and_iff]
+  simp only [ne_eq, ← Set.nonempty_iff_ne_empty]
+  use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+  simp only [Set.mem_inter_iff, mem_models', not_or]
+  simp only [PartialModel.ext_iff, pos_restrict, neg_restrict, PartialModel.vars_eq] at h1
+  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union] at h1
+  grind only [VarSet.inter_eq_empty_iff, M1.disjoint, M2.disjoint]
+
+/--
+If two partial models `M1` and `M2` agree on their common variables,
+then their conjunction is well-defined.
+-/
+lemma exists_iff_restrict_eq {n} {M1 M2 : PartialModel n} :
+    M1.restrict M2.vars = M2.restrict M1.vars ↔ ∃ M3 : PartialModel n, M1.and M2 = some M3 := by
+  rw [← Option.isSome_iff_exists ,isSome_and_iff]
+  simp only [ne_eq, ← Set.nonempty_iff_ne_empty]
+  simp only [PartialModel.ext_iff, pos_restrict, neg_restrict, PartialModel.vars_eq]
+  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union]
+  constructor
+  · intro h1
+    use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+    simp only [Set.mem_inter_iff, mem_models', not_or]
+    grind only [VarSet.inter_eq_empty_iff, M1.disjoint, M2.disjoint]
+  · rintro ⟨M, hM⟩
+    simp only [Set.mem_inter_iff, mem_models'] at hM
+    grind only [VarSet.inter_eq_empty_iff, M1.disjoint, M2.disjoint]
+
+/--
+If two partial models `M1` and `M2` agree on their common variables, then there is a third partial
+model over the variables `M1.vars ∪ M2.vars` agreeing with both partial models.
+-/
+lemma exists_of_restrict_eq' {n} {M1 M2 : PartialModel n} :
+    M1.restrict M2.vars = M2.restrict M1.vars →
+    ∃ M3 : PartialModel n, M3.restrict M1.vars = M1 ∧ M3.restrict M2.vars = M2 := by
+  intro h1
+  match h2 : M1.and M2 with
+  | some M3 => sorry
+  | none M2 => sorry
 
 /--
 Expand the given partial model `M` to `2 ^ |Varset.ofList xs|` partial models over
@@ -444,13 +495,19 @@ public instance {n} : Implicant n (MODS n) where
       next h2 =>
         simp only [List.any_eq_true, decide_eq_true_eq]
         simp only [PartialModel.mem_expand, PartialModel.vars_restrict]
+        have h : M.vars ∩ φ.vars ∪ φ.vars \ M.vars = φ.vars := by
+          simp only [VarSet.ext_iff, VarSet.mem_union, VarSet.mem_inter, VarSet.mem_diff]
+          grind only
+        rw [h]
+
         constructor
-        · rintro ⟨mod, h3, h4⟩ M' hM'
+        · rintro ⟨mod, ⟨h3, h4⟩, h5⟩ M' hM'
           simp only [mem_models]
-          simp [VarSet.ext_iff] at h3
-          use mod, h4
+          --simp [VarSet.ext_iff] at h3
+          use mod, h5
           sorry
-        sorry
+        ·
+          sorry
     next h =>
       rw [Cube.toPartialModel_eq_none_iff] at h
       simp only [h, Set.empty_subset]
