@@ -45,6 +45,9 @@ lemma nvars_prop_max {n} {φ ψ : BDD n} : max φ.bdd.nvars ψ.bdd.nvars = n :=
 def models {n} (φ : BDD n) : Models n :=
   { M | φ.bdd[M.toVector]'(le_of_eq φ.nvars_prop) }
 
+lemma mem_models {n} {φ : BDD n} {M} :
+    M ∈ φ.models ↔ φ.bdd[M.toVector]'(le_of_eq φ.nvars_prop) := by rfl
+
 def top_bdd (n : ℕ) : _root_.BDD :=
   (BDD.const true).lift (BDD.const_nvars ▸ n.zero_le)
 
@@ -132,7 +135,7 @@ lemma vars_ofCube {n} (δ : Cube n) : (ofCube δ).vars = δ.vars := by
 
 @[simp]
 lemma models_ofCube {n} (δ : Cube n) : (ofCube δ).models = δ.models := by
-  simp only [models, ofCube, Set.ext_iff, Set.mem_ofPred_eq, Cube.mem_models]
+  simp only [ofCube, Set.ext_iff, mem_models, Cube.mem_models]
   induction δ with
   | nil => simp [getElem_top_bdd]
   | cons l δ ih =>
@@ -173,7 +176,7 @@ def ofClause {n} (γ : Clause n) : BDD n where
 
 @[simp]
 lemma models_ofClause {n} (γ : Clause n) : (ofClause γ).models = γ.models := by
-  simp only [models, ofClause, Set.ext_iff, Set.mem_ofPred_eq, Clause.mem_models]
+  simp only [mem_models, ofClause, Set.ext_iff, Clause.mem_models]
   induction γ with
   | nil => simp [getElem_bot_bdd]
   | cons l δ ih =>
@@ -191,9 +194,8 @@ public instance {n} : Formula n (BDD n) where
 
   models_equiv_right φ M M' h1 h2 := by
     have h3 := φ.nvars_prop
-    suffices
-      φ.bdd[M.toVector] = φ.bdd[M'.toVector] by
-      simp_all only [eq_iff_iff, models, Set.mem_ofPred_eq]
+    suffices φ.bdd[M.toVector] = φ.bdd[M'.toVector] by
+      simp_all only [eq_iff_iff, mem_models]
     apply BDD.congrInterpretation
     rintro ⟨i, h4⟩ h5
     simp [Model.toVector]
@@ -239,7 +241,7 @@ public instance {n} : Consistency n (BDD n) where
 
   consistent_iff φ := by
     simp only [BDD.SemanticEquiv, BDD.getElem_const, not_forall, Bool.not_eq_false,
-      decide_eq_true_eq, Set.Nonempty, Formula.models, models, Set.mem_ofPred_eq]
+      decide_eq_true_eq, Set.Nonempty, Formula.models, mem_models]
     have h1 : max φ.bdd.nvars (BDD.const false).nvars = n := by
         simp only [φ.nvars_prop, BDD.const_nvars, Nat.zero_le, sup_of_le_left]
     constructor
@@ -267,8 +269,8 @@ public instance {n} : BoundedConjuction n (BDD n) where
   }
 
   models_and φ ψ := by
-    simp only [Formula.models, models, BDD.getElem_and, Bool.and_eq_true, Set.ext_iff,
-      Set.mem_ofPred_eq, Set.mem_inter_iff, implies_true]
+    simp only [Formula.models, Set.ext_iff, mem_models, BDD.getElem_and, Bool.and_eq_true,
+      Set.mem_inter_iff, implies_true]
 
 @[no_expose]
 public instance {n} : BoundedDisjunction n (BDD n) where
@@ -285,8 +287,8 @@ public instance {n} : BoundedDisjunction n (BDD n) where
   }
 
   models_or φ ψ := by
-    simp only [Formula.models, models, BDD.getElem_or, Bool.or_eq_true, Set.ext_iff,
-      Set.mem_ofPred_eq, Set.mem_union, implies_true]
+    simp only [Formula.models, mem_models, BDD.getElem_or, Bool.or_eq_true, Set.ext_iff,
+      Set.mem_union, implies_true]
 
 @[no_expose]
 public instance {n} : SententialEntailment n (BDD n) where
@@ -413,8 +415,12 @@ public instance {n} : Rename n (BDD n) where
   models_rename φ V r h1 := by
     rcases φ with ⟨vars, bdd, rfl, h2⟩
     ext M
-    simp [Formula.models, models, BDD.getElem_relabel, Model.toVector]
-    congr
+    simp only [Formula.models, mem_models, Model.toVector, Std.le_refl, BDD.getElem_relabel,
+      Fin.getElem_fin, Vector.getElem_ofFn, Fin.eta, Set.mem_preimage, Model.rename_iff,
+      Bool.coe_iff_coe]
+    congr 2
+    ext i
+    simp only [Model.rename_iff, decide_eq_decide]
 
 public def parseBDD {n} (h : IO.FS.Handle) :
     IO { B : BDD (2 * n) // (instFormula.vars B).IsUnprimed } := do
