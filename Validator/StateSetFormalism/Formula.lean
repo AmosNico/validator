@@ -69,58 +69,83 @@ lemma Renaming.ne {n} {dom : VarSet n} {r : Renaming dom} :
   exact Set.InjOn.ne (StrictMonoOn.injOn r.mono) hi hj
 
 -- TODO : the name is a bit misleading, since it does the inverse of the other rename functions
-@[expose]
 def Model.rename {n} {dom : VarSet n} (r : Renaming dom) (M : Model n) : Model n :=
   fun i ↦ M (r.rename i)
 
-@[expose]
+@[simp]
+lemma Model.rename_iff {n dom} {r : Renaming dom} {M : Model n} {i} :
+    M.rename r i ↔ M (r.rename i) := by rfl
+
 def Literal.rename {n} {dom : VarSet n} (r : Renaming dom) (l : Literal n) : Literal n :=
   ⟨r.rename l.var, l.isPos⟩
+
+@[simp]
+lemma Literal.var_rename {n dom} (r : Renaming dom) {l : Literal n} :
+    (l.rename r).var = r.rename l.var := (rfl)
+
+@[simp]
+lemma Literal.isPos_rename {n dom} (r : Renaming dom) {l : Literal n} :
+    (l.rename r).isPos = l.isPos := (rfl)
 
 @[simp]
 lemma Literal.models_rename {n dom} {r : Renaming dom} {l : Literal n} :
     (l.rename r).models = Model.rename r ⁻¹' l.models := by
   ext M
-  simp only [rename, mem_models, Set.mem_preimage, Model.rename]
+  simp only [rename, mem_models, Set.mem_preimage, Model.rename_iff]
 
-@[expose]
 def Clause.rename {n} {dom : VarSet n} (r : Renaming dom) (γ : Clause n) : Clause n :=
   γ.map (Literal.rename r)
+
+lemma Clause.rename_eq {n dom} {r : Renaming dom} {γ : Clause n} :
+    γ.rename r = γ.map (Literal.rename r) := (rfl)
+
+@[simp]
+lemma Clause.mem_rename {n dom} {r : Renaming dom} {γ : Clause n} {l} :
+    l ∈ (γ.rename r) ↔ ∃ l' ∈ γ, l = l'.rename r := by
+  grind only [rename_eq, List.mem_map]
+
+@[simp]
+lemma Clause.mem_vars_rename {n dom} {r : Renaming dom} {γ : Clause n} {i} :
+    i ∈ (γ.rename r).vars ↔ ∃ j ∈ γ.vars, i = r.rename j := by
+  simp only [mem_vars, mem_rename, existsAndEq, and_true, Literal.var_rename]
+  tauto
 
 @[simp]
 lemma Clause.models_rename {n dom} {r : Renaming dom} {γ : Clause n} :
     (γ.rename r).models = Model.rename r ⁻¹' γ.models := by
   ext M
-  simp only [rename, mem_models, List.mem_map, exists_exists_and_eq_and, Literal.models_rename,
+  simp only [mem_models, mem_rename, ↓existsAndEq, and_true, Literal.models_rename,
     Set.mem_preimage]
 
 def Cube.rename {n} {dom : VarSet n} (r : Renaming dom) (δ : Cube n) : Cube n :=
   δ.map (Literal.rename r)
 
-@[expose]
 def CNF.rename {n} {dom : VarSet n} (r : Renaming dom) (φ : CNF n) : CNF n :=
   φ.map (Clause.rename r)
 
 @[simp]
-lemma CNF.mem_vars_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} {i} :
-    i ∈ (φ.rename r).vars ↔ ∃ j ∈ φ.vars, i = r.rename j := by
-  simp [rename, mem_vars, List.mem_map, Clause.rename, Clause.mem_vars,
-    exists_exists_and_eq_and, Literal.rename, ↓existsAndEq, and_true]
-  grind only
+lemma CNF.mem_rename {n dom} {r : Renaming dom} {φ : CNF n} {γ} :
+    γ ∈ (φ.rename r) ↔ ∃ γ' ∈ φ, γ = γ'.rename r := by
+  grind only [rename, List.mem_map]
 
 @[simp]
-lemma CNF.models_rename {n} {dom : VarSet n} {r : Renaming dom} {φ : CNF n} :
+lemma CNF.mem_vars_rename {n dom} {r : Renaming dom} {φ : CNF n} {i} :
+    i ∈ (φ.rename r).vars ↔ ∃ j ∈ φ.vars, i = r.rename j := by
+  simp only [mem_vars, mem_rename, ↓existsAndEq, and_true, Clause.mem_vars_rename]
+  tauto
+
+@[simp]
+lemma CNF.models_rename {n dom} {r : Renaming dom} {φ : CNF n} :
     (φ.rename r).models = Model.rename r ⁻¹' φ.models := by
   ext M
-  simp only [mem_models, Set.mem_preimage]
-  simp only [rename, List.mem_map, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
-  simp only [Clause.models_rename, Set.mem_preimage]
+  simp only [mem_models, mem_rename, forall_exists_index, and_imp, Set.mem_preimage]
+  grind only [!Clause.models_rename, = Set.mem_preimage]
 
 def VarSet.rename {n} {dom : VarSet n} (r : Renaming dom) (V : VarSet n) : VarSet n :=
   V.map r.rename
 
 @[simp]
-lemma VarSet.mem_rename {n} {dom : VarSet n} {r : Renaming dom} {V : VarSet n} {i} :
+lemma VarSet.mem_rename {n dom} {r : Renaming dom} {V : VarSet n} {i} :
     i ∈ (VarSet.rename r V) ↔ ∃ j ∈ V, i = r.rename j := by
   simp [rename, VarSet.mem_map]
 

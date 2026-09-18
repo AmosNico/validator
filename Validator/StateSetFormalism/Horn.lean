@@ -618,23 +618,18 @@ public instance {n} : Rename n (Horn n) where
       horn_prop := by
         have h : ∀ γ : Clause n, (γ.rename r).IsHorn ↔ γ.IsHorn := by
             intro γ
-            simp only [Clause.IsHorn, Clause.rename, List.countP_map]
-            rfl
-        simp only [CNF.rename, List.mem_map, forall_exists_index, and_imp,
-          forall_apply_eq_imp_iff₂, h]
-        exact φ.horn_prop
+            simp only [Clause.IsHorn, Clause.rename_eq, List.countP_map, Function.comp_def,
+              Literal.isPos_rename]
+        grind only [CNF.mem_rename, List.mem_map, φ.horn_prop]
       clauses_prop := by
-        simp only [CNF.rename, List.mem_map, Clause.rename, forall_exists_index, and_imp,
-          forall_apply_eq_imp_iff₂, List.length_map]
-        exact φ.clauses_prop
+        intro γ hγ
+        simp only [CNF.mem_rename, Clause.rename_eq] at hγ
+        rcases hγ with ⟨γ', h, rfl⟩
+        simp only [List.length_map, φ.clauses_prop γ' h]
       subset_vars := by
-        simp only [VarSet.mem_union, PartialModel.mem_vars_rename, CNF.mem_vars, Clause.mem_vars,
+        simp_rw [VarSet.mem_union, PartialModel.mem_vars_rename, CNF.mem_vars_rename,
           VarSet.mem_rename]
-        simp only [CNF.rename, List.mem_map, Clause.rename, exists_exists_and_eq_and,
-          Literal.rename]
-        have h2 := φ.subset_vars
-        simp only [VarSet.mem_union, CNF.mem_vars, Clause.mem_vars] at h2
-        grind only
+        grind only [φ.subset_vars, VarSet.mem_union]
       vars_prop := by
         have h2 := φ.vars_prop
         have h3 := φ.subset_vars

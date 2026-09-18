@@ -266,7 +266,7 @@ lemma mem_models_toPrimed_iff [Formalism pt R] [Rename (2 * n) R]
     M ∈ (x.toPrimed V).models ↔ M.toPrimed V ∈ x.val.models := by
   simp only [Variable.models, toPrimed, Rename.mem_rename_models]
   apply Formula.models_equiv
-  simp only [Variable.vars, Model.rename, Model.toPrimed_eq, Nat.not_even_iff_odd,
+  simp only [Variable.vars, Model.rename_iff, Model.toPrimed_eq, Nat.not_even_iff_odd,
     eq_iff_iff]
   intro i hi
   have h2  := x.prop i hi
