@@ -31,7 +31,7 @@ abbrev Models n := Set (Model n)
 A Literal is a variable `i` (represented by `(i, true)`) or
 its negation (represented by `(i, false)`).
 -/
-@[unbox]
+@[unbox, ext]
 structure Literal (n : ℕ) where
   var : Fin n
   isPos : Bool
@@ -48,9 +48,16 @@ lemma mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.var ↔ l.isPos
   split
   all_goals simp
 
-@[expose]
 def negate {n} (l : Literal n) : Literal n :=
   ⟨l.var, !l.isPos⟩
+
+lemma negate_eq {n} (l : Literal n) : l.negate = ⟨l.var, !l.isPos⟩ := (rfl)
+
+@[simp]
+lemma isPos_negate {n} (l : Literal n) : l.negate.isPos = !l.isPos := (rfl)
+
+@[simp]
+lemma var_negate {n} (l : Literal n) : l.negate.var = l.var := (rfl)
 
 @[simp]
 lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ := by
@@ -98,7 +105,7 @@ lemma mem_vars {n} (γ : Clause n) {i} : i ∈ γ.vars ↔ ∃ l ∈ γ, l.var =
 
 @[simp]
 lemma vars_cons {n} (γ : Clause n) {l} : Clause.vars (l :: γ) = γ.vars.insert l.var := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
 
 end Clause
@@ -140,12 +147,12 @@ lemma mem_vars {n} (δ : Cube n) i : i ∈ δ.vars ↔ ∃ l ∈ δ, i = l.var :
 
 @[simp]
 lemma vars_cons {n} (δ : Cube n) {l} : Cube.vars (l :: δ) = δ.vars.insert l.var := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_insert, List.map_cons, VarSet.mem_ofList, List.mem_cons]
 
 -- TODO : remove
 lemma vars_append {n} (δ δ' : Cube n) : Cube.vars (δ ++ δ') = δ.vars ∪ δ'.vars := by
-  rw [SetLike.ext_iff]
+  ext i
   grind only [vars, VarSet.mem_union, VarSet.mem_ofList, = List.map_append, = List.mem_append]
 
 def consistent {n} (δ : Cube n) : Bool :=
@@ -225,8 +232,8 @@ lemma mem_vars {n} (φ : CNF n) {i} : i ∈ φ.vars ↔ ∃ γ ∈ φ, i ∈ γ.
 
 @[simp]
 lemma vars_cons {n γ} {φ : CNF n} : CNF.vars (γ :: φ) = γ.vars ∪ φ.vars := by
-  simp only [SetLike.ext_iff, mem_vars, List.mem_cons, Clause.mem_vars, exists_eq_or_imp,
-    VarSet.mem_union, implies_true]
+  ext i
+  simp only [mem_vars, List.mem_cons, Clause.mem_vars, exists_eq_or_imp, VarSet.mem_union]
 
 @[simp]
 lemma forall_iff_subset_models {n} {φ : CNF n} {Ms} : (∀ γ ∈ φ, Ms ⊆ γ.models) ↔ Ms ⊆ φ.models := by
