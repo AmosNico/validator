@@ -4,7 +4,7 @@ public import Validator.StateSetFormalism.Formula
 
 open STRIPS (VarSet)
 
-namespace Validator.Formula.Clause
+namespace Validator.Clause
 
 public def IsHorn {n} (γ : Clause n) : Prop :=
   γ.countP Literal.isPos ≤ 1
@@ -143,7 +143,7 @@ lemma mem_models_propagate_literal {n} {φ : CNF n} {l} :
       simp_all
     grind
 
-end Formula.CNF
+end CNF
 open Formula
 
 -- Enforce that unit_literals does not contain a literal and its negation?

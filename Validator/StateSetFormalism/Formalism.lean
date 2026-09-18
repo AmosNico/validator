@@ -8,7 +8,7 @@ public import Mathlib.Order.Monotone.Defs
 public import Validator.StateSetFormalism.Formula
 
 
-open Validator.Formula (Model Models Renaming OfPartialModel)
+open Validator.Formula (OfPartialModel)
 open STRIPS
 
 public section
@@ -77,7 +77,7 @@ lemma toUnprimed_mem_unprimedVars {n} {i : Fin n} : i.toUnprimed ∈ (unprimedVa
 
 end STRIPS.VarSet
 
-namespace Validator.Formula.Model
+namespace Validator.Model
 
 @[expose]
 def unprimedState {n} (M : Model (2 * n)) : State n :=
@@ -119,7 +119,7 @@ lemma exists_model_of_state {n} s : ∃ M : Model (2 * n), s = M.unprimedState :
   use fun i => ⟨i / 2, by omega⟩ ∈ s
   simp [Model.unprimedState, Fin.toUnprimed]
 
-end Formula.Model
+end Model
 
 open Formula
 

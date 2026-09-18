@@ -18,7 +18,7 @@ public structure BDD n where
   private nvars_prop : bdd.nvars = n
   private vars_prop : ∀ i : Fin n, bdd.DependsOn i  → i ∈ vars
 
-namespace Formula.Model
+namespace Model
 
 noncomputable def toVector {n} (M : Model n) : Vector Bool n :=
   have := Classical.decPred M
@@ -36,7 +36,7 @@ lemma ofVector_toVector {n} (M : Model n) : ofVector M.toVector = M := by
 lemma toVector_ofVector {n} (V : Vector Bool n) : (ofVector V).toVector = V := by
   grind only [toVector, = Vector.getElem_ofFn, ofVector, = Fin.getElem_fin]
 
-end Formula.Model
+end Model
 namespace BDD
 
 lemma nvars_prop_max {n} {φ ψ : BDD n} : max φ.bdd.nvars ψ.bdd.nvars = n :=

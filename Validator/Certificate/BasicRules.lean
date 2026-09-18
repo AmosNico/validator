@@ -12,7 +12,6 @@ open STRIPS
 open Constraint Certificate.validSets
 open ActionSubsetKnowledge StateSubsetKnowledge
 open Formalism StateSetFormalism
-open Formula (Model)
 
 variable {n : ℕ} {pt : PlanningTask n} {C : Certificate pt}
 

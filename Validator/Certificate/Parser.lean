@@ -156,7 +156,7 @@ def parseBdd : Parser pt (StateSetExpr pt) := do
   let idx ← parseNat
   getBDD path idx
 
-def parsePosLiteral : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } := do
+def parsePosLiteral : Parser pt { l : Literal (2 * n) // Even l.1.val } := do
   let i ← parseNat
   -- The variables in dimacs format start counting with 1, whereas we start with 0
   -- Immediately make the variables unprimed.
@@ -164,21 +164,21 @@ def parsePosLiteral : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } 
   then return ⟨⟨⟨2 * (i - 1), by grind⟩, true⟩, by grind⟩
   else Parser.throwUnexpected
 
-def parseNegLiteral : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } := do
+def parseNegLiteral : Parser pt { l : Literal (2 * n) // Even l.1.val } := do
   let i ← dropString "-" *> parseNat
   if h : 0 < i && i < n + 1
   then return ⟨⟨⟨2 * (i - 1), by grind⟩, false⟩, by grind⟩
   else Parser.throwUnexpected
 
-def parseLiteral : Parser pt { l : Formula.Literal (2 * n) // Even l.1.val } :=
+def parseLiteral : Parser pt { l : Literal (2 * n) // Even l.1.val } :=
   Parser.withErrorMessage "Parsing a literal."
     (parsePosLiteral <|> parseNegLiteral)
 
-def parseClause : Parser pt { γ : Formula.Clause (2 * n) // γ.vars.IsUnprimed } := do
+def parseClause : Parser pt { γ : Clause (2 * n) // γ.vars.IsUnprimed } := do
   let ⟨γ, ()⟩ ← takeUntil (dropString "0") parseLiteral
   return ⟨γ.toList, by simp [VarSet.IsUnprimed]; grind⟩
 
-def parseCNF : Parser pt { φ : Formula.CNF (2 * n) // φ.vars.IsUnprimed } :=
+def parseCNF : Parser pt { φ : CNF (2 * n) // φ.vars.IsUnprimed } :=
   Parser.withErrorMessage "Parsing CNF-formula in DIMACS format" do
     dropString "p" *> dropString "cnf" *> dropString (toString n)
     let nb_clauses ← parseNat

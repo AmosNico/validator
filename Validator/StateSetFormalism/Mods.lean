@@ -11,7 +11,7 @@ public structure MODS n where
   private prop : ∀ M ∈ mods, M.vars = vars
   deriving DecidableEq
 
-namespace Formula.PartialModel
+namespace PartialModel
 
 /--
 Returns the conjunction of two partial models.
@@ -105,7 +105,7 @@ lemma mem_models' {n} (γ : Clause n) (M : Model n) :
     M ∈ γ.models ↔ (∃ l ∈ γ, M ∈ l.models) ∨ γ.isTrivial := by
   simp_all only [mem_models, isTrivial_iff, Set.eq_univ_iff_forall, iff_self_or, implies_true]
 
-end Formula.Clause
+end Clause
 namespace MODS
 
 def models {n} (φ : MODS n) : Models n :=
