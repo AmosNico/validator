@@ -114,6 +114,11 @@ lemma mem_restrict {n} {M : PartialModel n} {vars l} :
     l ∈ M.restrict vars ↔ l ∈ M ∧ l.var ∈ vars := by
   grind only [restrict, mem_iff, VarSet.mem_inter]
 
+lemma models_subset_models_restrict {n} {M : PartialModel n} {vars} :
+    M.models ⊆ (M.restrict vars).models := by
+  simp only [Set.subset_def, mem_models', pos_restrict, VarSet.mem_inter, and_imp, neg_restrict]
+  grind only
+
 @[simp]
 lemma restrict_inter {n} {M : PartialModel n} {V1 V2} :
     M.restrict (V1 ∩ V2) = (M.restrict V1).restrict V2 := by
@@ -126,6 +131,10 @@ lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
   simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
     neg_restrict, vars_eq, VarSet.subset_iff, VarSet.mem_union]
   grind only
+
+@[simp]
+lemma restrict_vars_self {n} {M : PartialModel n} : M.restrict M.vars = M := by
+  simp only [restrict_vars_eq_self_iff, VarSet.subset_iff, imp_self, implies_true]
 
 /--
 If two partial models `M1` and `M2` agree on their common variables,
@@ -149,6 +158,24 @@ then their conjunction is well-defined.
 lemma exists_iff_restrict_eq {n} {M1 M2 : PartialModel n} :
     M1.restrict M2.vars = M2.restrict M1.vars ↔ ∃ M3 : PartialModel n, M1.and M2 = some M3 := by
   rw [← Option.isSome_iff_exists ,isSome_and_iff]
+  simp only [ne_eq, ← Set.nonempty_iff_ne_empty]
+  simp only [PartialModel.ext_iff, pos_restrict, neg_restrict, PartialModel.vars_eq]
+  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union]
+  constructor
+  · intro h1
+    use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+    simp only [Set.mem_inter_iff, mem_models', not_or]
+    grind only [VarSet.inter_eq_empty_iff, M1.disjoint, M2.disjoint]
+  · rintro ⟨M, hM⟩
+    simp only [Set.mem_inter_iff, mem_models'] at hM
+    grind only [VarSet.inter_eq_empty_iff, M1.disjoint, M2.disjoint]
+
+/--
+If two partial models `M1` and `M2` agree on their common variables,
+then their conjunction is well-defined.
+-/
+lemma restrict_eq_iff {n} {M1 M2 : PartialModel n} :
+    M1.restrict M2.vars = M2.restrict M1.vars ↔ M1.models ∩ M2.models ≠ ∅ := by
   simp only [ne_eq, ← Set.nonempty_iff_ne_empty]
   simp only [PartialModel.ext_iff, pos_restrict, neg_restrict, PartialModel.vars_eq]
   simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union]
@@ -271,25 +298,63 @@ lemma mem_expand' {n} {M : PartialModel n} {xs h1 h2} {M' : PartialModel n} :
       | false => exact .inl <| ih1 <| mem_expand'_aux2 h4 (by simp only [← h6, hl])
       | true => exact .inr <| ih2 <| mem_expand'_aux2 h4 (by simp only [← h6, hl])
 
-/-- Expand the given partial model `M` to `2 ^ |V|` partial models over `M.vars ∪ V`. -/
-def expand {n} (M : PartialModel n) (V : VarSet n) (h : V ∩ M.vars = ∅) :
-    List (PartialModel n) :=
-  M.expand' V.toList VarSet.toList_nodup (by simp_all)
+/-- Expand the given partial model `M` to `2 ^ |V \ M.vars|` partial models over `M.vars ∪ V`. -/
+-- TODO : implement this as an iterator, as `Implicant` only needs to check a linear amount of
+-- partial models, avoiding the exponential complexity
+def expand {n} (M : PartialModel n) (V : VarSet n) : List (PartialModel n) :=
+  M.expand' (V \ M.vars).toList VarSet.toList_nodup (by simp)
 
-lemma vars_of_mem_expand {n} {M : PartialModel n} {V h} {M' : PartialModel n} :
-    M' ∈ M.expand V h → M'.vars = M.vars ∪ V := by
-  grind only [expand, vars_of_mem_expand', VarSet.ofList_toList]
+lemma vars_of_mem_expand {n} {M : PartialModel n} {V} {M' : PartialModel n} :
+    M' ∈ M.expand V → M'.vars = M.vars ∪ V := by
+  intro h
+  have := vars_of_mem_expand' h
+  simp_all only [VarSet.ofList_toList, VarSet.ext_iff, VarSet.mem_union, VarSet.mem_diff]
+  grind only
 
-lemma mem_expand {n} {M : PartialModel n} {V h} {M' : PartialModel n} :
-    M' ∈ M.expand V h ↔ M'.vars = M.vars ∪ V ∧ M'.restrict M.vars = M := by
-  grind only [expand, mem_expand', = VarSet.ofList_toList]
+lemma mem_expand {n} {M : PartialModel n} {V} {M' : PartialModel n} :
+    M' ∈ M.expand V ↔ M'.vars = M.vars ∪ V ∧ M'.restrict M.vars = M := by
+  simp only [expand, mem_expand', VarSet.ofList_toList, VarSet.ext_iff, VarSet.mem_union,
+    VarSet.mem_diff, and_congr_left_iff]
+  grind only
 
-lemma models_expand {n} {M : PartialModel n} {V h} :
-    M.models = ⋃ M' ∈ M.expand V h, M'.models := by
+lemma expand_restrict {n} {M : PartialModel n} {V} {M'} :
+    M' ∈ (M.restrict V).expand V ↔ ∃ M'' ∈ M.expand V, M''.restrict V = M' := by
+  simp only [mem_expand, vars_restrict]
+  constructor
+  · intro ⟨h1, h2⟩
+    obtain ⟨rfl⟩ : M'.vars = V := by
+      simp_all only [VarSet.ext_iff, VarSet.mem_union, VarSet.mem_inter]
+      tauto
+    rw [VarSet.inter_comm, restrict_inter, restrict_vars_self, exists_iff_restrict_eq] at h2
+    rcases h2 with ⟨M'', h2⟩
+    use M''
+    rw [vars_and h2, VarSet.union_comm]
+    sorry
+  · rintro ⟨M'', ⟨h1, h2⟩, rfl⟩
+    have h : V ∩ (M.vars ∩ V) = M.vars ∩ V := by
+      simp [VarSet.ext_iff, VarSet.mem_inter]
+    rw [← restrict_inter, h, restrict_inter, h2]
+    simp only [vars_restrict, h1, VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union, and_true]
+    grind only
+
+
+lemma subset_models_of_expand {n} {M : PartialModel n} {V} :
+    ∀ M' ∈ M.expand V, M'.models ⊆ M.models := by
+  simp only [mem_expand]
+  intro M' ⟨h1, h2⟩ M'' h3
+  simp only [mem_models'] at ⊢ h3
+  simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
+    neg_restrict] at h2
+  grind only
+
+lemma models_expand {n} (M : PartialModel n) V :
+    M.models = ⋃ M' ∈ M.expand V, M'.models := by
   ext M1
   simp only [Set.mem_iUnion, mem_expand, exists_prop]
   constructor
-  · sorry
+  · intro hM1
+    use M
+    sorry
   · rintro ⟨M', ⟨h1, h2⟩, h3⟩
     simp only [mem_models'] at ⊢ h3
     simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
@@ -382,6 +447,28 @@ lemma restrict_mem_mods {n} {φ : MODS n} {M : PartialModel n} (h : φ.vars ⊆ 
         grind only [PartialModel.vars_eq, !PartialModel.neg_restrict, VarSet.mem_inter,
           VarSet.mem_union]
     simp only [h4, h2]
+
+lemma models_subset_models_iff {n} {φ : MODS n} {M : PartialModel n} :
+    M.models ⊆ φ.models ↔ ∀ M' ∈ (M.restrict φ.vars).expand φ.vars, M' ∈ φ.mods := by
+  simp only [PartialModel.expand_restrict, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
+  constructor
+  · intro h1 M' hM'
+    have h2 := PartialModel.subset_models_of_expand M' hM'
+    have h3 := Set.Subset.trans h2 h1
+    have h4 : φ.vars ⊆ M'.vars := by
+      rw [PartialModel.vars_of_mem_expand hM']
+      simp only [VarSet.subset_iff, VarSet.mem_union]
+      tauto
+    rwa [← restrict_mem_mods h4] at h3
+  · rw [M.models_expand φ.vars]
+    intro h1 M' hM'
+    simp only [Set.mem_iUnion, exists_prop] at hM'
+    rcases hM' with ⟨M'', h2, hM'⟩
+    specialize h1 M'' h2
+    rw [PartialModel.mem_expand] at h2
+    simp only [mem_models]
+    grind only [PartialModel.mem_models', !PartialModel.pos_restrict, !PartialModel.neg_restrict,
+      VarSet.mem_inter]
 
 @[no_expose]
 public instance {n} : Formula n (MODS n) where
@@ -479,10 +566,7 @@ public instance {n} : Implicant n (MODS n) where
       if φ.vars ⊆ M.vars then
         M.restrict φ.vars ∈ φ.mods
       else
-        have h : (φ.vars \ M.vars) ∩ (M.restrict φ.vars).vars = ∅ := by
-          grind only [!PartialModel.vars_restrict, VarSet.inter_eq_empty_iff, VarSet.mem_diff,
-            VarSet.mem_inter]
-        M.restrict φ.vars |>.expand (φ.vars \ M.vars) h |>.any (· ∈ φ.mods)
+        M.restrict φ.vars |>.expand φ.vars |>.all (· ∈ φ.mods)
     | none => true
 
   entails_iff δ φ := by
@@ -492,22 +576,7 @@ public instance {n} : Implicant n (MODS n) where
       rw [← Cube.models_toPartialModel h1]
       split
       next h2 => simp only [restrict_mem_mods h2, decide_eq_true_eq]
-      next h2 =>
-        simp only [List.any_eq_true, decide_eq_true_eq]
-        simp only [PartialModel.mem_expand, PartialModel.vars_restrict]
-        have h : M.vars ∩ φ.vars ∪ φ.vars \ M.vars = φ.vars := by
-          simp only [VarSet.ext_iff, VarSet.mem_union, VarSet.mem_inter, VarSet.mem_diff]
-          grind only
-        rw [h]
-
-        constructor
-        · rintro ⟨mod, ⟨h3, h4⟩, h5⟩ M' hM'
-          simp only [mem_models]
-          --simp [VarSet.ext_iff] at h3
-          use mod, h5
-          sorry
-        ·
-          sorry
+      next h2 => simp only [List.all_eq_true, decide_eq_true_eq, models_subset_models_iff]
     next h =>
       rw [Cube.toPartialModel_eq_none_iff] at h
       simp only [h, Set.empty_subset]

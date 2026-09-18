@@ -27,7 +27,7 @@ rev = "parser-v4.34.0"
 [[require]]
 name = "strips"
 git = "https://github.com/AmosNico/lean4-strips"
-rev = "v4.34.0"
+rev = "c4c00cbf756755ce9cc0d35549dea46b7685efc7"
 
 [[lean_lib]]
 name = "Validator"
