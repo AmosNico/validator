@@ -1,15 +1,56 @@
 module
 
 public import Validator.StateSetFormalism.Formula
+import Std.Data.HashSet.Lemmas
+
+-- TODO : make more efficient and move to Basic.lean
+
+def Std.HashSet.filterMap {α} [BEq α] [Hashable α] {β} [BEq β] [Hashable β]
+    (f : α → Option β) (m : Std.HashSet α) : Std.HashSet β :=
+  Std.HashSet.ofList (m.toList.filterMap f)
+
+@[simp]
+lemma Std.HashSet.mem_filterMap {α} [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α]
+    {β} [BEq β] [Hashable β] [LawfulBEq β] [LawfulHashable β]
+    {f : α → Option β} {m : Std.HashSet α} {b : β} :
+    b ∈ m.filterMap f ↔ ∃ a ∈ m, f a = some b := by
+  simp only [filterMap, mem_ofList, List.contains_eq_mem, List.mem_filterMap, mem_toList,
+    decide_eq_true_eq]
+
+def Std.HashSet.biUnion {α} [BEq α] [Hashable α] {β} [BEq β] [Hashable β]
+    (f : α → Std.HashSet β) (m : Std.HashSet α) : Std.HashSet β :=
+  Std.HashSet.ofList (m.toList.flatMap fun m ↦ (f m).toList)
+
+@[simp]
+lemma Std.HashSet.mem_flatMap {α} [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α]
+    {β} [BEq β] [Hashable β] [LawfulBEq β] [LawfulHashable β]
+    {f : α → Std.HashSet β} {m : Std.HashSet α} {b : β} :
+    b ∈ m.biUnion f ↔ ∃ a ∈ m, b ∈ f a := by
+  simp only [biUnion, mem_ofList, List.contains_eq_mem, List.mem_flatMap, mem_toList,
+    decide_eq_true_eq]
+
+def Std.HashSet.attachMap {α} [BEq α] [LawfulBEq α] [Hashable α] {β} [BEq β] [Hashable β]
+     (m : Std.HashSet α) (f : (a : α) → a ∈ m → β): Std.HashSet β :=
+  Std.HashSet.ofList (m.toList.attach.map fun ⟨a, ha⟩ ↦ f a (Std.HashSet.mem_toList.1 ha))
+
+@[simp]
+lemma Std.HashSet.mem_attachMap {α} [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α]
+    {β} [BEq β] [Hashable β] [LawfulBEq β] [LawfulHashable β]
+    {m : Std.HashSet α} {f : (a : α) → a ∈ m → β} {b : β} :
+    b ∈ m.attachMap f ↔ ∃ a ha, f a ha = b := by
+  simp only [attachMap, mem_ofList, List.contains_eq_mem, List.mem_map, List.mem_attach, true_and,
+    Subtype.exists, mem_toList, decide_eq_true_eq]
 
 namespace Validator
 open Formula STRIPS
 
+public instance {n} : Hashable (PartialModel n) where
+  hash M := mixHash (hash M.pos.toBitVec) (hash M.neg.toBitVec)
+
 public structure MODS n where
   private vars : VarSet n
-  private mods : List (PartialModel n)
-  private prop : ∀ M ∈ mods, M.vars = vars
-  deriving DecidableEq
+  private mods : Std.HashSet (PartialModel n)
+  private vars_eq : ∀ M ∈ mods, M.vars = vars
 
 namespace Clause
 
@@ -73,7 +114,7 @@ lemma restrict_mem_mods {n} {φ : MODS n} {M : PartialModel n} (h : φ.vars ⊆ 
     rcases h' with ⟨M', h2, h3⟩
     have h4 : M.restrict φ.vars = M' := by
       simp [PartialModel.mem_models'] at h3
-      rw [← φ.prop M' h2] at ⊢ h
+      rw [← φ.vars_eq M' h2] at ⊢ h
       ext i
       · grind only [PartialModel.vars_eq, !PartialModel.pos_restrict, VarSet.mem_inter,
           VarSet.mem_union]
@@ -117,29 +158,30 @@ public instance {n} : Formula n (MODS n) where
     simp only [mem_models, PartialModel.mem_models, Literal.mem_models]
     rintro h1 ⟨M'', h2, h3⟩
     use M'', h2
-    have h4 := φ.prop M'' h2
+    have h4 := φ.vars_eq M'' h2
     simp only [← h4, PartialModel.mem_vars] at h1
     grind only
 
 @[no_expose]
 public instance {n} : Top n (MODS n) where
 
-  top := ⟨∅, [PartialModel.empty], by simp⟩
+  top := ⟨∅, {PartialModel.empty}, by simp⟩
 
   models_top := by
-    simp only [Formula.models, Set.eq_univ_iff_forall, mem_models, List.mem_cons, List.not_mem_nil,
-      or_false, exists_eq_left, PartialModel.models_empty, Set.mem_univ, implies_true]
+    simp only [Formula.models, Std.HashSet.singleton_eq_insert, Set.eq_univ_iff_forall, mem_models,
+      Std.HashSet.mem_insert, beq_iff_eq, Std.HashSet.not_mem_empty, or_false, exists_eq_left',
+      PartialModel.models_empty, Set.mem_univ, implies_true]
 
 @[no_expose]
 public instance {n} : Bot n (MODS n) where
 
-  bot := ⟨∅, [], by simp⟩
+  bot := ⟨∅, ∅, by simp⟩
 
   vars_bot := by simp only [Formula.vars]
 
   models_bot := by
-    simp only [Formula.models, Set.eq_empty_iff_forall_notMem, mem_models, List.not_mem_nil,
-      false_and, exists_false, not_false_eq_true, implies_true]
+    simp only [Formula.models, Set.eq_empty_iff_forall_notMem, mem_models,
+      Std.HashSet.not_mem_empty, false_and, exists_false, not_false_eq_true, implies_true]
 
 @[no_expose]
 public instance {n} : ClausalEntailment n (MODS n) where
@@ -148,17 +190,16 @@ public instance {n} : ClausalEntailment n (MODS n) where
 
   entails_iff := by
     intro φ γ
-    simp only [Bool.or_eq_true, List.all_eq_true, List.any_eq_true, decide_eq_true_eq,
-      Formula.models, Set.subset_def, mem_models, forall_exists_index, and_imp]
+    simp only [Bool.or_eq_true, Std.HashSet.all_eq_true_iff_forall_mem, List.any_eq_true,
+      decide_eq_true_eq, Formula.models, Set.subset_def, mem_models, forall_exists_index, and_imp]
     constructor
     · intro h M M' hM' hM
       rcases h with h | h
-      · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hM'
-        specialize h φ.mods[i] hM'
+      · specialize h M' hM'
         rcases h with ⟨l, h1, h2⟩
         rw [Clause.mem_models]
         use l, h1
-        simp_all only [List.getElem_mem, PartialModel.mem_models]
+        simp_all only [PartialModel.mem_models]
       · rw [Clause.isTrivial_iff, Set.eq_univ_iff_forall] at h
         exact h M
     · simp only [Clause.mem_models', or_iff_not_imp_right]
@@ -222,20 +263,21 @@ public instance {n} : BoundedConjuction n (MODS n) where
 
   and φ ψ := {
     vars := φ.vars ∪ ψ.vars
-    mods := φ.mods.flatMap fun δ ↦ ψ.mods.filterMap fun δ' ↦ δ.and? δ'
-    prop := by
-      simp only [List.mem_flatMap, List.mem_filterMap, forall_exists_index, and_imp]
+    mods :=
+      φ.mods.biUnion fun δ ↦ ψ.mods.filterMap fun δ' ↦ δ.and? δ'
+    vars_eq := by
+      simp only [Std.HashSet.mem_flatMap, Std.HashSet.mem_filterMap, forall_exists_index, and_imp]
       intro M M1 h1 M2 h2
-      rw [← φ.prop M1 h1, ← ψ.prop M2 h2]
+      rw [← φ.vars_eq M1 h1, ← ψ.vars_eq M2 h2]
       grind only [= PartialModel.and?_eq_some_iff, = PartialModel.vars_and]
     }
 
   models_and φ ψ := by
-    simp only [Formula.models, Set.ext_iff, mem_models, List.mem_flatMap, List.mem_filterMap,
-      Set.mem_inter_iff]
+    simp only [Formula.models, Set.ext_iff, mem_models, Std.HashSet.mem_flatMap,
+      Std.HashSet.mem_filterMap, Set.mem_inter_iff]
     intro M
     constructor
-    · grind only [= PartialModel.and?_eq_some_iff, → PartialModel.models_and, = Set.mem_inter_iff]
+    · grind only [= PartialModel.and?_eq_some_iff, = PartialModel.models_and, = Set.mem_inter_iff]
     · rintro ⟨⟨M1, hM1, h1⟩, M2, hM2, h2⟩
       have h3 : M1.Compatible M2 := by
         simp only [PartialModel.compatible_iff_models, Set.nonempty_def, Set.mem_inter_iff]
@@ -244,20 +286,14 @@ public instance {n} : BoundedConjuction n (MODS n) where
       grind only [= PartialModel.models_and, = Set.mem_inter_iff, = PartialModel.and?_eq_some_iff]
 
 @[no_expose]
-public instance {n} : SententialEntailment n (MODS n) where
-
-  entails φ ψ := sorry
-
-  entails_iff := sorry
-
-@[no_expose]
 public instance {n} : OfPartialModel n (MODS n) where
 
-  ofPartialModel M := ⟨M.vars, [M], by simp⟩
+  ofPartialModel M := ⟨M.vars, {M}, by simp⟩
 
   vars_ofPartialModel := by simp only [Formula.vars, implies_true]
 
-  models_ofPartialModel := by simp only [Formula.models, models, List.mem_singleton, exists_eq_left,
+  models_ofPartialModel := by simp only [Formula.models, models, Std.HashSet.singleton_eq_insert,
+    Std.HashSet.mem_insert, beq_iff_eq, Std.HashSet.not_mem_empty, or_false, exists_eq_left',
     Set.ofPred_mem_eq, implies_true]
 
 @[no_expose]
@@ -265,11 +301,12 @@ public instance {n} : Rename n (MODS n) where
 
   rename φ V r h1 := {
     vars :=  φ.vars.map r.rename
-    mods := φ.mods.attach.map fun ⟨M, hM⟩ ↦ PartialModel.rename r M (φ.prop M hM ▸ h1)
-    prop := by
-      simp only [List.mem_map, List.mem_attach, true_and, Subtype.exists, forall_exists_index]
+    mods :=
+      φ.mods.attachMap fun M hM ↦ PartialModel.rename r M (φ.vars_eq M hM ▸ h1)
+    vars_eq := by
+      simp only [Std.HashSet.mem_attachMap, forall_exists_index]
       intro M' M hM rfl
-      simp only [← φ.prop M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
+      simp only [← φ.vars_eq M hM, SetLike.ext_iff, PartialModel.mem_vars_rename, VarSet.mem_map]
       grind only [PartialModel.mem_vars]
     }
 
@@ -290,10 +327,10 @@ public instance {n} : ToCNF n (MODS n) where
 @[no_expose]
 public instance {n} : ToDNF n (MODS n) where
 
-  toDNF φ := φ.mods.map PartialModel.toCube
+  toDNF φ := φ.mods.toList.map PartialModel.toCube
 
   models_toDNF := by
-    simp only [Formula.models, Set.ext_iff, DNF.mem_models, List.mem_map, exists_exists_and_eq_and,
-      PartialModel.models_toCube, mem_models, implies_true]
+    simp only [Formula.models, Set.ext_iff, DNF.mem_models, List.mem_map, Std.HashSet.mem_toList,
+      exists_exists_and_eq_and, PartialModel.models_toCube, mem_models, implies_true]
 
 end Validator.MODS
