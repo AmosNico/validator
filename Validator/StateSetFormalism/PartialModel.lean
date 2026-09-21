@@ -126,13 +126,13 @@ def insert {n} (M : PartialModel n) : Literal n → Option (PartialModel n)
 
 @[simp]
 lemma insert_eq_none_iff {n} {M : PartialModel n} {l} : M.insert l = none ↔ l.negate ∈ M := by
-  simp [mem_def, insert, Literal.negate]
+  simp [mem_def, insert, Literal.negate_eq]
   grind
 
 @[simp]
 lemma insert_eq_some_iff {n} {M M' : PartialModel n} {l} :
     M.insert l = some M' ↔ l.negate ∉ M ∧ ∀ l', l' ∈ M' ↔ l' ∈ M ∨ l' = l := by
-  simp only [insert, mem_def, Literal.negate]
+  simp only [insert, mem_def, Literal.negate_eq]
   split
   all_goals
     simp only [Option.dite_none_left_eq_some, Option.some.injEq]
