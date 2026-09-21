@@ -58,11 +58,11 @@ public instance {n} {pt : PlanningTask n} :
   | mods => MODS.instImplicant
 
 -- TODO : remove?
-instance {n} {pt : PlanningTask n} :
+/- instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.SententialEntailment (2 * n) (R.type pt)
   | bdd => BDD.instSententialEntailment
   | horn => Horn.instSententialEntailment
-  | mods => MODS.instSententialEntailment
+  | mods => MODS.instSententialEntailment -/
 
 public instance {n} {pt : PlanningTask n} :
     {R : StateSetFormalism} → Formula.OfPartialModel (2 * n) (R.type pt)

@@ -94,9 +94,9 @@ lemma isTrivial_iff' {n} {γ : Clause n} : isTrivial γ ↔ ∃ l ∈ γ, l.nega
   simp only [isTrivial, Vector.mem_iff_getElem', Fin.getElem_fin, getElem_isTrivial_aux,
     Vector.getElem_replicate, Bool.true_eq_false, decide_false, Bool.false_or, decide_eq_true_eq]
   constructor
-  · grind [Literal.negate]
+  · grind only [Literal.negate_eq]
   · rintro ⟨⟨v, (true | false)⟩, h⟩
-    all_goals grind [Literal.negate]
+    all_goals grind only [Literal.negate_eq]
 
 lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ γ.models = Set.univ := by
   sorry
@@ -199,7 +199,7 @@ public instance {n} : ClausalEntailment n (MODS n) where
         · simp_all
           specialize h3 _ h1
           specialize h2 _ h1
-          grind only [Literal.negate, PartialModel.mem_iff]
+          grind only [Literal.negate_eq, PartialModel.mem_iff]
       specialize h1 M' M hM h4 h2
       grind only [Clause.mem_models]
 
