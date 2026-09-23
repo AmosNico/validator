@@ -60,6 +60,52 @@ def models {n} (φ : MODS n) : Models n :=
 lemma mem_models {n} {φ : MODS n} {M} : M ∈ φ.models ↔ ∃ M' ∈ φ.mods, M ∈ M'.models := by
   simp [models]
 
+lemma restrict_mem_mods {n} {φ : MODS n} {M : PartialModel n} (h : φ.vars ⊆ M.vars) :
+    M.restrict φ.vars ∈ φ.mods ↔ M.models ⊆ φ.models := by
+  simp only [Set.subset_def, mem_models]
+  constructor
+  · grind only [PartialModel.mem_models', !PartialModel.pos_restrict, !PartialModel.neg_restrict,
+      VarSet.mem_inter]
+  · intro h'
+    have h1 : ∀ i ∈ M.neg, i ∉ M.pos := by
+      grind only [VarSet.inter_eq_empty_iff, M.disjoint]
+    specialize h' (fun i ↦ i ∈ M.pos) (by grind only [PartialModel.mem_models'])
+    rcases h' with ⟨M', h2, h3⟩
+    have h4 : M.restrict φ.vars = M' := by
+      simp [PartialModel.mem_models'] at h3
+      rw [← φ.prop M' h2] at ⊢ h
+      ext i
+      · grind only [PartialModel.vars_eq, !PartialModel.pos_restrict, VarSet.mem_inter,
+          VarSet.mem_union]
+      · have : ∀ i ∈ M'.neg, i ∈ M.neg := by
+          simp only [PartialModel.vars_eq, VarSet.subset_iff, VarSet.mem_union] at h
+          grind only
+        grind only [PartialModel.vars_eq, !PartialModel.neg_restrict, VarSet.mem_inter,
+          VarSet.mem_union]
+    simp only [h4, h2]
+
+lemma models_subset_models_iff {n} {φ : MODS n} {M : PartialModel n} :
+    M.models ⊆ φ.models ↔ ∀ M' ∈ (M.restrict φ.vars).expand φ.vars, M' ∈ φ.mods := by
+  simp only [PartialModel.expand_restrict, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂]
+  constructor
+  · intro h1 M' hM'
+    have h2 := PartialModel.subset_models_of_expand M' hM'
+    have h3 := Set.Subset.trans h2 h1
+    have h4 : φ.vars ⊆ M'.vars := by
+      rw [PartialModel.vars_of_mem_expand hM']
+      simp only [VarSet.subset_iff, VarSet.mem_union]
+      tauto
+    rwa [← restrict_mem_mods h4] at h3
+  · intro h1 M' hM'
+    rw [M.models_expand φ.vars] at hM'
+    simp only [Set.mem_iUnion, exists_prop] at hM'
+    rcases hM' with ⟨M'', h2, hM'⟩
+    specialize h1 M'' h2
+    rw [PartialModel.mem_expand] at h2
+    simp only [mem_models]
+    grind only [PartialModel.mem_models', !PartialModel.pos_restrict, !PartialModel.neg_restrict,
+      VarSet.mem_inter]
+
 @[no_expose]
 public instance {n} : Formula n (MODS n) where
 
@@ -151,9 +197,25 @@ public instance {n} : ClausalEntailment n (MODS n) where
 @[no_expose]
 public instance {n} : Implicant n (MODS n) where
 
-  entails δ φ := sorry
+  entails δ φ := match δ.toPartialModel with
+    | some M =>
+      if φ.vars ⊆ M.vars then
+        M.restrict φ.vars ∈ φ.mods
+      else
+        M.restrict φ.vars |>.expand φ.vars |>.all (· ∈ φ.mods)
+    | none => true
 
-  entails_iff := sorry
+  entails_iff δ φ := by
+    simp only [Formula.models]
+    split
+    next M h1 =>
+      rw [← Cube.models_toPartialModel h1]
+      split
+      next h2 => simp only [restrict_mem_mods h2, decide_eq_true_eq]
+      next h2 => simp only [List.all_eq_true, decide_eq_true_eq, models_subset_models_iff]
+    next h =>
+      rw [Cube.toPartialModel_eq_none_iff] at h
+      simp only [h, Set.empty_subset]
 
 @[no_expose]
 public instance {n} : BoundedConjuction n (MODS n) where
