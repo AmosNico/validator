@@ -186,6 +186,88 @@ lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
   simp only [foldl, VarSet.foldl_cons, List.not_mem_nil, or_false, mem_iff]
   grind only [Literal]
 
+/-- Two partial models are compatible if they agree on their common variables. -/
+def Compatible {n} (M1 M2 : PartialModel n) : Prop :=
+  (M1.pos ∪ M2.pos) ∩ (M1.neg ∪ M2.neg) = ∅
+
+lemma compatible_iff {n} {M1 M2 : PartialModel n} :
+    M1.Compatible M2 ↔ (M1.pos ∪ M2.pos) ∩ (M1.neg ∪ M2.neg) = ∅ := by rfl
+
+-- TODO : remove?
+lemma compatible_iff_mem {n} {M1 M2 : PartialModel n} :
+    M1.Compatible M2 ↔ ∀ l, l ∉ M1 ∨ l.negate ∉ M2 := by
+  simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or]
+  simp only [mem_iff, Literal.var_negate, Literal.isPos_negate]
+  simp only [Literal.forall_iff, Bool.forall_bool]
+  grind only [not_mem_pos_or_not_mem_neg]
+
+lemma compatible_iff_models {n} {M1 M2 : PartialModel n} :
+    M1.Compatible M2 ↔ (M1.models ∩ M2.models).Nonempty := by
+  simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or]
+  simp only [Set.nonempty_def, Set.mem_inter_iff, mem_models']
+  constructor
+  · intro h1
+    use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+    grind only
+  · grind only
+
+lemma compatible_symm {n} {M1 M2 : PartialModel n} : M1.Compatible M2 ↔ M2.Compatible M1 := by
+  simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union]
+  grind only
+
+/-- The conjunction of two compatible partial models. -/
+def and {n} (M1 M2 : PartialModel n) (h : M1.Compatible M2) :
+    PartialModel n :=
+  ⟨M1.pos ∪ M2.pos, M1.neg ∪ M2.neg, h⟩
+
+@[simp]
+lemma pos_and {n} {M1 M2 : PartialModel n} {h : M1.Compatible M2} :
+    (M1.and M2 h).neg = M1.neg ∪ M2.neg := (rfl)
+
+@[simp]
+lemma neg_and {n} {M1 M2 : PartialModel n} {h : M1.Compatible M2} :
+    (M1.and M2 h).pos = M1.pos ∪ M2.pos := (rfl)
+
+@[simp]
+lemma mem_and {n} {M1 M2 : PartialModel n} {h : M1.Compatible M2} {l} :
+    l ∈ M1.and M2 h ↔ l ∈ M1 ∨ l ∈ M2 := by
+  grind only [mem_iff, !neg_and, !pos_and, VarSet.mem_union]
+
+@[simp, grind =]
+lemma vars_and {n} {M1 M2 : PartialModel n} {h} :
+    (M1.and M2 h).vars = M1.vars ∪ M2.vars := by
+  ext i
+  grind only [vars_eq, neg_and, pos_and, VarSet.mem_union]
+
+@[simp, grind =]
+lemma models_and {n} {M1 M2 : PartialModel n} {h} :
+    (M1.and M2 h).models = M1.models ∩ M2.models := by
+  ext M
+  grind only [and, mem_models', VarSet.mem_union, Set.mem_inter_iff]
+
+lemma and_symm {n} {M1 M2 : PartialModel n} {h} :
+    ∃ h', M1.and M2 h = M2.and M1 h' := by
+  use compatible_symm.1 h
+  rw [PartialModel.ext'_iff]
+  grind only [mem_and]
+
+/--
+Returns the conjunction of two partial models.
+Returns `none` if the conjunction of the two partial models is inconsistent.
+-/
+def and? {n} (M1 M2 : PartialModel n) : Option (PartialModel n) :=
+  let pos := M1.pos ∪ M2.pos
+  let neg := M1.neg ∪ M2.neg
+  if h : pos ∩ neg = ∅ then
+    return ⟨pos, neg, h⟩
+  else
+    none
+
+@[simp, grind =]
+lemma and?_eq_some_iff {n} {M1 M2 M3 : PartialModel n} :
+    M1.and? M2 = some M3 ↔ ∃ h1, M1.and M2 h1 = M3 := by
+  grind only [and?, compatible_iff, and, = Option.pure_apply]
+
 def toCube {n} (M : PartialModel n) : Cube n :=
   M.foldl (fun δ l ↦ l :: δ) []
 
