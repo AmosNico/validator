@@ -193,7 +193,6 @@ def Compatible {n} (M1 M2 : PartialModel n) : Prop :=
 lemma compatible_iff {n} {M1 M2 : PartialModel n} :
     M1.Compatible M2 ↔ (M1.pos ∪ M2.pos) ∩ (M1.neg ∪ M2.neg) = ∅ := by rfl
 
--- TODO : remove?
 lemma compatible_iff_mem {n} {M1 M2 : PartialModel n} :
     M1.Compatible M2 ↔ ∀ l, l ∉ M1 ∨ l.negate ∉ M2 := by
   simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or]
@@ -267,6 +266,81 @@ def and? {n} (M1 M2 : PartialModel n) : Option (PartialModel n) :=
 lemma and?_eq_some_iff {n} {M1 M2 M3 : PartialModel n} :
     M1.and? M2 = some M3 ↔ ∃ h1, M1.and M2 h1 = M3 := by
   grind only [and?, compatible_iff, and, = Option.pure_apply]
+
+/-- Restrict the given partial model to the given set of variables. -/
+def restrict {n} (M : PartialModel n) (vars : VarSet n) : PartialModel n where
+  pos := M.pos ∩ vars
+  neg := M.neg ∩ vars
+  disjoint := by grind only [VarSet.inter_eq_empty_iff, VarSet.mem_inter, M.disjoint]
+
+@[simp]
+lemma pos_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).pos = M.pos ∩ vars := (rfl)
+
+@[simp]
+lemma neg_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).neg = M.neg ∩ vars := (rfl)
+
+@[simp]
+lemma vars_restrict {n} {M : PartialModel n} {vars} : (M.restrict vars).vars = M.vars ∩ vars := by
+  ext i
+  grind only [vars_eq, !pos_restrict, !neg_restrict, VarSet.mem_inter, VarSet.mem_union]
+
+@[simp]
+lemma mem_restrict {n} {M : PartialModel n} {vars l} :
+    l ∈ M.restrict vars ↔ l ∈ M ∧ l.var ∈ vars := by
+  grind only [restrict, mem_iff, VarSet.mem_inter]
+
+lemma models_subset_models_restrict {n} {M : PartialModel n} {vars} :
+    M.models ⊆ (M.restrict vars).models := by
+  simp only [Set.subset_def, mem_models', pos_restrict, VarSet.mem_inter, and_imp, neg_restrict]
+  grind only
+
+@[simp]
+lemma restrict_inter {n} {M : PartialModel n} {V1 V2} :
+    M.restrict (V1 ∩ V2) = (M.restrict V1).restrict V2 := by
+  rw [PartialModel.ext'_iff]
+  grind only [mem_restrict, VarSet.mem_inter]
+
+@[simp]
+lemma restrict_vars_eq_self_iff {n} {M : PartialModel n} {vars} :
+    M.restrict vars = M ↔ M.vars ⊆ vars := by
+  simp only [PartialModel.ext_iff, pos_restrict, VarSet.ext_iff, VarSet.mem_inter,
+    neg_restrict, vars_eq, VarSet.subset_iff, VarSet.mem_union]
+  grind only
+
+@[simp]
+lemma restrict_vars_self {n} {M : PartialModel n} : M.restrict M.vars = M := by
+  simp only [restrict_vars_eq_self_iff, VarSet.subset_iff, imp_self, implies_true]
+
+@[simp]
+lemma and_restrict_left {n} {M1 M2 : PartialModel n} {h} : (M1.and M2 h).restrict M1.vars = M1 := by
+  ext i
+  · simp only [vars_eq, pos_restrict, neg_and, VarSet.mem_inter, VarSet.mem_union]
+    suffices i ∈ M1.neg → i ∉ M2.pos by grind only
+    simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or] at h
+    grind only [M2.not_mem_pos_or_not_mem_neg]
+  · simp only [vars_eq, neg_restrict, pos_and, VarSet.mem_inter, VarSet.mem_union]
+    suffices i ∈ M1.pos → i ∉ M2.neg by grind only
+    simp only [compatible_iff, VarSet.inter_eq_empty_iff, VarSet.mem_union, not_or] at h
+    grind only [M2.not_mem_pos_or_not_mem_neg]
+
+@[simp]
+lemma and_restrict_right {n} {M1 M2 : PartialModel n} {h} :
+    (M1.and M2 h).restrict M2.vars = M2 := by
+  grind only [!and_symm, !and_restrict_left]
+
+lemma restrict_eq_iff_compatible {n} {M1 M2 : PartialModel n} :
+    M1.restrict M2.vars = M2.restrict M1.vars ↔ M1.Compatible M2 := by
+  rw [compatible_iff_models, PartialModel.ext_iff]
+  simp only [pos_restrict, neg_restrict, PartialModel.vars_eq]
+  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_union]
+  constructor
+  · intro h1
+    use fun i ↦ i ∈ M1.pos ∨ i ∈ M2.pos
+    simp only [Set.mem_inter_iff, mem_models', not_or]
+    grind only [M1.not_mem_pos_or_not_mem_neg, M2.not_mem_pos_or_not_mem_neg]
+  · rintro ⟨M, hM⟩
+    simp only [Set.mem_inter_iff, mem_models'] at hM
+    grind only [M1.not_mem_pos_or_not_mem_neg, M2.not_mem_pos_or_not_mem_neg]
 
 def toCube {n} (M : PartialModel n) : Cube n :=
   M.foldl (fun δ l ↦ l :: δ) []
