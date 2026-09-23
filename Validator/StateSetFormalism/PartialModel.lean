@@ -37,9 +37,12 @@ lemma mem_iff {n} (M : PartialModel n) l :
   · grind only [mem_neg_iff]
   · grind only [mem_pos_iff]
 
+lemma not_mem_pos_or_not_mem_neg {n} (M : PartialModel n) : ∀ i, i ∉ M.pos ∨ i ∉ M.neg := by
+  grind only [VarSet.inter_eq_empty_iff, M.disjoint]
+
 @[grind .]
 lemma not_mem_or_negate_not_mem {n} (M : PartialModel n) : ∀ l, l ∉ M ∨ l.negate ∉ M := by
-  grind [mem_iff, !Literal.isPos_negate, !Literal.var_negate, VarSet.inter_eq_empty_iff,
+  grind only [mem_iff, !Literal.isPos_negate, !Literal.var_negate, VarSet.inter_eq_empty_iff,
     M.disjoint]
 
 @[ext 500]
@@ -58,12 +61,8 @@ def vars {n} (M : PartialModel n) : VarSet n :=
 lemma vars_eq {n} (M : PartialModel n) : M.vars = M.pos ∪ M.neg := (rfl)
 
 lemma mem_vars {n i} {M : PartialModel n} : i ∈ M.vars ↔ ∃ l ∈ M, l.var = i := by
-  simp only [vars_eq, VarSet.mem_union, mem_iff]
-  constructor
-  · rintro (h | h)
-    · use ⟨i, true⟩; grind only
-    · use ⟨i, false⟩; grind only
-  · grind only
+  simp only [vars_eq, VarSet.mem_union, mem_iff, Literal.exists_iff, Bool.exists_bool]
+  grind only
 
 lemma var_mem_vars {n} {l : Literal n} {M : PartialModel n} :
     l.var ∈ M.vars ↔ l ∈ M ∨ l.negate ∈ M := by
@@ -78,25 +77,14 @@ lemma mem_models' {n} (M : PartialModel n) {M'} :
   simp [models]
 
 lemma mem_models {n} {M : PartialModel n} {M'} : M' ∈ M.models ↔ ∀ l ∈ M, M' ∈ l.models := by
-  simp only [models, Set.mem_ofPred_eq, Literal.mem_models]
-  constructor
-  · grind [mem_iff]
-  · intro h1
-    constructor
-    · intro i hi
-      specialize h1 ⟨i, true⟩ hi
-      grind only
-    · intro i hi
-      specialize h1 ⟨i, false⟩ hi
-      grind only
+  simp_rw [models, Set.mem_ofPred_eq, Literal.mem_models]
+  simp_rw [Literal.forall_iff, Bool.forall_bool, mem_iff]
+  grind only
 
 lemma models_nonempty {n} (M : PartialModel n) : M.models.Nonempty := by
   use fun i ↦ ⟨i, true⟩ ∈ M
   simp only [mem_models, Literal.mem_models, mem_iff]
-  intro l
-  have h := M.disjoint
-  simp only [VarSet.ext_iff, VarSet.mem_inter, VarSet.mem_empty, iff_false, not_and] at h
-  grind only [mem_iff]
+  grind only [not_mem_pos_or_not_mem_neg]
 
 -- TODO : remove?
 lemma subset_models_of_mem {n} {M : PartialModel n} {l} : l ∈ M →  M.models ⊆ l.models := by
@@ -148,6 +136,12 @@ lemma vars_insert {n} {M : PartialModel n} {l h} :
   ext i
   grind only [mem_vars, VarSet.mem_insert, M.mem_insert_iff]
 
+@[simp]
+lemma models_insert {n} {M : PartialModel n} {l h1} :
+    (M.insert l h1).models = M.models ∩ l.models := by
+  ext M'
+  grind only [mem_models, mem_insert_iff, Set.mem_inter_iff]
+
 /-- Returns none if the negation of the literal already occurs in M -/
 def insert? {n} (M : PartialModel n) (l : Literal n) : Option (PartialModel n) :=
   if h : l.var ∈ M.vars then
@@ -192,18 +186,6 @@ lemma foldl_cons {α n} {M : PartialModel n} {f : Literal n → α} {a} :
   simp only [foldl, VarSet.foldl_cons, List.not_mem_nil, or_false, mem_iff]
   grind only [Literal]
 
-def toCNF {n} (M : PartialModel n) : CNF n :=
-  M.foldl (fun φ l ↦ [l] :: φ) []
-
-lemma mem_toCNF {n} {M : PartialModel n} {γ} : γ ∈ M.toCNF ↔ ∃ l ∈ M, γ = [l] := by
-  simp [toCNF, foldl_cons, mem_iff]
-
-lemma models_toCNF {n} {M : PartialModel n} : M.toCNF.models = M.models := by
-  ext M'
-  simp only [CNF.mem_models, mem_toCNF, Clause.mem_models, forall_exists_index, and_imp,
-    mem_models]
-  grind only [= List.mem_cons, ← List.not_mem_nil]
-
 def toCube {n} (M : PartialModel n) : Cube n :=
   M.foldl (fun δ l ↦ l :: δ) []
 
@@ -216,6 +198,18 @@ lemma vars_toCube {n} {M : PartialModel n} : M.toCube.vars = M.vars := by
 lemma models_toCube {n} {M : PartialModel n} : M.toCube.models = M.models := by
   ext M'
   simp [toCube, foldl_cons, mem_models]
+
+def toCNF {n} (M : PartialModel n) : CNF n :=
+  M.foldl (fun φ l ↦ [l] :: φ) []
+
+lemma mem_toCNF {n} {M : PartialModel n} {γ} : γ ∈ M.toCNF ↔ ∃ l ∈ M, γ = [l] := by
+  simp [toCNF, foldl_cons, mem_iff]
+
+lemma models_toCNF {n} {M : PartialModel n} : M.toCNF.models = M.models := by
+  ext M'
+  simp only [CNF.mem_models, mem_toCNF, Clause.mem_models, forall_exists_index, and_imp,
+    mem_models]
+  grind only [= List.mem_cons, ← List.not_mem_nil]
 
 end PartialModel
 

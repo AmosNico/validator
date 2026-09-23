@@ -48,6 +48,12 @@ lemma mem_models {n} (l : Literal n) M : M ∈ l.models ↔ (M l.var ↔ l.isPos
   split
   all_goals simp
 
+lemma forall_iff {n} {p : Literal n → Prop} : (∀ l, p l) ↔ ∀ i b, p ⟨i, b⟩ :=
+  ⟨fun h i isPos ↦ h ⟨i, isPos⟩, fun h ⟨i, isPos⟩ ↦ h i isPos⟩
+
+lemma exists_iff {n} {p : Literal n → Prop} : (∃ l, p l) ↔ ∃ i b, p ⟨i, b⟩ :=
+  ⟨fun ⟨⟨i, isPos⟩, h⟩ ↦ ⟨i, isPos, h⟩, fun ⟨i, isPos, h⟩ ↦ ⟨⟨i, isPos⟩, h⟩⟩
+
 def negate {n} (l : Literal n) : Literal n :=
   ⟨l.var, !l.isPos⟩
 
@@ -66,10 +72,8 @@ lemma models_negate {n} (l : Literal n) : l.negate.models = l.modelsᶜ := by
 
 lemma eq_or_eq_negate_iff_var_eq {n} {l l' : Literal n} :
     l.var = l'.var ↔ l = l' ∨ l = l'.negate := by
-  rcases l with ⟨v, b⟩
-  rcases l' with ⟨v', b'⟩
-  have := Bool.eq_or_eq_not b b'
-  grind only [negate]
+  simp only [Literal.ext_iff, var_negate, isPos_negate]
+  grind only
 
 end Literal
 
@@ -158,10 +162,10 @@ lemma vars_append {n} (δ δ' : Cube n) : Cube.vars (δ ++ δ') = δ.vars ∪ δ
 def consistent {n} (δ : Cube n) : Bool :=
   δ.all fun l ↦ l.negate ∉ δ
 
-lemma consistent_iff {n} {δ : Cube n} : δ.consistent ↔ δ.models ≠ ∅ := by
+lemma consistent_iff {n} {δ : Cube n} : δ.consistent ↔ δ.models.Nonempty := by
   simp only [consistent, decide_not, List.all_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
-    decide_eq_false_iff_not, ne_eq, Set.ext_iff, mem_models, Set.mem_empty_iff_false, iff_false,
-    not_forall, not_exists, not_not, Literal.mem_models]
+    decide_eq_false_iff_not]
+  simp only [Set.nonempty_def, mem_models, Literal.mem_models]
   constructor
   · intro h1
     use fun i ↦ ⟨i, true⟩ ∈ δ
