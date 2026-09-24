@@ -255,13 +255,6 @@ public instance {n} : BoundedConjuction n (MODS n) where
       grind only [= PartialModel.models_and, = Set.mem_inter_iff, = PartialModel.and?_eq_some_iff]
 
 @[no_expose]
-public instance {n} : SententialEntailment n (MODS n) where
-
-  entails φ ψ := sorry
-
-  entails_iff := sorry
-
-@[no_expose]
 public instance {n} : OfPartialModel n (MODS n) where
 
   ofPartialModel M := ⟨M.vars, [M], by simp⟩
