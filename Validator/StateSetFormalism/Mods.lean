@@ -18,33 +18,44 @@ def isTrivial_aux {n} (acc : Vector (Bool × Bool) n) : Clause n → Vector (Boo
   | ⟨i, true⟩ :: ls => isTrivial_aux (acc.set i (true, acc[i].2)) ls
   | ⟨i, false⟩ :: ls => isTrivial_aux (acc.set i (acc[i].1, true)) ls
 
-lemma getElem_isTrivial_aux {n acc} {γ : Clause n} {b1 b2} {i} :
-    (γ.isTrivial_aux acc)[i.val] = (b1, b2) ↔
-    (b1 = acc[i].1 || ⟨i, true⟩ ∈ γ) ∧ (b2 = acc[i].2 || ⟨i, false⟩ ∈ γ) := by
+lemma getElem_isTrivial_aux {n acc} {γ : Clause n} {i} :
+    (γ.isTrivial_aux acc)[i.val] = (acc[i].1 || ⟨i, true⟩ ∈ γ, acc[i].2 || ⟨i, false⟩ ∈ γ) := by
   fun_induction isTrivial_aux
   case _ acc => grind only [← List.not_mem_nil, usr Fin.isLt, = Fin.getElem_fin]
   case _ acc j γ ih =>
-    simp_all only [Fin.getElem_fin, Bool.or_eq_true, decide_eq_true_eq, List.mem_cons,
-      Bool.decide_or]
-    constructor
-    · grind only [= Vector.getElem_set]
-    · intro h
-      sorry
-  sorry
+    simp only [List.mem_cons, Literal.mk.injEq, and_true, Bool.decide_or,
+      Bool.false_eq_true, and_false, false_or]
+    rw [ih, Prod.mk_inj]
+    grind
+  case _ acc j γ ih =>
+    simp only [List.mem_cons, Literal.mk.injEq, Bool.true_eq_false, and_false,
+      false_or, and_true, Bool.decide_or]
+    rw [ih, Prod.mk_inj]
+    grind
 
 def isTrivial {n} (γ : Clause n) : Bool :=
   (true, true) ∈ isTrivial_aux (Vector.replicate n (false, false)) γ
 
 lemma isTrivial_iff' {n} {γ : Clause n} : isTrivial γ ↔ ∃ l ∈ γ, l.negate ∈ γ := by
   simp only [isTrivial, Vector.mem_iff_getElem', Fin.getElem_fin, getElem_isTrivial_aux,
-    Vector.getElem_replicate, Bool.true_eq_false, decide_false, Bool.false_or, decide_eq_true_eq]
-  constructor
-  · grind only [Literal.negate_eq]
-  · rintro ⟨⟨v, (true | false)⟩, h⟩
-    all_goals grind only [Literal.negate_eq]
+    Vector.getElem_replicate, Bool.false_or, decide_eq_true_eq]
+  simp only [Literal.exists_iff, Bool.exists_bool]
+  grind only [Literal.negate_eq]
 
 lemma isTrivial_iff {n} {γ : Clause n} : isTrivial γ ↔ γ.models = Set.univ := by
-  sorry
+  rw [isTrivial_iff']
+  constructor
+  · rintro ⟨l, h1, h2⟩
+    ext M
+    simp only [mem_models, Set.mem_univ, iff_true]
+    grind only [!Literal.models_negate, = Set.mem_compl_iff]
+  · intro h1
+    simp only [Set.ext_iff, mem_models, Set.mem_univ, iff_true] at h1
+    obtain ⟨l, hl, h2⟩ := h1 fun i ↦ ⟨i, false⟩ ∈ γ
+    use l, hl
+    rcases l with ⟨i, (_ | _)⟩
+    · grind only [Literal.mem_models]
+    · grind only [Literal.mem_models, Literal.negate_eq]
 
 lemma mem_models' {n} (γ : Clause n) (M : Model n) :
     M ∈ γ.models ↔ (∃ l ∈ γ, M ∈ l.models) ∨ γ.isTrivial := by
