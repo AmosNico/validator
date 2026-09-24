@@ -284,6 +284,17 @@ public instance {n} : Rename n (MODS n) where
   models_rename φ V r h1 := by
     simp [Formula.models, Set.ext_iff]
 
+
+/-
+A MODS-formula can be translated to a CNF-formula by incrementally building its decision tree.
+Each path to false in the decision tree corresponds to a clause in the CNF-formula, by taking the
+disjunction of the negations of all literals on the path.
+
+For efficiency reasons it makes sense to use an acyclic graph for this instead of a tree, resulting
+in an OBDD. Hence, to avoid implementing a new data structure, it might make sense to translate a
+mods formula to a BDD and then to a CNF formula (even though the translation from a BDD to a
+CNF in general may have an exponential blow up).
+-/
 @[no_expose]
 public instance {n} : ToCNF n (MODS n) where
 
