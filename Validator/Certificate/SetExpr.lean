@@ -132,7 +132,7 @@ public lemma getActionIds_union {C : Certificate pt} {hC : C.validSets}
     (Aᵢ A'ᵢ A''ᵢ : Fin C.actions.size) (h : C.actions[Aᵢ]? = ActionSetExpr.union A'ᵢ A''ᵢ) :
     hC.getActionIds Aᵢ = hC.getActionIds A'ᵢ ∪ hC.getActionIds A''ᵢ := by
   rw [getActionIds]
-  grind only [= getElem?_pos, = Lean.Grind.toInt_fin]
+  grind only [= getElem?_pos]
 
 public def getActions {C : Certificate pt} (hC : C.validSets) (Aᵢ : Fin C.actions.size) :
     Actions n :=
